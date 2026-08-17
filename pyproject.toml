@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nommogramme"
+version = "0.1.0"
+description = "Résistance au feu de profilés métalliques par la méthode du nomogramme (SIA 263 / EN 1993-1-2)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+dependencies = []
+
+[project.optional-dependencies]
+xlsx = ["openpyxl>=3.1"]
+trace = ["matplotlib>=3.7"]
+dev = ["pytest>=7.4", "openpyxl>=3.1"]
+
+[project.scripts]
+nommo = "nommogramme.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+nommogramme = ["data/*.csv", "data/*.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
