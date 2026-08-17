@@ -1,0 +1,1264 @@
+<title>Nommogramme</title>
+<style>
+:root{
+  --ground:#F6F5F1;
+  --surface:#FFFFFF;
+  --surface-2:#EEEDE7;
+  --ink:#17191C;
+  --muted:#666A70;
+  --rule:#D6D4CC;
+  --rule-soft:#E4E2DB;
+  --accent:#0B4F6C;
+  --accent-soft:rgba(11,79,108,.10);
+  --heat:#B44A16;
+  --heat-soft:rgba(180,74,22,.09);
+  --serif: Charter,"Bitstream Charter","Sitka Text",Cambria,Georgia,"Times New Roman",serif;
+  --mono:"JetBrains Mono","SF Mono",SFMono-Regular,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#131417;
+    --surface:#1A1C1F;
+    --surface-2:#212428;
+    --ink:#E6E4DF;
+    --muted:#969AA1;
+    --rule:#2E3237;
+    --rule-soft:#25282C;
+    --accent:#6BB8D8;
+    --accent-soft:rgba(107,184,216,.14);
+    --heat:#E8814A;
+    --heat-soft:rgba(232,129,74,.13);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131417;
+  --surface:#1A1C1F;
+  --surface-2:#212428;
+  --ink:#E6E4DF;
+  --muted:#969AA1;
+  --rule:#2E3237;
+  --rule-soft:#25282C;
+  --accent:#6BB8D8;
+  --accent-soft:rgba(107,184,216,.14);
+  --heat:#E8814A;
+  --heat-soft:rgba(232,129,74,.13);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--serif);
+  font-size:17px;
+  line-height:1.62;
+  margin:0;
+  padding:0 1.5rem 6rem;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1010px;margin:0 auto}
+
+/* ---------- masthead ---------- */
+.masthead{
+  padding:4rem 0 2rem;
+  border-bottom:2px solid var(--ink);
+  margin-bottom:0;
+}
+.eyebrow{
+  font-family:var(--mono);
+  font-size:.7rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin:0 0 1.1rem;
+}
+h1{
+  font-family:var(--serif);
+  font-weight:600;
+  font-size:clamp(2rem,5vw,2.9rem);
+  line-height:1.12;
+  letter-spacing:-.015em;
+  text-wrap:balance;
+  margin:0 0 .8rem;
+}
+.standfirst{
+  font-size:1.1rem;
+  color:var(--muted);
+  max-width:62ch;
+  margin:0 0 2rem;
+}
+.meta{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:1rem 1.6rem;
+  border-top:1px solid var(--rule);
+  padding-top:1.1rem;
+}
+.meta dt{
+  font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);margin:0 0 .25rem;
+}
+.meta dd{margin:0;font-family:var(--mono);font-size:.82rem}
+
+/* ---------- document grid ---------- */
+.doc{display:block}
+section{
+  border-top:1px solid var(--rule);
+  padding:2.6rem 0 .4rem;
+}
+section:first-of-type{border-top:none}
+.sechead{
+  display:grid;
+  grid-template-columns:3.2rem minmax(0,1fr);
+  gap:0 1.2rem;
+  align-items:baseline;
+  margin-bottom:1.4rem;
+}
+.secnum{
+  font-family:var(--mono);
+  font-size:.82rem;
+  color:var(--accent);
+  letter-spacing:.04em;
+  padding-top:.35rem;
+}
+h2{
+  font-family:var(--serif);font-weight:600;
+  font-size:1.5rem;line-height:1.25;letter-spacing:-.01em;
+  margin:0;text-wrap:balance;
+}
+h3{
+  font-family:var(--serif);font-weight:600;
+  font-size:1.06rem;margin:2rem 0 .7rem;letter-spacing:-.005em;
+}
+h4{
+  font-family:var(--mono);font-weight:500;
+  font-size:.74rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--muted);margin:1.6rem 0 .6rem;
+}
+.body{max-width:74ch}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1.1rem;padding-left:1.3rem}
+li{margin-bottom:.4rem}
+li::marker{color:var(--muted)}
+strong{font-weight:600}
+em{font-style:italic}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+
+/* ---------- clause chip ---------- */
+.c{
+  font-family:var(--mono);font-size:.76em;
+  background:var(--accent-soft);color:var(--accent);
+  padding:.12em .38em;border-radius:2px;white-space:nowrap;
+}
+
+/* ---------- equation block ---------- */
+.eq{
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-left:3px solid var(--accent);
+  margin:1.1rem 0 1.3rem;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:0 1.2rem;
+}
+.eq .f{
+  font-family:var(--mono);
+  font-size:.88rem;line-height:1.75;
+  padding:.9rem 0 .9rem 1rem;
+  overflow-x:auto;
+  white-space:pre;
+  tab-size:2;
+}
+.eq .ref{
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.05em;
+  color:var(--muted);white-space:nowrap;
+  padding:0 1rem 0 0;text-align:right;
+}
+.eq.multi{grid-template-columns:minmax(0,1fr);}
+.eq.multi .ref{text-align:right;padding:0 1rem .7rem;}
+.where{font-size:.9rem;color:var(--muted);margin:-.6rem 0 1.3rem}
+.where code{font-family:var(--mono);font-size:.9em;color:var(--ink)}
+
+/* ---------- callouts ---------- */
+.note{
+  border-left:3px solid var(--heat);
+  background:var(--heat-soft);
+  padding:.9rem 1.1rem;
+  margin:1.3rem 0;
+  font-size:.95rem;
+}
+.note p:last-child{margin-bottom:0}
+.note .tag{
+  font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--heat);display:block;margin-bottom:.35rem;
+}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto;margin:1.2rem 0 1.5rem;border:1px solid var(--rule)}
+table{border-collapse:collapse;width:100%;font-size:.85rem;background:var(--surface)}
+th,td{
+  padding:.5rem .7rem;text-align:left;
+  border-bottom:1px solid var(--rule-soft);
+  font-variant-numeric:tabular-nums;
+}
+thead th{
+  font-family:var(--mono);font-weight:500;font-size:.68rem;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
+  border-bottom:1px solid var(--rule);background:var(--surface-2);
+  white-space:nowrap;
+}
+td.num,th.num{text-align:right;font-family:var(--mono);font-size:.82rem}
+tbody tr:last-child td{border-bottom:none}
+caption{
+  caption-side:bottom;text-align:left;font-size:.8rem;color:var(--muted);
+  padding:.6rem .7rem;background:var(--surface-2);border-top:1px solid var(--rule);
+}
+
+/* ---------- code / tree ---------- */
+pre{
+  background:var(--surface);
+  border:1px solid var(--rule);
+  padding:1rem 1.1rem;
+  overflow-x:auto;
+  font-family:var(--mono);
+  font-size:.79rem;
+  line-height:1.62;
+  margin:1.1rem 0 1.4rem;
+}
+code{font-family:var(--mono);font-size:.88em}
+p code,li code,td code{
+  background:var(--surface-2);padding:.1em .3em;border-radius:2px;
+}
+.cm{color:var(--muted)}
+
+/* ---------- figure ---------- */
+figure{margin:1.6rem 0 1.8rem}
+.figbox{
+  overflow-x:auto;
+  border:1px solid var(--rule);
+  background:var(--surface);
+  padding:1rem .6rem .4rem;
+}
+.figbox svg{display:block;min-width:640px;width:100%;height:auto}
+figcaption{
+  font-size:.82rem;color:var(--muted);
+  margin-top:.7rem;max-width:74ch;
+}
+
+/* svg semantic classes */
+.ax{stroke:var(--ink);stroke-width:1.1;fill:none}
+.grid{stroke:var(--rule);stroke-width:.6;fill:none}
+.tick{stroke:var(--ink);stroke-width:.9}
+.lbl{font-family:var(--mono);font-size:9.5px;fill:var(--muted)}
+.lbl-b{font-family:var(--mono);font-size:10px;fill:var(--ink)}
+.axname{font-family:var(--mono);font-size:10px;fill:var(--ink);letter-spacing:.05em}
+.halo{paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
+.k-left{stroke:var(--accent);stroke-width:2;fill:none;stroke-linejoin:round}
+.k-heat{stroke:var(--heat);fill:none;stroke-linejoin:round;stroke-linecap:round}
+.k-gas{stroke:var(--muted);stroke-width:1.1;fill:none;stroke-dasharray:7 4}
+.k-path{stroke:var(--accent);stroke-width:1.2;fill:none;stroke-dasharray:3 3}
+.k-dot{fill:var(--accent)}
+.legbox{fill:var(--surface);stroke:var(--rule);stroke-width:1}
+
+/* ---------- TOC ---------- */
+.toc{
+  margin:2.4rem 0 0;
+  padding:1.4rem 0 0;
+}
+.toc ol{
+  list-style:none;padding:0;margin:0;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));
+  gap:.15rem 2rem;
+}
+.toc li{margin:0;display:flex;gap:.8rem;align-items:baseline;font-size:.9rem}
+.toc .n{font-family:var(--mono);font-size:.72rem;color:var(--muted);min-width:1.5rem}
+.toc a{text-decoration:none;border-bottom:1px solid transparent;padding-bottom:1px}
+.toc a:hover{border-bottom-color:var(--accent)}
+
+/* ---------- misc ---------- */
+.lead-in{
+  font-size:.95rem;color:var(--muted);
+  border-left:2px solid var(--rule);padding-left:1rem;margin:0 0 1.4rem;max-width:70ch;
+}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.35rem 1.2rem;font-size:.92rem;margin:0 0 1.3rem}
+.kv dt{font-family:var(--mono);font-size:.82rem;color:var(--accent);white-space:nowrap}
+.kv dd{margin:0}
+hr.end{border:none;border-top:2px solid var(--ink);margin:3.5rem 0 1.2rem}
+.colophon{font-size:.84rem;color:var(--muted);max-width:74ch}
+
+@media (max-width:700px){
+  body{font-size:16px;padding:0 1.1rem 4rem}
+  .sechead{grid-template-columns:1fr;gap:.2rem}
+  .secnum{padding-top:0}
+  .eq{grid-template-columns:minmax(0,1fr)}
+  .eq .ref{text-align:right;padding:0 1rem .7rem}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Spécification de conception · v0.1</p>
+  <h1>Nommogramme</h1>
+  <p class="standfirst">Calcul de la résistance au feu de profilés métalliques non protégés et protégés, sollicités en effort normal et en flexion, par la méthode du nomogramme — SIA&nbsp;263 et EN&nbsp;1993‑1‑2, avec intégration explicite de la diffusion de chaleur.</p>
+  <dl class="meta">
+    <div><dt>Dépôt</dt><dd>damthon/Nommogramme</dd></div>
+    <div><dt>Branche</dt><dd>claude/fire-resistance-<wbr>metal-profiles-u2512i</dd></div>
+    <div><dt>Base profilés</dt><dd>SZS C5 — 277 profilés</dd></div>
+    <div><dt>Langage</dt><dd>Python ≥ 3.11</dd></div>
+  </dl>
+
+  <nav class="toc" aria-label="Sommaire">
+    <ol>
+      <li><span class="n">1</span><a href="#s1">Périmètre et hypothèses</a></li>
+      <li><span class="n">2</span><a href="#s2">Architecture du code</a></li>
+      <li><span class="n">3</span><a href="#s3">Base de données des profilés SZS</a></li>
+      <li><span class="n">4</span><a href="#s4">Chaîne de calcul</a></li>
+      <li><span class="n">5</span><a href="#s5">Actions en situation d'incendie</a></li>
+      <li><span class="n">6</span><a href="#s6">Propriétés de l'acier à chaud</a></li>
+      <li><span class="n">7</span><a href="#s7">Courbes de feu et flux thermique</a></li>
+      <li><span class="n">8</span><a href="#s8">Facteur de massiveté A<sub>m</sub>/V</a></li>
+      <li><span class="n">9</span><a href="#s9">Diffusion de chaleur — non protégé</a></li>
+      <li><span class="n">10</span><a href="#s10">Diffusion de chaleur — protégé</a></li>
+      <li><span class="n">11</span><a href="#s11">Le nomogramme</a></li>
+      <li><span class="n">12</span><a href="#s12">Vérification croisée par résistances</a></li>
+      <li><span class="n">13</span><a href="#s13">Interaction N + M</a></li>
+      <li><span class="n">14</span><a href="#s14">Cadre suisse — SIA 263 / SIA 260</a></li>
+      <li><span class="n">15</span><a href="#s15">API et interface CLI</a></li>
+      <li><span class="n">16</span><a href="#s16">Validation et tests</a></li>
+      <li><span class="n">17</span><a href="#s17">Lots de développement</a></li>
+      <li><span class="n">18</span><a href="#s18">Points à recouper</a></li>
+    </ol>
+  </nav>
+</header>
+
+<main class="doc">
+
+<!-- ============ 1 ============ -->
+<section id="s1">
+  <div class="sechead"><span class="secnum">1</span><h2>Périmètre et hypothèses</h2></div>
+  <div class="body">
+
+  <p>L'outil vérifie qu'un élément en acier laminé conserve sa capacité portante pendant une durée d'exposition au feu donnée (R30, R60, R90, R120), ou détermine l'épaisseur de protection nécessaire pour l'atteindre.</p>
+
+  <h4>Dans le périmètre</h4>
+  <ul>
+    <li>Profilés laminés en I et H (IPE, PEA, INP, HEA, HEB, HEM, HHD, HL) et tubes carrés/rectangulaires (RRW) du catalogue SZS&nbsp;C5.</li>
+    <li>Sollicitations&nbsp;: traction, compression avec flambage, flexion simple et déversée, <strong>interaction N&nbsp;+&nbsp;M<sub>y</sub>&nbsp;+&nbsp;M<sub>z</sub></strong>.</li>
+    <li>Éléments <strong>non protégés</strong> et <strong>protégés</strong> (produit isolant en contact, épaisseur constante).</li>
+    <li>Exposition sur 3 ou 4 faces, encaissement (caisson) ou suivi de contour.</li>
+    <li>Courbes de feu nominales&nbsp;: ISO&nbsp;834, hydrocarbures, feu extérieur.</li>
+    <li>Classes de section 1, 2 et 3. Classe 4 traitée par la température critique conventionnelle.</li>
+  </ul>
+
+  <h4>Hors périmètre (v1)</h4>
+  <ul>
+    <li>Feux paramétriques (Annexe A EN&nbsp;1991‑1‑2) et modèles de zone/CFD — prévus en extension, l'interface courbe de feu est conçue pour les accueillir.</li>
+    <li>Gradient thermique dans la section&nbsp;: on retient l'hypothèse normative de <strong>température uniforme</strong>, corrigée par les facteurs d'adaptation κ₁&nbsp;κ₂ pour la flexion.</li>
+    <li>Assemblages, sections composées, éléments mixtes acier‑béton (EN&nbsp;1994‑1‑2).</li>
+    <li>Effets indirects du feu (dilatations empêchées) — supposés négligeables, hypothèse admise pour l'analyse par élément isolé <span class="c">EN 1993-1-2 §2.4.2</span>.</li>
+  </ul>
+
+  <h4>Hypothèses structurantes</h4>
+  <dl class="kv">
+    <dt>Analyse</dt><dd>par élément isolé, avec conditions d'appui adaptées à la situation d'incendie.</dd>
+    <dt>Température</dt><dd>uniforme dans la section et sur la longueur de l'élément.</dd>
+    <dt>γ<sub>M,fi</sub></dt><dd>= 1,0 — situation accidentelle <span class="c">EN 1993-1-2 §2.3(1)P</span></dd>
+    <dt>ρ<sub>a</sub></dt><dd>= 7850 kg/m³, indépendant de la température <span class="c">EN 1993-1-2 §3.2.2</span></dd>
+    <dt>Critère</dt><dd>résistance mécanique R uniquement (ni E ni I).</dd>
+  </dl>
+
+  </div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section id="s2">
+  <div class="sechead"><span class="secnum">2</span><h2>Architecture du code</h2></div>
+  <div class="body">
+
+  <p class="lead-in">Séparation stricte entre <em>données</em> (catalogue de profilés, matériaux de protection), <em>physique</em> (thermique, propriétés à chaud), <em>vérifications normatives</em> (résistances, interaction) et <em>orchestration</em> (nomogramme, CLI). Chaque fonction normative porte sa référence de clause dans sa docstring.</p>
+
+<pre>nommogramme/
+├── pyproject.toml
+├── data/
+│   ├── Profilé SZS.xlsx          <span class="cm"># source, inchangée</span>
+│   ├── profils_szs.csv           <span class="cm"># catalogue normalisé (généré, versionné)</span>
+│   └── protections.toml          <span class="cm"># λp, cp, ρp, plages d'épaisseur</span>
+├── src/nommogramme/
+│   ├── __init__.py
+│   ├── unites.py                 <span class="cm"># SI strict en interne, conversions aux bords</span>
+│   │
+│   ├── profils/
+│   │   ├── modele.py             <span class="cm"># dataclass Profil (frozen)</span>
+│   │   ├── chargeur.py           <span class="cm"># xlsx SZS → Profil ; cache CSV</span>
+│   │   ├── geometrie.py          <span class="cm"># périmètres exposés, Am/V, ksh</span>
+│   │   └── classification.py     <span class="cm"># classes 1–4 à chaud, ε = 0,85·√(235/fy)</span>
+│   │
+│   ├── materiaux/
+│   │   ├── acier.py              <span class="cm"># ky,θ kp,θ kE,θ ; ca(θ) ; λa(θ) ; nuances</span>
+│   │   └── protection.py         <span class="cm"># Protection : λp, cp, ρp, dp, type de pose</span>
+│   │
+│   ├── thermique/
+│   │   ├── courbes.py            <span class="cm"># CourbeFeu (protocole) : ISO834, HC, ext.</span>
+│   │   ├── flux.py               <span class="cm"># h_net,c + h_net,r</span>
+│   │   ├── nu.py                 <span class="cm"># §4.2.5.1 — intégration explicite</span>
+│   │   ├── protege.py            <span class="cm"># §4.2.5.2 — intégration explicite</span>
+│   │   └── solveur.py            <span class="cm"># θa(t) ; t(θ_cr) ; dp requis (bissection)</span>
+│   │
+│   ├── mecanique/
+│   │   ├── actions.py            <span class="cm"># combinaison accidentelle, η_fi</span>
+│   │   ├── resistances.py        <span class="cm"># N_fi,Rd, M_fi,Rd, χ_fi, χ_LT,fi</span>
+│   │   ├── interaction.py        <span class="cm"># éq. 4.21a/b, facteurs k_y k_z k_LT</span>
+│   │   └── utilisation.py        <span class="cm"># μ0 = E_fi,d / R_fi,d,0</span>
+│   │
+│   ├── nomogramme/
+│   │   ├── temperature_critique.py  <span class="cm"># éq. 4.22 et son inverse</span>
+│   │   ├── verification.py       <span class="cm"># orchestre : μ0 → θcr → θa(t) → verdict</span>
+│   │   └── trace.py              <span class="cm"># rendu matplotlib du nomogramme</span>
+│   │
+│   ├── rapport.py                <span class="cm"># note de calcul traçable (texte / Markdown)</span>
+│   └── cli.py                    <span class="cm"># argparse / typer</span>
+└── tests/
+    ├── test_acier.py             <span class="cm"># tableau 3.1, ca(θ)</span>
+    ├── test_thermique.py         <span class="cm"># comparaison aux abaques publiés</span>
+    ├── test_geometrie.py         <span class="cm"># Am/V vs tables ECCS et Um du SZS</span>
+    ├── test_resistances.py
+    └── test_exemples_normatifs.py</pre>
+
+  <h4>Principes d'implémentation</h4>
+  <ul>
+    <li><strong>Unités SI strictes en interne</strong> (m, m², N, W, K, s). La conversion depuis les mm/kN de l'utilisateur et depuis les mm/×10⁶ du fichier SZS se fait uniquement aux frontières (chargeur, CLI).</li>
+    <li><strong>Objets immuables</strong> (<code>@dataclass(frozen=True)</code>) pour <code>Profil</code>, <code>Nuance</code>, <code>Protection</code>, <code>CasDeCharge</code> — un calcul ne modifie jamais ses entrées.</li>
+    <li><strong>Zéro dépendance obligatoire</strong> hors <code>openpyxl</code> (lecture unique du xlsx) et <code>numpy</code>. <code>matplotlib</code> reste optionnel (extra <code>[trace]</code>).</li>
+    <li><strong>Traçabilité</strong>&nbsp;: chaque résultat intermédiaire (μ₀, θ<sub>cr</sub>, A<sub>m</sub>/V, k<sub>sh</sub>, θ<sub>a</sub>(t), k<sub>y,θ</sub>, χ<sub>fi</sub>) est conservé dans l'objet résultat et restitué par la note de calcul, avec la clause associée.</li>
+  </ul>
+
+  </div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section id="s3">
+  <div class="sechead"><span class="secnum">3</span><h2>Base de données des profilés SZS</h2></div>
+  <div class="body">
+
+  <p>Votre fichier <code>Profilé SZS.xlsx</code> (feuille <code>SZS C5 I_H</code>) contient <strong>277 profilés</strong>, répartis en&nbsp;:</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Famille</th><th class="num">Nb</th><th>Type</th><th>Remarque pour le calcul au feu</th></tr></thead>
+    <tbody>
+      <tr><td>IPE</td><td class="num">22</td><td>I à ailes parallèles</td><td>—</td></tr>
+      <tr><td>PEA</td><td class="num">16</td><td>I allégés</td><td>—</td></tr>
+      <tr><td>INP</td><td class="num">20</td><td>I à ailes inclinées (14 %)</td><td>périmètre spécifique (voir §8)</td></tr>
+      <tr><td>HEA / HEB / HEM</td><td class="num">72</td><td>H à ailes parallèles</td><td>—</td></tr>
+      <tr><td>HHD</td><td class="num">31</td><td>H trapus fortes charges</td><td>A<sub>m</sub>/V très faibles (jusqu'à 45 m⁻¹)</td></tr>
+      <tr><td>HL</td><td class="num">8</td><td>H de grande hauteur</td><td>—</td></tr>
+      <tr><td>RRW</td><td class="num">108</td><td>tubes carrés / rectangulaires</td><td><code>r</code> et <code>Ix</code> absents du fichier</td></tr>
+    </tbody>
+    <caption>Grandeurs disponibles par profilé : m, A, A<sub>v</sub>, A<sub>w</sub>, I<sub>y</sub>, W<sub>el,y</sub>, W<sub>pl,y</sub>, i<sub>y</sub>, I<sub>z</sub>, W<sub>el,z</sub>, W<sub>pl,z</sub>, i<sub>z</sub>, I<sub>t</sub>, h, b, t<sub>w</sub>, t<sub>f</sub>, r, U<sub>m</sub>, U<sub>t</sub>.</caption>
+  </table>
+  </div>
+
+  <p>Le jeu de données est <strong>suffisant et complet</strong> pour ce calcul&nbsp;: toutes les grandeurs nécessaires (A, W<sub>pl</sub>, i, I<sub>t</sub>, h, b, t<sub>w</sub>, t<sub>f</sub>, r) sont présentes pour les 169 profilés I/H, et la colonne <code>U<sub>m</sub></code> (surface développée, m²/m) fournit un excellent contrôle croisé du périmètre calculé.</p>
+
+  <h4>Sur une « meilleure liste » en ligne</h4>
+  <p>Les tables SZS&nbsp;C5 sont un produit éditorial payant du Stahlbau Zentrum Schweiz&nbsp;; il n'existe pas de version machine‑lisible librement téléchargeable. Le proxy réseau de cette session bloque par ailleurs <code>szs.ch</code>, je n'ai donc pas pu vérifier une éventuelle mise à disposition récente. <strong>Ma recommandation est de conserver votre fichier comme source</strong> — il est déjà structuré et couvre l'essentiel du catalogue suisse — et de l'enrichir par calcul plutôt que de le remplacer.</p>
+
+  <h4>Traitement à la lecture</h4>
+  <ol>
+    <li>Application des facteurs d'échelle de la ligne 4 du fichier (×10⁶ pour I, ×10³ pour W) — actuellement portés par l'en‑tête et non par les valeurs.</li>
+    <li>Conversion en SI et normalisation des noms (<code>iy2</code> → <code>iy</code>, <code>iz3</code> → <code>iz</code>, <code>K = Ix</code> → <code>It</code>).</li>
+    <li>Pour les RRW&nbsp;: reconstruction de <code>h</code>, <code>b</code>, <code>t</code> depuis le nom, et rayon extérieur pris à <code>r_ext = 2·t</code> (profilés formés à chaud, EN&nbsp;10210).</li>
+    <li>Calcul et stockage des <strong>quatre facteurs de massiveté</strong> (contour/caisson × 3/4 faces) et du facteur d'ombre k<sub>sh</sub>.</li>
+    <li>Export vers <code>data/profils_szs.csv</code>, versionné — le xlsx n'est relu qu'en cas de régénération explicite.</li>
+  </ol>
+
+  <div class="note">
+    <span class="tag">Contrôle qualité déjà effectué</span>
+    <p>La formule de périmètre retenue (§8) a été confrontée à la colonne <code>U<sub>m</sub></code> du fichier sur les 169 profilés I/H&nbsp;: écart moyen <strong>0,55 %</strong>, et <strong>149/169</strong> à moins de 1 %. Les 20 restants sont les INP, dont les ailes inclinées à 14 % allongent le contour de ~4 %&nbsp;— ils recevront leur propre formule. Le calcul sera systématiquement recoupé avec <code>U<sub>m</sub></code> à la lecture, avec avertissement au‑delà de 2 % d'écart.</p>
+  </div>
+
+  <p>Vérification sur profilés courants (contour, 4 faces), à comparer aux tables ECCS&nbsp;:</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Profilé</th><th class="num">A [mm²]</th><th class="num">contour 4f</th><th class="num">caisson 4f</th><th class="num">contour 3f</th><th class="num">caisson 3f</th><th class="num">k<sub>sh</sub></th></tr></thead>
+    <tbody>
+      <tr><td>IPE 300</td><td class="num">5 380</td><td class="num">215,6</td><td class="num">167,3</td><td class="num">187,7</td><td class="num">139,4</td><td class="num">0,698</td></tr>
+      <tr><td>HEA 200</td><td class="num">5 380</td><td class="num">211,2</td><td class="num">145,0</td><td class="num">174,0</td><td class="num">107,8</td><td class="num">0,618</td></tr>
+      <tr><td>HEB 300</td><td class="num">14 900</td><td class="num">116,2</td><td class="num">80,5</td><td class="num">96,1</td><td class="num">60,4</td><td class="num">0,624</td></tr>
+      <tr><td>HEM 400</td><td class="num">32 600</td><td class="num">61,5</td><td class="num">45,3</td><td class="num">52,0</td><td class="num">35,9</td><td class="num">0,664</td></tr>
+      <tr><td>HHD 400.421</td><td class="num">53 700</td><td class="num">44,6</td><td class="num">31,1</td><td class="num">37,0</td><td class="num">23,4</td><td class="num">0,627</td></tr>
+      <tr><td>RRW 200/200/10</td><td class="num">7 493</td><td class="num">102,2</td><td class="num">102,2</td><td class="num">75,5</td><td class="num">75,5</td><td class="num">0,900</td></tr>
+    </tbody>
+    <caption>Facteurs de massiveté A<sub>m</sub>/V en m⁻¹, calculés à partir de votre fichier. Les valeurs IPE 300 (216) et HEB 300 (116) correspondent aux tables publiées.</caption>
+  </table>
+  </div>
+
+  <h4>Extensions envisageables du catalogue</h4>
+  <p>Si votre pratique en a besoin, les familles suivantes manquent et peuvent être ajoutées depuis les dimensions normalisées EN&nbsp;10365 / EN&nbsp;10210&nbsp;: UPE et UNP (profilés en U), cornières L, tubes circulaires CHS, et fers plats. Le modèle <code>Profil</code> est conçu pour les accueillir sans modification&nbsp;: seule la stratégie de périmètre change.</p>
+
+  </div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section id="s4">
+  <div class="sechead"><span class="secnum">4</span><h2>Chaîne de calcul</h2></div>
+  <div class="body">
+
+  <p>La méthode du nomogramme découple le problème mécanique du problème thermique par l'intermédiaire d'une <strong>température critique</strong> θ<sub>a,cr</sub>&nbsp;: la température uniforme à laquelle la résistance de l'élément chute jusqu'au niveau de la sollicitation présente pendant l'incendie.</p>
+
+<pre>       <span class="cm">── VOIE MÉCANIQUE ──</span>                 <span class="cm">── VOIE THERMIQUE ──</span>
+
+  Actions ELU  ──┐                        Courbe de feu θg(t)
+                 │                                 │
+  ψ (SIA 260)  ──┤                        Am/V, ksh (géométrie)
+                 ▼                                 │
+        E_fi,d  (§5)                       Protection λp, dp
+                 │                                 │
+                 ▼                                 ▼
+        μ0 = E_fi,d / R_fi,d,0  (§11)      θa(t)  (§9 / §10)
+                 │                                 │
+                 ▼                                 │
+        θa,cr = f(μ0)   éq. 4.22                   │
+                 │                                 │
+                 └────────────┬────────────────────┘
+                              ▼
+             t_fi,d = t tel que θa(t) = θa,cr
+                              │
+                    ┌─────────┴─────────┐
+                    ▼                   ▼
+          t_fi,d ≥ t_requis ?    dp requis pour t_requis
+                    │
+                    ▼
+       <span class="cm">Contre-vérification §12–13 : résistances</span>
+       <span class="cm">complètes à θa(t_requis), avec χ_fi et</span>
+       <span class="cm">interaction N+M — garde-fou obligatoire</span>
+       <span class="cm">dès que le flambement gouverne.</span></pre>
+
+  <p>La branche de droite est la partie « diffusion de chaleur » que vous demandez&nbsp;: une intégration pas à pas de l'équation de bilan thermique, et non une lecture d'abaque.</p>
+
+  </div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section id="s5">
+  <div class="sechead"><span class="secnum">5</span><h2>Actions en situation d'incendie</h2></div>
+  <div class="body">
+
+  <p>L'incendie est une <strong>situation de projet accidentelle</strong>. Les charges sont donc nettement plus faibles qu'à l'ELU fondamental — c'est le premier levier de la vérification.</p>
+
+  <h4>Combinaison accidentelle</h4>
+  <div class="eq"><div class="f">E_fi,d,t  =  Σ G_k,j  +  P  +  A_d  +  ψ₁,₁·Q_k,1  +  Σ ψ₂,i·Q_k,i</div><div class="ref">EN 1991-1-2 §4.3.1</div></div>
+  <p class="where">L'Annexe nationale peut substituer ψ₂,₁ à ψ₁,₁ pour l'action variable dominante. <strong>La SIA 260 retient ψ₂ pour toutes les actions variables</strong> — voir §14. A<sub>d</sub> (action accidentelle directe due au feu) est nulle dans une analyse par élément isolé où les effets indirects sont négligés.</p>
+
+  <h4>Niveau de charge en cas d'incendie</h4>
+  <div class="eq"><div class="f">η_fi  =  E_fi,d / E_d</div><div class="ref">EN 1993-1-2 éq. (2.5)</div></div>
+  <p class="where">Forme simplifiée, avec une seule action variable dominante&nbsp;:</p>
+  <div class="eq"><div class="f">η_fi  =  (γ_GA·G_k + ψ_fi·Q_k,1) / (γ_G·G_k + γ_Q,1·Q_k,1)</div><div class="ref">EN 1993-1-2 éq. (2.5)</div></div>
+  <p class="where">Valeur conservative admise par défaut&nbsp;: <code>η_fi = 0,65</code> (0,70 pour la catégorie E, aires de stockage) <span class="c">EN 1993-1-2 §2.4.2(3)</span>. L'outil calcule η<sub>fi</sub> explicitement si les charges sont fournies, et retombe sur 0,65 sinon, en le signalant.</p>
+
+  <h4>Implémentation</h4>
+  <p>Le module <code>mecanique/actions.py</code> expose deux voies d'entrée&nbsp;:</p>
+  <ul>
+    <li><strong>Voie directe</strong>&nbsp;: l'utilisateur saisit N<sub>fi,Ed</sub>, M<sub>y,fi,Ed</sub>, M<sub>z,fi,Ed</sub> issus de son modèle de calcul.</li>
+    <li><strong>Voie η<sub>fi</sub></strong>&nbsp;: l'utilisateur saisit les efforts ELU et un jeu de coefficients ψ, l'outil déduit les efforts en situation d'incendie.</li>
+  </ul>
+
+  </div>
+</section>
+
+<!-- ============ 6 ============ -->
+<section id="s6">
+  <div class="sechead"><span class="secnum">6</span><h2>Propriétés de l'acier à chaud</h2></div>
+  <div class="body">
+
+  <h4>Facteurs de réduction mécaniques</h4>
+  <p>Trois facteurs pilotent toute la dégradation, avec <strong>interpolation linéaire</strong> entre les valeurs tabulées <span class="c">EN 1993-1-2 §3.2.1, tableau 3.1</span>&nbsp;:</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th class="num">θ<sub>a</sub> [°C]</th><th class="num">k<sub>y,θ</sub></th><th class="num">k<sub>p,θ</sub></th><th class="num">k<sub>E,θ</sub></th></tr></thead>
+    <tbody>
+      <tr><td class="num">20</td><td class="num">1,000</td><td class="num">1,000</td><td class="num">1,000</td></tr>
+      <tr><td class="num">100</td><td class="num">1,000</td><td class="num">1,000</td><td class="num">1,000</td></tr>
+      <tr><td class="num">200</td><td class="num">1,000</td><td class="num">0,807</td><td class="num">0,900</td></tr>
+      <tr><td class="num">300</td><td class="num">1,000</td><td class="num">0,613</td><td class="num">0,800</td></tr>
+      <tr><td class="num">400</td><td class="num">1,000</td><td class="num">0,420</td><td class="num">0,700</td></tr>
+      <tr><td class="num">500</td><td class="num">0,780</td><td class="num">0,360</td><td class="num">0,600</td></tr>
+      <tr><td class="num">600</td><td class="num">0,470</td><td class="num">0,180</td><td class="num">0,310</td></tr>
+      <tr><td class="num">700</td><td class="num">0,230</td><td class="num">0,075</td><td class="num">0,130</td></tr>
+      <tr><td class="num">800</td><td class="num">0,110</td><td class="num">0,050</td><td class="num">0,090</td></tr>
+      <tr><td class="num">900</td><td class="num">0,060</td><td class="num">0,0375</td><td class="num">0,0675</td></tr>
+      <tr><td class="num">1000</td><td class="num">0,040</td><td class="num">0,0250</td><td class="num">0,0450</td></tr>
+      <tr><td class="num">1100</td><td class="num">0,020</td><td class="num">0,0125</td><td class="num">0,0225</td></tr>
+      <tr><td class="num">1200</td><td class="num">0,000</td><td class="num">0,000</td><td class="num">0,000</td></tr>
+    </tbody>
+    <caption>k<sub>y,θ</sub> = limite d'élasticité efficace / f<sub>y</sub> · k<sub>p,θ</sub> = limite de proportionnalité / f<sub>y</sub> · k<sub>E,θ</sub> = pente élastique / E<sub>a</sub>. Ces valeurs sont indépendantes de la nuance.</caption>
+  </table>
+  </div>
+
+  <p>Point clé du comportement&nbsp;: <strong>k<sub>y,θ</sub> reste égal à 1 jusqu'à 400&nbsp;°C</strong> puis s'effondre — d'où la concentration des températures critiques usuelles entre 500 et 700&nbsp;°C.</p>
+
+  <h4>Chaleur spécifique</h4>
+  <p>Elle entre directement dans l'intégration thermique&nbsp;; sa <strong>singularité à 735&nbsp;°C</strong> (transformation de phase, pic de c<sub>a</sub>) produit le palier caractéristique visible sur les courbes d'échauffement.</p>
+  <div class="eq multi"><div class="f">c_a(θ) [J/kg·K] =
+  425 + 7,73·10⁻¹·θ − 1,69·10⁻³·θ² + 2,22·10⁻⁶·θ³     20 ≤ θ &lt; 600 °C
+  666 + 13 002 / (738 − θ)                            600 ≤ θ &lt; 735 °C
+  545 + 17 820 / (θ − 731)                            735 ≤ θ &lt; 900 °C
+  650                                                 900 ≤ θ ≤ 1200 °C</div><div class="ref">EN 1993-1-2 éq. (3.2a–d), §3.4.1.2</div></div>
+
+  <h4>Conductivité thermique</h4>
+  <div class="eq multi"><div class="f">λ_a(θ) [W/m·K] =
+  54 − 3,33·10⁻²·θ        20 ≤ θ &lt; 800 °C
+  27,3                    800 ≤ θ ≤ 1200 °C</div><div class="ref">EN 1993-1-2 éq. (3.3a–b), §3.4.1.3</div></div>
+  <p class="where">λ<sub>a</sub> n'intervient pas dans le modèle à température uniforme, mais reste nécessaire pour justifier l'hypothèse (Bi ≪ 1) et pour une éventuelle extension à un modèle à gradient.</p>
+
+  <h4>Nuances d'acier</h4>
+  <p>S235, S275, S355, S420, S460 selon EN&nbsp;10025, avec f<sub>y</sub> dépendant de l'épaisseur du produit <span class="c">SIA 263 tab. 1</span>. Le module <code>materiaux/acier.py</code> applique la réduction de f<sub>y</sub> pour t &gt; 40 mm — non négligeable sur les HHD et HL.</p>
+
+  </div>
+</section>
+
+<!-- ============ 7 ============ -->
+<section id="s7">
+  <div class="sechead"><span class="secnum">7</span><h2>Courbes de feu et flux thermique</h2></div>
+  <div class="body">
+
+  <h4>Courbes nominales</h4>
+  <div class="eq"><div class="f">ISO 834 (normalisée)   θ_g = 20 + 345·log₁₀(8t + 1)</div><div class="ref">EN 1991-1-2 éq. (3.4)</div></div>
+  <div class="eq"><div class="f">Feu extérieur          θ_g = 660·(1 − 0,687·e^(−0,32t) − 0,313·e^(−3,8t)) + 20</div><div class="ref">EN 1991-1-2 éq. (3.5)</div></div>
+  <div class="eq"><div class="f">Hydrocarbures          θ_g = 1080·(1 − 0,325·e^(−0,167t) − 0,675·e^(−2,5t)) + 20</div><div class="ref">EN 1991-1-2 éq. (3.6)</div></div>
+  <p class="where"><code>t</code> en minutes, θ<sub>g</sub> en °C. Repères ISO 834 : 739 °C à 15 min, 842 °C à 30 min, 945 °C à 60 min, 1049 °C à 120 min.</p>
+
+  <h4>Flux thermique net</h4>
+  <p>C'est la condition aux limites de tout le calcul de diffusion&nbsp;: somme d'une composante convective et d'une composante radiative.</p>
+  <div class="eq"><div class="f">ḣ_net  =  ḣ_net,c  +  ḣ_net,r        [W/m²]</div><div class="ref">EN 1991-1-2 §3.1(3)</div></div>
+  <div class="eq"><div class="f">ḣ_net,c  =  α_c · (θ_g − θ_m)</div><div class="ref">EN 1991-1-2 éq. (3.2)</div></div>
+  <div class="eq"><div class="f">ḣ_net,r  =  Φ · ε_m · ε_f · σ · [ (θ_r + 273)⁴ − (θ_m + 273)⁴ ]</div><div class="ref">EN 1991-1-2 éq. (3.3)</div></div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Paramètre</th><th>Valeur</th><th>Référence</th></tr></thead>
+    <tbody>
+      <tr><td>α<sub>c</sub> — ISO 834 / feu extérieur</td><td class="num">25 W/m²K</td><td><span class="c">EN 1991-1-2 §3.2.1(2)</span></td></tr>
+      <tr><td>α<sub>c</sub> — hydrocarbures</td><td class="num">50 W/m²K</td><td><span class="c">EN 1991-1-2 §3.2.3(2)</span></td></tr>
+      <tr><td>ε<sub>m</sub> — émissivité surface acier carbone</td><td class="num">0,70</td><td><span class="c">EN 1993-1-2 §2.2(2)</span></td></tr>
+      <tr><td>ε<sub>f</sub> — émissivité du feu</td><td class="num">1,00</td><td><span class="c">EN 1991-1-2 §3.1(6)</span></td></tr>
+      <tr><td>Φ — facteur de forme</td><td class="num">1,00</td><td>par défaut, §3.1(7)</td></tr>
+      <tr><td>σ — constante de Stefan-Boltzmann</td><td class="num">5,67·10⁻⁸ W/m²K⁴</td><td>—</td></tr>
+      <tr><td>θ<sub>r</sub> — température de rayonnement</td><td>= θ<sub>g</sub></td><td>élément entouré de flammes</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p class="where">Pour l'acier <strong>inoxydable</strong>, ε<sub>m</sub> = 0,40 <span class="c">EN 1993-1-2 Annexe C</span> — prévu comme paramètre, non couvert en v1.</p>
+
+  </div>
+</section>
+
+<!-- ============ 8 ============ -->
+<section id="s8">
+  <div class="sechead"><span class="secnum">8</span><h2>Facteur de massiveté A<sub>m</sub>/V</h2></div>
+  <div class="body">
+
+  <p>Rapport entre la surface exposée au feu par unité de longueur et le volume d'acier par unité de longueur. C'est <strong>la</strong> variable géométrique du problème thermique&nbsp;: un IPE 300 (216 m⁻¹) chauffe presque cinq fois plus vite qu'un HHD 400.421 (45 m⁻¹).</p>
+
+  <div class="eq"><div class="f">A_m/V  =  P_exposé / A        [m⁻¹]</div><div class="ref">EN 1993-1-2 §4.2.5.1, tab. 4.2 / 4.3</div></div>
+
+  <h4>Périmètres — profilés I et H à ailes parallèles</h4>
+  <p>En développant le contour d'une section en I avec congés de raccordement de rayon r, les termes en t<sub>f</sub> se compensent et il reste une expression compacte&nbsp;:</p>
+  <div class="eq multi"><div class="f">Contour, 4 faces   P = 2h + 4b − 2t_w − (8 − 2π)·r
+Contour, 3 faces   P = 2h + 3b − 2t_w − (8 − 2π)·r
+Caisson, 4 faces   P = 2h + 2b
+Caisson, 3 faces   P = 2h + b</div><div class="ref">EN 1993-1-2 tab. 4.2</div></div>
+  <p class="where">Le terme <code>(8 − 2π)·r ≈ 1,717·r</code> retranche l'excès des quatre angles droits par rapport aux quatre quarts de cercle réels. C'est cette correction qui aligne le résultat sur la colonne U<sub>m</sub> du SZS (écart moyen 0,55 %).</p>
+
+  <h4>Périmètres — profilés à ailes inclinées (INP)</h4>
+  <p>Les faces intérieures d'ailes ont une pente de 14 %&nbsp;; leur longueur développée vaut <code>(b − t_w)/2 · √(1 + 0,14²)</code> par demi-aile, et l'épaisseur en bord d'aile diffère de t<sub>f</sub> (mesurée à mi-largeur d'aile). La formule dédiée réduit l'écart résiduel de ~4 % constaté avec la formule à ailes parallèles.</p>
+
+  <h4>Périmètres — tubes RRW</h4>
+  <div class="eq"><div class="f">4 faces   P = 2(h + b) − (8 − 2π)·r_ext        avec  r_ext ≈ 2t  (EN 10210)</div><div class="ref">EN 1993-1-2 tab. 4.3</div></div>
+  <p class="where">Sans la correction de rayon, l'écart avec U<sub>m</sub> atteint 9 % sur les petits tubes épais (RRW 60/60/8). Pour les tubes, contour et caisson sont identiques.</p>
+
+  <h4>Facteur d'ombre k<sub>sh</sub></h4>
+  <p>Les parties concaves d'un profilé en I se « voient » mutuellement et reçoivent donc moins de rayonnement net. Le facteur d'ombre corrige cet effet, et n'intervient que pour l'acier <strong>non protégé</strong>.</p>
+  <div class="eq"><div class="f">Sections en I, feu nominal   k_sh = 0,9 · [A_m/V]_caisson / [A_m/V]</div><div class="ref">EN 1993-1-2 éq. (4.26a)</div></div>
+  <div class="eq"><div class="f">Autres cas                   k_sh = [A_m/V]_caisson / [A_m/V]</div><div class="ref">EN 1993-1-2 éq. (4.26b)</div></div>
+  <p class="where">Pour un tube, [A<sub>m</sub>/V]<sub>caisson</sub> = [A<sub>m</sub>/V], donc k<sub>sh</sub> = 0,9 sous feu nominal. Valeurs typiques pour les I/H : 0,62 à 0,70.</p>
+
+  <div class="note">
+    <span class="tag">Domaine de validité</span>
+    <p>La méthode simplifiée d'échauffement suppose <code>A_m/V ≥ 10 m⁻¹</code> <span class="c">EN 1993-1-2 §4.2.5.1(1)</span>. Le catalogue SZS satisfait cette condition, mais de justesse dans le cas le plus défavorable&nbsp;: <strong>11,5 m⁻¹</strong> pour le HHD 400.1086 encaissé sur 3 faces. Le contrôle sera codé, avec avertissement explicite sous 15 m⁻¹.</p>
+  </div>
+
+  </div>
+</section>
+
+<!-- ============ 9 ============ -->
+<section id="s9">
+  <div class="sechead"><span class="secnum">9</span><h2>Diffusion de chaleur — profilé non protégé</h2></div>
+  <div class="body">
+
+  <p>Bilan d'énergie sur une tranche unitaire de profilé, à température uniforme&nbsp;: la chaleur entrant par la surface exposée pendant Δt élève la température de toute la masse d'acier.</p>
+
+  <div class="eq"><div class="f">Δθ_a,t  =  k_sh · (A_m/V) / (c_a · ρ_a) · ḣ_net · Δt</div><div class="ref">EN 1993-1-2 éq. (4.25), §4.2.5.1</div></div>
+
+  <dl class="kv">
+    <dt>k<sub>sh</sub></dt><dd>facteur d'ombre, éq. (4.26a/b) — voir §8</dd>
+    <dt>A<sub>m</sub>/V</dt><dd>facteur de massiveté [m⁻¹]</dd>
+    <dt>c<sub>a</sub></dt><dd>chaleur spécifique, <strong>réévaluée à chaque pas</strong> à θ<sub>a,t</sub> [J/kg·K]</dd>
+    <dt>ρ<sub>a</sub></dt><dd>7850 kg/m³</dd>
+    <dt>ḣ<sub>net</sub></dt><dd>flux net [W/m²], évalué avec θ<sub>m</sub> = θ<sub>a,t</sub> — voir §7</dd>
+    <dt>Δt</dt><dd><strong>≤ 5 s</strong>, prescription explicite de la norme</dd>
+  </dl>
+
+  <h4>Schéma d'intégration</h4>
+  <p>Euler explicite, conforme à la formulation normative. Le pas est plafonné à 5 s par la norme&nbsp;; l'outil utilisera <strong>Δt = 2 s</strong> par défaut pour la marge, avec vérification supplémentaire du critère de stabilité issu du terme radiatif (le flux net est fortement non linéaire aux premiers instants, où θ<sub>g</sub> monte de 20 à 500 °C en moins de 3 min).</p>
+
+<pre>θ ← 20 °C ;  t ← 0
+tant que t &lt; t_max :
+    θg   ← courbe_feu(t)
+    hnet ← αc·(θg − θ) + Φ·εm·εf·σ·((θg+273)⁴ − (θ+273)⁴)
+    Δθ   ← ksh · (Am/V) / (ca(θ)·ρa) · hnet · Δt
+    θ    ← θ + Δθ            <span class="cm"># c_a réévaluée au pas suivant</span>
+    t    ← t + Δt
+    enregistrer (t, θ)</pre>
+
+  <p>Résultats de l'implémentation de référence (ISO 834, k<sub>sh</sub> = 0,7, Δt = 2 s), en °C&nbsp;:</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="num">t [min]</th><th class="num">A<sub>m</sub>/V = 50</th><th class="num">100</th><th class="num">200</th><th class="num">300</th></tr></thead>
+    <tbody>
+      <tr><td class="num">5</td><td class="num">82</td><td class="num">136</td><td class="num">227</td><td class="num">300</td></tr>
+      <tr><td class="num">10</td><td class="num">184</td><td class="num">309</td><td class="num">474</td><td class="num">562</td></tr>
+      <tr><td class="num">15</td><td class="num">297</td><td class="num">473</td><td class="num">634</td><td class="num">686</td></tr>
+      <tr><td class="num">20</td><td class="num">410</td><td class="num">601</td><td class="num">718</td><td class="num">735</td></tr>
+      <tr><td class="num">30</td><td class="num">599</td><td class="num">734</td><td class="num">809</td><td class="num">829</td></tr>
+      <tr><td class="num">45</td><td class="num">740</td><td class="num">871</td><td class="num">894</td><td class="num">897</td></tr>
+      <tr><td class="num">60</td><td class="num">876</td><td class="num">934</td><td class="num">940</td><td class="num">942</td></tr>
+    </tbody>
+    <caption>Le palier autour de 735 °C (visible à 20–30 min pour A<sub>m</sub>/V = 300) est la signature du pic de chaleur spécifique — bon indicateur de correction de l'implémentation.</caption>
+  </table>
+  </div>
+
+  <p>Ces valeurs confirment le résultat bien connu&nbsp;: <strong>un profilé nu de massiveté courante dépasse 600 °C en 15 à 20 minutes</strong>, ce qui exclut pratiquement le R60 sans protection.</p>
+
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <div class="sechead"><span class="secnum">10</span><h2>Diffusion de chaleur — profilé protégé</h2></div>
+  <div class="body">
+
+  <p>Avec un isolant en contact, la résistance thermique de la couche contrôle le flux entrant, et la <strong>capacité calorifique de l'isolant lui-même</strong> absorbe une part de la chaleur — c'est le rôle du paramètre φ.</p>
+
+  <div class="eq"><div class="f">Δθ_a,t  =  [ λ_p·(A_p/V) / (d_p · c_a · ρ_a) ] · [ (θ_g,t − θ_a,t) / (1 + φ/3) ] · Δt
+           −  ( e^(φ/10) − 1 ) · Δθ_g,t</div><div class="ref">EN 1993-1-2 éq. (4.27), §4.2.5.2</div></div>
+
+  <div class="eq"><div class="f">φ  =  ( c_p · ρ_p / (c_a · ρ_a) ) · d_p · (A_p/V)</div><div class="ref">EN 1993-1-2 éq. (4.28)</div></div>
+
+  <dl class="kv">
+    <dt>A<sub>p</sub>/V</dt><dd>facteur de massiveté de l'acier protégé — <strong>périmètre de l'isolant</strong>, pas du profilé (caisson pour un encaissement, contour pour un flocage ou une peinture)</dd>
+    <dt>λ<sub>p</sub></dt><dd>conductivité thermique de l'isolant [W/m·K]</dd>
+    <dt>d<sub>p</sub></dt><dd>épaisseur de l'isolant [m]</dd>
+    <dt>c<sub>p</sub>, ρ<sub>p</sub></dt><dd>chaleur spécifique et masse volumique de l'isolant</dd>
+    <dt>Δθ<sub>g,t</sub></dt><dd>accroissement de la température des gaz sur le pas Δt</dd>
+    <dt>Δt</dt><dd><strong>≤ 30 s</strong> <span class="c">§4.2.5.2(2)</span></dd>
+  </dl>
+
+  <div class="note">
+    <span class="tag">Règle numérique impérative</span>
+    <p>Si <code>Δθ_g,t &gt; 0</code> et <code>Δθ_a,t &lt; 0</code>, alors <code>Δθ_a,t = 0</code> <span class="c">EN 1993-1-2 §4.2.5.2(1)</span>. Le second terme de l'éq. (4.27) peut rendre l'incrément négatif pendant la phase initiale d'un isolant très capacitif ; sans cette règle, la température de l'acier chuterait sous 20 °C. C'est l'erreur d'implémentation la plus fréquente sur cette équation, et elle sera couverte par un test dédié.</p>
+  </div>
+
+  <h4>Base de matériaux de protection</h4>
+  <p>Valeurs génériques de la littérature, à remplacer par vos fiches produit certifiées. Stockées dans <code>data/protections.toml</code>, éditable sans toucher au code.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Produit</th><th class="num">λ<sub>p</sub> [W/mK]</th><th class="num">ρ<sub>p</sub> [kg/m³]</th><th class="num">c<sub>p</sub> [J/kgK]</th><th class="num">d<sub>p</sub> usuel [mm]</th><th>Pose</th></tr></thead>
+    <tbody>
+      <tr><td>Flocage fibreux (laine minérale projetée)</td><td class="num">0,12</td><td class="num">300</td><td class="num">1200</td><td class="num">10–50</td><td>contour</td></tr>
+      <tr><td>Flocage pâteux (vermiculite–ciment)</td><td class="num">0,15</td><td class="num">550</td><td class="num">1100</td><td class="num">10–50</td><td>contour</td></tr>
+      <tr><td>Plaques de plâtre coupe-feu (type F)</td><td class="num">0,20</td><td class="num">800</td><td class="num">1700</td><td class="num">12,5–50</td><td>caisson</td></tr>
+      <tr><td>Plaques silicate de calcium</td><td class="num">0,15</td><td class="num">450</td><td class="num">1200</td><td class="num">15–50</td><td>caisson</td></tr>
+      <tr><td>Laine de roche en panneaux</td><td class="num">0,12</td><td class="num">150</td><td class="num">1200</td><td class="num">20–60</td><td>caisson</td></tr>
+      <tr><td>Peinture intumescente</td><td colspan="4">traitement particulier — voir ci-dessous</td><td>contour</td></tr>
+    </tbody>
+    <caption>Valeurs d'ordre de grandeur pour le développement et les tests. Toute étude réelle doit utiliser les valeurs de l'agrément technique du produit (ETE / homologation AEAI).</caption>
+  </table>
+  </div>
+
+  <h4>Cas des peintures intumescentes</h4>
+  <p>Leur λ<sub>p</sub> apparent varie fortement avec la température (le film gonfle d'un facteur 50 à 100). Les traiter comme un isolant à λ<sub>p</sub> constant est physiquement faux. L'outil offrira deux voies&nbsp;:</p>
+  <ol>
+    <li><strong>λ<sub>p</sub>(θ) tabulé</strong> par le fabricant, interpolé à chaque pas de temps — l'éq. (4.27) reste valable, seul λ<sub>p</sub> devient fonction de θ<sub>a,t</sub>.</li>
+    <li><strong>Tables d'épaisseur certifiées</strong> (A<sub>p</sub>/V × θ<sub>cr</sub> × durée → d<sub>p</sub>), interpolées directement. C'est la pratique réelle des bureaux d'études&nbsp;; le format d'import sera un CSV simple.</li>
+  </ol>
+
+  <h4>Teneur en humidité</h4>
+  <p>Un isolant humide présente un palier d'évaporation à 100 °C. La méthode admise consiste à ajouter un <strong>délai t<sub>v</sub></strong> pendant lequel θ<sub>a</sub> reste bloqué à 100 °C <span class="c">EN 1993-1-2 §4.2.5.2(6)</span>. Implémenté comme option, désactivé par défaut (sécuritaire).</p>
+
+  <h4>Recherche de l'épaisseur requise</h4>
+  <p>θ<sub>a</sub>(t<sub>requis</sub>) est strictement décroissante en d<sub>p</sub>, ce qui garantit l'unicité de la solution. Bissection sur <code>d_p ∈ [0,1 mm ; 100 mm]</code> jusqu'à <code>|θ_a(t_requis) − θ_cr| &lt; 0,5 °C</code>, puis arrondi à l'épaisseur commerciale supérieure. Une vingtaine d'itérations, chacune une intégration complète&nbsp;: quelques dizaines de millisecondes.</p>
+
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <div class="sechead"><span class="secnum">11</span><h2>Le nomogramme</h2></div>
+  <div class="body">
+
+  <p>Le nomogramme est l'articulation graphique des deux voies&nbsp;: à gauche la relation mécanique degré d'utilisation → température critique, à droite la relation thermique température → durée d'exposition, partageant l'axe vertical des températures.</p>
+
+  <h4>Degré d'utilisation</h4>
+  <div class="eq"><div class="f">μ₀  =  E_fi,d / R_fi,d,0</div><div class="ref">EN 1993-1-2 éq. (4.23), §4.2.4</div></div>
+  <p class="where">R<sub>fi,d,0</sub> est la résistance de l'élément <strong>à l'instant t = 0</strong> (donc à 20 °C), calculée avec γ<sub>M,fi</sub> = 1,0 et les <strong>conditions d'appui de la situation d'incendie</strong>. Pour un poteau, R<sub>fi,d,0</sub> inclut donc déjà le flambage avec la longueur de flambement réduite du §12.</p>
+
+  <div class="eq"><div class="f">μ₀  =  η_fi · ( γ_M,fi / γ_M0 )        (alternative, éléments tendus et poutres sans déversement)</div><div class="ref">EN 1993-1-2 éq. (4.24)</div></div>
+
+  <h4>Température critique</h4>
+  <div class="eq"><div class="f">θ_a,cr  =  39,19 · ln[ 1 / (0,9674 · μ₀^3,833) − 1 ]  +  482        [°C]</div><div class="ref">EN 1993-1-2 éq. (4.22), §4.2.4(2)</div></div>
+  <p class="where">Valable pour <code>μ₀ ≥ 0,013</code>. C'est l'inversion analytique de la courbe k<sub>y,θ</sub>(θ) du tableau 3.1 — d'où le domaine 480–700 °C pour les degrés d'utilisation courants.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th class="num">μ₀</th><th class="num">0,10</th><th class="num">0,20</th><th class="num">0,30</th><th class="num">0,40</th><th class="num">0,50</th><th class="num">0,60</th><th class="num">0,70</th><th class="num">0,80</th></tr></thead>
+    <tbody>
+      <tr><td class="num">θ<sub>a,cr</sub> [°C]</td><td class="num">829</td><td class="num">725</td><td class="num">664</td><td class="num">620</td><td class="num">585</td><td class="num">554</td><td class="num">526</td><td class="num">496</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 780 420" role="img" aria-labelledby="nomo-t nomo-d">
+        <title id="nomo-t">Nomogramme à deux quadrants</title>
+        <desc id="nomo-d">Quadrant gauche : température critique en fonction du degré d'utilisation selon l'équation 4.22. Quadrant droit : échauffement de l'acier nu sous ISO 834 pour cinq facteurs de massiveté. Les deux quadrants partagent l'axe vertical des températures.</desc>
+
+        <!-- grille horizontale -->
+        <g class="grid">
+          <line x1="60" y1="296" x2="720" y2="296"/>
+          <line x1="60" y1="232" x2="720" y2="232"/>
+          <line x1="60" y1="168" x2="720" y2="168"/>
+          <line x1="60" y1="104" x2="720" y2="104"/>
+          <line x1="60" y1="40"  x2="720" y2="40"/>
+        </g>
+
+        <!-- axes -->
+        <path class="ax" d="M60 360 H720"/>
+        <path class="ax" d="M340 360 V40"/>
+
+        <!-- graduations bas gauche : mu0 -->
+        <g class="tick">
+          <line x1="340" y1="360" x2="340" y2="365"/><line x1="278" y1="360" x2="278" y2="365"/>
+          <line x1="216" y1="360" x2="216" y2="365"/><line x1="153" y1="360" x2="153" y2="365"/>
+          <line x1="91"  y1="360" x2="91"  y2="365"/>
+        </g>
+        <g class="lbl" text-anchor="middle">
+          <text x="340" y="378">0</text><text x="278" y="378">0,2</text><text x="216" y="378">0,4</text>
+          <text x="153" y="378">0,6</text><text x="91" y="378">0,8</text>
+        </g>
+
+        <!-- graduations bas droite : t -->
+        <g class="tick">
+          <line x1="435" y1="360" x2="435" y2="365"/><line x1="530" y1="360" x2="530" y2="365"/>
+          <line x1="625" y1="360" x2="625" y2="365"/><line x1="720" y1="360" x2="720" y2="365"/>
+        </g>
+        <g class="lbl" text-anchor="middle">
+          <text x="435" y="378">30</text><text x="530" y="378">60</text>
+          <text x="625" y="378">90</text><text x="720" y="378">120</text>
+        </g>
+
+        <!-- graduations température -->
+        <g class="tick">
+          <line x1="340" y1="296" x2="345" y2="296"/><line x1="340" y1="232" x2="345" y2="232"/>
+          <line x1="340" y1="168" x2="345" y2="168"/><line x1="340" y1="104" x2="345" y2="104"/>
+          <line x1="340" y1="40"  x2="345" y2="40"/>
+        </g>
+        <g class="lbl halo" text-anchor="end">
+          <text x="336" y="299">200</text><text x="336" y="235">400</text><text x="336" y="171">600</text>
+          <text x="336" y="107">800</text><text x="336" y="43">1000</text>
+        </g>
+
+        <!-- noms d'axes -->
+        <text class="axname" x="200" y="402" text-anchor="middle">μ₀  ·  degré d'utilisation</text>
+        <text class="axname" x="530" y="402" text-anchor="middle">t  ·  durée d'exposition [min]</text>
+        <text class="axname halo" x="340" y="28" text-anchor="middle">θ  [°C]</text>
+
+        <!-- courbe gauche : eq 4.22 -->
+        <polyline class="k-left" points="324.4,61.3 320.1,73.1 315.8,82.5 311.5,90.4 307.2,97.2 302.9,103.1 298.6,108.4 294.3,113.1 290.0,117.5 285.7,121.4 281.4,125.1 277.1,128.5 272.8,131.7 268.5,134.7 264.2,137.5 259.9,140.2 255.6,142.7 251.3,145.1 247.0,147.4 242.7,149.6 238.4,151.7 234.1,153.8 229.8,155.7 225.5,157.6 221.2,159.4 216.9,161.1 212.5,162.9 208.2,164.5 203.9,166.1 199.6,167.7 195.3,169.2 191.0,170.7 186.7,172.1 182.4,173.6 178.1,175.0 173.8,176.4 169.5,177.7 165.2,179.0 160.9,180.4 156.6,181.7 152.3,182.9 148.0,184.2 143.7,185.5 139.4,186.7 135.1,188.0 130.8,189.3 126.5,190.5 122.2,191.8 117.9,193.0 113.6,194.3 109.3,195.6 105.0,196.9 100.7,198.2 96.3,199.6 92.0,201.0 87.7,202.4 83.4,203.9 79.1,205.4 74.8,207.0 70.5,208.7 66.2,210.5"/>
+        <text class="lbl-b halo" x="95" y="224">éq. (4.22)</text>
+
+        <!-- courbe gaz -->
+        <polyline class="k-gas" points="340.0,353.6 344.8,230.6 349.5,199.3 354.2,180.5 359.0,167.0 363.8,156.5 368.5,147.9 373.2,140.6 378.0,134.3 382.8,128.7 387.5,123.7 392.2,119.1 397.0,115.0 401.8,111.2 406.5,107.6 411.2,104.4 416.0,101.3 420.8,98.4 425.5,95.7 430.2,93.1 435.0,90.6 439.8,88.3 444.5,86.1 449.2,84.0 454.0,81.9 458.8,80.0 463.5,78.1 468.2,76.3 473.0,74.5 477.8,72.9 482.5,71.3 487.2,69.7 492.0,68.2 496.8,66.7 501.5,65.3 506.2,63.9 511.0,62.5 515.8,61.2 520.5,59.9 525.2,58.7 530.0,57.5 534.8,56.3 539.5,55.2 544.2,54.0 549.0,52.9 553.8,51.9 558.5,50.8 563.2,49.8 568.0,48.8 572.8,47.8 577.5,46.8 582.2,45.9 587.0,44.9 591.8,44.0 596.5,43.1 601.2,42.2 606.0,41.4 610.8,40.5 615.5,40.0"/>
+
+        <!-- courbes acier -->
+        <polyline class="k-heat" stroke-width="2" points="340.0,353.6 343.2,341.7 346.3,319.9 349.5,294.9 352.7,269.5 355.8,245.3 359.0,223.6 362.2,204.9 365.3,189.3 368.5,176.5 371.7,166.0 374.8,157.3 378.0,150.0 381.2,143.9 384.3,138.8 387.5,134.4 390.7,130.8 393.8,128.0 397.0,125.9 400.2,124.6 403.3,122.8 406.5,119.8 409.7,115.8 412.8,111.6 416.0,107.7 419.2,104.4 422.3,101.6 425.5,99.2 428.7,97.0 431.8,95.0 435.0,93.1 438.2,91.4 441.3,89.7 444.5,88.1 447.7,86.6 450.8,85.1 454.0,83.6 457.2,82.3 460.3,80.9 463.5,79.6 466.7,78.3 469.8,77.1 473.0,75.9 476.2,74.7 479.3,73.6 482.5,72.4 485.7,71.4 488.8,70.3 492.0,69.2 495.2,68.2 498.3,67.2 501.5,66.3 504.7,65.3 507.8,64.4 511.0,63.5 514.2,62.6 517.3,61.7 520.5,60.8 523.7,59.9 526.8,59.1 530.0,58.3 533.2,57.5 536.3,56.7 539.5,55.9 542.7,55.1 545.8,54.4 549.0,53.6 552.2,52.9 555.3,52.2 558.5,51.5 561.7,50.8 564.8,50.1 568.0,49.4 571.2,48.7 574.3,48.1 577.5,47.4 580.7,46.8 583.8,46.1 587.0,45.5 590.2,44.9 593.3,44.3 596.5,43.7 599.7,43.1 602.8,42.5 606.0,41.9 609.2,41.3 612.3,40.7 615.5,40.2 618.7,40.0"/>
+        <polyline class="k-heat" stroke-width="1.4" points="340.0,353.6 343.2,347.4 346.3,335.3 349.5,320.5 352.7,304.3 355.8,287.4 359.0,270.3 362.2,253.5 365.3,237.3 368.5,222.1 371.7,208.1 374.8,195.5 378.0,184.1 381.2,174.0 384.3,165.1 387.5,157.1 390.7,150.1 393.8,143.9 397.0,138.6 400.2,134.1 403.3,130.4 406.5,127.5 409.7,125.6 412.8,124.5 416.0,122.9 419.2,120.4 422.3,116.9 425.5,112.9 428.7,108.7 431.8,104.7 435.0,101.1 438.2,97.9 441.3,95.0 444.5,92.5 447.7,90.3 450.8,88.2 454.0,86.4 457.2,84.7 460.3,83.1 463.5,81.6 466.7,80.1 469.8,78.8 473.0,77.5 476.2,76.2 479.3,75.0 482.5,73.8 485.7,72.6 488.8,71.5 492.0,70.4 495.2,69.4 498.3,68.3 501.5,67.3 504.7,66.3 507.8,65.4 511.0,64.4 514.2,63.5 517.3,62.6 520.5,61.7 523.7,60.8 526.8,60.0 530.0,59.1 533.2,58.3 536.3,57.5 539.5,56.7 542.7,55.9 545.8,55.1 549.0,54.4 552.2,53.6 555.3,52.9 558.5,52.1 561.7,51.4 564.8,50.7 568.0,50.0 571.2,49.3 574.3,48.7 577.5,48.0 580.7,47.4 583.8,46.7 587.0,46.1 590.2,45.4 593.3,44.8 596.5,44.2 599.7,43.6 602.8,43.0 606.0,42.4 609.2,41.8 612.3,41.3 615.5,40.7 618.7,40.1 621.8,40.0"/>
+        <polyline class="k-heat" stroke-width="1.4" stroke-dasharray="6 3.5" points="340.0,353.6 343.2,350.4 346.3,344.0 349.5,335.9 352.7,326.6 355.8,316.5 359.0,305.9 362.2,294.9 365.3,283.8 368.5,272.5 371.7,261.2 374.8,250.1 378.0,239.1 381.2,228.6 384.3,218.3 387.5,208.6 390.7,199.4 393.8,190.7 397.0,182.5 400.2,174.9 403.3,167.8 406.5,161.1 409.7,154.9 412.8,149.2 416.0,143.9 419.2,139.2 422.3,135.0 425.5,131.4 428.7,128.5 431.8,126.4 435.0,125.1 438.2,124.1 441.3,122.6 444.5,120.4 447.7,117.4 450.8,113.8 454.0,110.0 457.2,106.0 460.3,102.1 463.5,98.4 466.7,94.9 469.8,91.7 473.0,88.7 476.2,86.0 479.3,83.5 482.5,81.2 485.7,79.2 488.8,77.3 492.0,75.5 495.2,73.9 498.3,72.4 501.5,71.0 504.7,69.7 507.8,68.4 511.0,67.2 514.2,66.1 517.3,65.0 520.5,64.0 523.7,63.0 526.8,62.1 530.0,61.1 533.2,60.2 536.3,59.3 539.5,58.5 542.7,57.6 545.8,56.8 549.0,56.0 552.2,55.2 555.3,54.4 558.5,53.6 561.7,52.9 564.8,52.2 568.0,51.4 571.2,50.7 574.3,50.0 577.5,49.3 580.7,48.6 583.8,48.0 587.0,47.3 590.2,46.6 593.3,46.0 596.5,45.4 599.7,44.7 602.8,44.1 606.0,43.5 609.2,42.9 612.3,42.3 615.5,41.7 618.7,41.1 621.8,40.6 625.0,40.0"/>
+        <polyline class="k-heat" stroke-width="1.4" stroke-dasharray="2 2.6" points="340.0,353.6 343.2,352.0 346.3,348.7 349.5,344.4 352.7,339.4 355.8,333.8 359.0,327.8 362.2,321.5 365.3,314.9 368.5,308.1 371.7,301.1 374.8,294.0 378.0,286.8 381.2,279.5 384.3,272.2 387.5,264.8 390.7,257.5 393.8,250.2 397.0,243.0 400.2,235.8 403.3,228.8 406.5,221.9 409.7,215.2 412.8,208.6 416.0,202.2 419.2,196.0 422.3,190.1 425.5,184.3 428.7,178.7 431.8,173.4 435.0,168.3 438.2,163.4 441.3,158.6 444.5,154.1 447.7,149.7 450.8,145.6 454.0,141.7 457.2,138.1 460.3,134.9 463.5,132.0 466.7,129.5 469.8,127.5 473.0,126.0 476.2,125.0 479.3,124.3 482.5,123.2 485.7,121.7 488.8,119.7 492.0,117.3 495.2,114.4 498.3,111.3 501.5,108.0 504.7,104.6 507.8,101.2 511.0,97.8 514.2,94.5 517.3,91.3 520.5,88.2 523.7,85.3 526.8,82.5 530.0,79.8 533.2,77.3 536.3,74.9 539.5,72.7 542.7,70.6 545.8,68.7 549.0,66.9 552.2,65.2 555.3,63.6 558.5,62.1 561.7,60.6 564.8,59.3 568.0,58.0 571.2,56.9 574.3,55.7 577.5,54.6 580.7,53.6 583.8,52.6 587.0,51.7 590.2,50.8 593.3,49.9 596.5,49.1 599.7,48.2 602.8,47.5 606.0,46.7 609.2,46.0 612.3,45.2 615.5,44.5 618.7,43.9 621.8,43.2 625.0,42.5 628.2,41.9 631.3,41.3 634.5,40.7 637.7,40.1 640.8,40.0"/>
+        <polyline class="k-heat" stroke-width="1.6" stroke-dasharray="0.5 3.4" points="340.0,353.6 343.2,352.8 346.3,351.1 349.5,348.9 352.7,346.3 355.8,343.3 359.0,340.1 362.2,336.7 365.3,333.0 368.5,329.2 371.7,325.3 374.8,321.3 378.0,317.1 381.2,312.8 384.3,308.5 387.5,304.1 390.7,299.6 393.8,295.1 397.0,290.5 400.2,285.9 403.3,281.2 406.5,276.5 409.7,271.8 412.8,267.1 416.0,262.4 419.2,257.7 422.3,253.0 425.5,248.3 428.7,243.6 431.8,239.0 435.0,234.3 438.2,229.8 441.3,225.2 444.5,220.7 447.7,216.3 450.8,211.9 454.0,207.6 457.2,203.4 460.3,199.2 463.5,195.1 466.7,191.1 469.8,187.2 473.0,183.3 476.2,179.6 479.3,175.9 482.5,172.3 485.7,168.8 488.8,165.3 492.0,161.9 495.2,158.6 498.3,155.4 501.5,152.3 504.7,149.2 507.8,146.3 511.0,143.4 514.2,140.7 517.3,138.1 520.5,135.7 523.7,133.5 526.8,131.4 530.0,129.6 533.2,128.1 536.3,126.8 539.5,125.8 542.7,125.1 545.8,124.6 549.0,123.9 552.2,123.1 555.3,122.0 558.5,120.6 561.7,119.0 564.8,117.1 568.0,115.0 571.2,112.7 574.3,110.2 577.5,107.7 580.7,105.1 583.8,102.4 587.0,99.7 590.2,97.0 593.3,94.3 596.5,91.6 599.7,88.9 602.8,86.3 606.0,83.8 609.2,81.3 612.3,78.9 615.5,76.5 618.7,74.2 621.8,72.0 625.0,69.9 628.2,67.8 631.3,65.8 634.5,64.0 637.7,62.1 640.8,60.4 644.0,58.7 647.2,57.1 650.3,55.6 653.5,54.1 656.7,52.6 659.8,51.3 663.0,50.0 666.2,48.7 669.3,47.5 672.5,46.3 675.7,45.2 678.8,44.1 682.0,43.1 685.2,42.1 688.3,41.1 691.5,40.2 694.7,40.0"/>
+
+        <!-- chemin de lecture exemple -->
+        <path class="k-path" d="M200 360 V167.7 H383.5 V360"/>
+        <circle class="k-dot" cx="200" cy="360" r="3"/>
+        <circle class="k-dot" cx="199.6" cy="167.7" r="3"/>
+        <circle class="k-dot" cx="383.5" cy="167.5" r="3"/>
+        <circle class="k-dot" cx="383.5" cy="360" r="3"/>
+        <text class="lbl-b halo" x="205" y="352" fill="var(--accent)">μ₀ = 0,45</text>
+        <text class="lbl-b halo" x="248" y="162" fill="var(--accent)">θ_cr = 601 °C</text>
+        <text class="lbl-b halo" x="390" y="352" fill="var(--accent)">≈ 14 min</text>
+
+        <!-- légende -->
+        <rect class="legbox" x="590" y="216" width="128" height="136" rx="1"/>
+        <text class="lbl" x="600" y="233" style="fill:var(--ink)">Aₘ/V [m⁻¹] · acier nu</text>
+        <g class="k-heat">
+          <line x1="600" y1="248" x2="628" y2="248" stroke-width="2"/>
+          <line x1="600" y1="266" x2="628" y2="266" stroke-width="1.4"/>
+          <line x1="600" y1="284" x2="628" y2="284" stroke-width="1.4" stroke-dasharray="6 3.5"/>
+          <line x1="600" y1="302" x2="628" y2="302" stroke-width="1.4" stroke-dasharray="2 2.6"/>
+          <line x1="600" y1="320" x2="628" y2="320" stroke-width="1.6" stroke-dasharray="0.5 3.4"/>
+        </g>
+        <line x1="600" y1="338" x2="628" y2="338" class="k-gas"/>
+        <g class="lbl">
+          <text x="635" y="251">400</text><text x="635" y="269">200</text><text x="635" y="287">100</text>
+          <text x="635" y="305">50</text><text x="635" y="323">25</text>
+          <text x="635" y="341">gaz</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption><strong>Lecture</strong> — On entre par μ₀ sur l'axe inférieur gauche, on remonte jusqu'à la courbe de l'équation (4.22), on lit θ<sub>a,cr</sub> sur l'axe central, puis on suit l'horizontale vers la droite jusqu'à la courbe d'échauffement du profilé considéré&nbsp;: la verticale donne la durée de résistance au feu. Ici, μ₀ = 0,45 → θ<sub>a,cr</sub> = 601 °C → pour A<sub>m</sub>/V = 200 m⁻¹ non protégé, t<sub>fi,d</sub> ≈ 14 min. Courbes calculées avec l'implémentation de référence (ISO 834, k<sub>sh</sub> = 0,7). Le quadrant droit se substitue, pour un élément protégé, par la famille de courbes à λ<sub>p</sub>·(A<sub>p</sub>/V)/d<sub>p</sub> constant.</figcaption>
+  </figure>
+
+  <h4>Cas particuliers de température critique</h4>
+  <ul>
+    <li><strong>Classe 4</strong>&nbsp;: θ<sub>a,cr</sub> = 350 °C, valeur conventionnelle <span class="c">EN 1993-1-2 Annexe E (recommandée)</span>. L'éq. (4.22) ne s'applique pas.</li>
+    <li><strong>Instabilité</strong>&nbsp;: l'éq. (4.22) suppose que la ruine est gouvernée par la résistance de section. Dès que le flambement ou le déversement gouverne, μ₀ doit inclure χ<sub>fi</sub> — et la variation de χ<sub>fi</sub> avec θ (via k<sub>E,θ</sub>/k<sub>y,θ</sub>) n'est pas prise en compte par l'éq. (4.22). D'où le §12.</li>
+    <li><strong>Critères de déformation</strong>&nbsp;: si des limites de flèche s'appliquent, l'éq. (4.22) n'est pas valable <span class="c">EN 1993-1-2 §4.2.4(1)</span>. Hors périmètre, signalé par un avertissement.</li>
+  </ul>
+
+  </div>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <div class="sechead"><span class="secnum">12</span><h2>Vérification croisée par les résistances</h2></div>
+  <div class="body">
+
+  <p class="lead-in">Conformément au choix retenu, le nomogramme fournit le résultat principal, et la méthode complète par facteurs de réduction sert de garde-fou obligatoire dès que la stabilité gouverne. En cas de divergence, le résultat le plus défavorable est retenu et l'écart est signalé dans la note de calcul.</p>
+
+  <h4>Classification à chaud</h4>
+  <div class="eq"><div class="f">ε  =  0,85 · √(235 / f_y)</div><div class="ref">EN 1993-1-2 §4.2.2</div></div>
+  <p class="where">Le coefficient 0,85 ≈ √(k<sub>E,θ</sub>/k<sub>y,θ</sub>) traduit la dégradation plus rapide du module que de la limite d'élasticité&nbsp;: une section de classe 3 à froid peut passer en classe 4 à chaud.</p>
+
+  <h4>Traction</h4>
+  <div class="eq"><div class="f">N_fi,θ,Rd  =  k_y,θ · A · f_y / γ_M,fi</div><div class="ref">EN 1993-1-2 éq. (4.3), §4.2.3.1</div></div>
+
+  <h4>Compression avec flambage — classes 1, 2, 3</h4>
+  <div class="eq"><div class="f">N_b,fi,t,Rd  =  χ_fi · A · k_y,θ · f_y / γ_M,fi</div><div class="ref">EN 1993-1-2 éq. (4.5), §4.2.3.2</div></div>
+  <div class="eq multi"><div class="f">χ_fi   = 1 / ( φ_θ + √(φ_θ² − λ̄_θ²) )
+φ_θ    = ½ · [ 1 + α·λ̄_θ + λ̄_θ² ]
+α      = 0,65 · √(235 / f_y)
+λ̄_θ    = λ̄ · √( k_y,θ / k_E,θ )</div><div class="ref">EN 1993-1-2 éq. (4.6) à (4.9)</div></div>
+
+  <p class="where">Deux points essentiels&nbsp;: (i) une <strong>courbe de flambement unique</strong> à chaud, avec α = 0,65·√(235/f<sub>y</sub>), remplace les courbes a/b/c/d de l'EN 1993-1-1&nbsp;; (ii) l'élancement réduit <strong>augmente</strong> avec la température, puisque k<sub>E,θ</sub> décroît plus vite que k<sub>y,θ</sub> — à 600 °C, √(0,470/0,310) = 1,23, soit +23 % d'élancement.</p>
+
+  <h4>Longueur de flambement en situation d'incendie</h4>
+  <p>Pour un poteau continu d'un contreventement, dans un compartiment coupe-feu&nbsp;: le poteau chaud est bridé par les étages froids adjacents <span class="c">EN 1993-1-2 §4.2.3.2(4)</span>.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Situation</th><th class="num">l<sub>fi</sub></th></tr></thead>
+    <tbody>
+      <tr><td>Poteau continu, étage intermédiaire</td><td class="num">0,5 · L</td></tr>
+      <tr><td>Poteau continu, étage supérieur</td><td class="num">0,7 · L</td></tr>
+      <tr><td>Autres cas (par défaut)</td><td class="num">= longueur ELU</td></tr>
+    </tbody>
+    <caption>Gain souvent décisif : passer de l = L à l<sub>fi</sub> = 0,5·L peut suffire à valider un R60 sans protection sur un poteau trapu.</caption>
+  </table>
+  </div>
+
+  <h4>Flexion — classes 1 et 2</h4>
+  <div class="eq"><div class="f">M_fi,t,Rd  =  ( W_pl,y · k_y,θ · f_y / γ_M,fi ) · 1 / (κ₁ · κ₂)</div><div class="ref">EN 1993-1-2 §4.2.3.3</div></div>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Facteur d'adaptation</th><th>Situation</th><th class="num">Valeur</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="3">κ₁ — répartition sur la section</td><td>poutre exposée sur 4 faces</td><td class="num">1,00</td></tr>
+      <tr><td>exposée 3 faces, dalle béton</td><td class="num">0,70</td></tr>
+      <tr><td>exposée 3 faces, dalle mixte</td><td class="num">0,85</td></tr>
+      <tr><td rowspan="2">κ₂ — répartition sur la longueur</td><td>aux appuis d'une poutre hyperstatique</td><td class="num">0,85</td></tr>
+      <tr><td>tous les autres cas</td><td class="num">1,00</td></tr>
+    </tbody>
+    <caption>Les κ traduisent le fait qu'une section partiellement protégée par une dalle est plus froide que ne le suppose l'hypothèse de température uniforme. <span class="c">EN 1993-1-2 §4.2.3.3(7)–(9)</span></caption>
+  </table>
+  </div>
+
+  <h4>Déversement</h4>
+  <div class="eq"><div class="f">M_b,fi,t,Rd  =  χ_LT,fi · W_pl,y · k_y,θ · f_y / γ_M,fi</div><div class="ref">EN 1993-1-2 éq. (4.11), §4.2.3.3(4)</div></div>
+  <div class="eq multi"><div class="f">χ_LT,fi        = 1 / ( φ_LT,θ,com + √(φ_LT,θ,com² − λ̄_LT,θ,com²) )
+φ_LT,θ,com     = ½ · [ 1 + α·λ̄_LT,θ,com + λ̄_LT,θ,com² ]
+λ̄_LT,θ,com     = λ̄_LT · √( k_y,θ,com / k_E,θ,com )</div><div class="ref">EN 1993-1-2 éq. (4.12) et suivantes</div></div>
+  <p class="where">L'indice « com » désigne la semelle comprimée. En température uniforme, k<sub>y,θ,com</sub> = k<sub>y,θ</sub>. La même valeur α = 0,65·√(235/f<sub>y</sub>) est utilisée.</p>
+
+  <h4>Effort tranchant</h4>
+  <div class="eq"><div class="f">V_fi,t,Rd  =  k_y,θ · A_v · f_y / (√3 · γ_M,fi)</div><div class="ref">EN 1993-1-2 §4.2.3.3(6) / §4.2.3.4</div></div>
+  <p class="where">A<sub>v</sub> est directement disponible dans votre fichier SZS. Vérification systématique et signalement d'interaction si V<sub>fi,Ed</sub> &gt; 0,5·V<sub>fi,t,Rd</sub>.</p>
+
+  </div>
+</section>
+
+<!-- ============ 13 ============ -->
+<section id="s13">
+  <div class="sechead"><span class="secnum">13</span><h2>Interaction N + M</h2></div>
+  <div class="body">
+
+  <p>C'est le cas visé par votre demande&nbsp;: un élément simultanément comprimé et fléchi. Deux critères doivent être satisfaits <span class="c">EN 1993-1-2 §4.2.3.5</span>.</p>
+
+  <h4>Critère de flambement par flexion</h4>
+  <div class="eq multi"><div class="f">        N_fi,Ed                    k_y · M_y,fi,Ed              k_z · M_z,fi,Ed
+──────────────────────  +  ──────────────────────  +  ──────────────────────   ≤ 1
+ χ_min,fi·A·k_y,θ·f_y/γ      W_pl,y·k_y,θ·f_y/γ           W_pl,z·k_y,θ·f_y/γ</div><div class="ref">EN 1993-1-2 éq. (4.21a)</div></div>
+
+  <h4>Critère de déversement</h4>
+  <div class="eq multi"><div class="f">        N_fi,Ed                   k_LT · M_y,fi,Ed              k_z · M_z,fi,Ed
+──────────────────────  +  ────────────────────────  +  ──────────────────────   ≤ 1
+  χ_z,fi·A·k_y,θ·f_y/γ      χ_LT,fi·W_pl,y·k_y,θ·f_y/γ      W_pl,z·k_y,θ·f_y/γ</div><div class="ref">EN 1993-1-2 éq. (4.21b)</div></div>
+
+  <p class="where">γ = γ<sub>M,fi</sub> = 1,0. χ<sub>min,fi</sub> = min(χ<sub>y,fi</sub>, χ<sub>z,fi</sub>).</p>
+
+  <h4>Facteurs d'interaction</h4>
+  <div class="eq multi"><div class="f">k_LT = 1 − μ_LT·N_fi,Ed / (χ_z,fi·A·k_y,θ·f_y/γ_M,fi)      ≤ 1
+μ_LT = 0,15 · λ̄_z,θ · β_M,LT − 0,15                        ≤ 0,9
+
+k_y  = 1 − μ_y·N_fi,Ed / (χ_y,fi·A·k_y,θ·f_y/γ_M,fi)       ≤ 3
+μ_y  = (1,2·β_M,y − 3)·λ̄_y,θ + 0,44·β_M,y − 0,29           ≤ 0,8
+
+k_z  = 1 − μ_z·N_fi,Ed / (χ_z,fi·A·k_y,θ·f_y/γ_M,fi)       ≤ 3
+μ_z  = (2·β_M,z − 5)·λ̄_z,θ + 0,44·β_M,z − 0,29             ≤ 0,8   (λ̄_z,θ ≤ 1,1)</div><div class="ref">EN 1993-1-2 §4.2.3.5</div></div>
+
+  <p class="where">β<sub>M</sub> sont les facteurs de moment uniforme équivalent, fonction du diagramme de moment (figure 4.2 de la norme)&nbsp;: β<sub>M,ψ</sub> = 1,8 − 0,7·ψ pour un diagramme linéaire d'extrémités M et ψ·M&nbsp;; 1,3 pour un moment de charge répartie&nbsp;; 1,4 pour une charge concentrée. L'utilisateur saisit soit ψ, soit β<sub>M</sub> directement.</p>
+
+  <h4>Conséquence sur le degré d'utilisation</h4>
+  <p>Pour un élément en N + M, μ₀ est <strong>le membre de gauche de l'éq. (4.21a) ou (4.21b) évalué à 20 °C</strong> — c'est-à-dire le taux de travail à froid sous les charges d'incendie, avec les conditions d'appui du feu. C'est la lecture correcte de « E<sub>fi,d</sub>/R<sub>fi,d,0</sub> » pour un cas combiné, et c'est ce que le module <code>utilisation.py</code> calcule.</p>
+
+  <div class="note">
+    <span class="tag">Limite reconnue de la méthode</span>
+    <p>L'équation (4.22) suppose que la résistance décroît proportionnellement à k<sub>y,θ</sub>. Pour un élément où le flambement gouverne, χ<sub>fi</sub> décroît <em>en plus</em> de k<sub>y,θ</sub> (par l'élancement qui augmente avec √(k<sub>y,θ</sub>/k<sub>E,θ</sub>)), et l'éq. (4.22) devient <strong>non conservative</strong>. Ordre de grandeur&nbsp;: 20 à 60 °C d'écart sur θ<sub>cr</sub> pour un poteau élancé. C'est précisément ce que la vérification croisée du §12 capture, et la raison pour laquelle elle n'est pas optionnelle dans cet outil.</p>
+  </div>
+
+  <h4>Résolution</h4>
+  <p>La vérification complète cherche la température θ<sub>a,cr,exact</sub> annulant la marge de l'éq. (4.21). Le membre de gauche est monotone croissant en θ sur [20 ; 1200] °C, donc bissection avec tolérance 0,1 °C — une centaine d'évaluations, instantané.</p>
+
+  </div>
+</section>
+
+<!-- ============ 14 ============ -->
+<section id="s14">
+  <div class="sechead"><span class="secnum">14</span><h2>Cadre suisse — SIA 263 / SIA 260</h2></div>
+  <div class="body">
+
+  <p>La SIA 263 traite la résistance au feu des structures en acier et renvoie, pour les méthodes de calcul détaillées, au corpus de l'EN 1993-1-2 — le moteur de calcul est donc commun. Ce qui change relève du <strong>cadre</strong>&nbsp;: combinaison d'actions, facteurs partiels, et exigences de durée.</p>
+
+  <h4>Ce que le code doit paramétrer différemment</h4>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Point</th><th>EN (valeurs recommandées)</th><th>Pratique suisse</th></tr></thead>
+    <tbody>
+      <tr><td>Combinaison accidentelle</td><td>ψ₁,₁·Q<sub>k,1</sub> + Σψ₂,i·Q<sub>k,i</sub></td><td><strong>ψ₂ pour toutes</strong> les actions variables <span class="c">SIA 260 §4.4.3.5</span></td></tr>
+      <tr><td>γ<sub>M</sub> à froid (section, stabilité)</td><td>γ<sub>M0</sub> = γ<sub>M1</sub> = 1,00</td><td>γ<sub>M1</sub> = <strong>1,05</strong> <span class="c">SIA 263 §4</span></td></tr>
+      <tr><td>γ<sub>M</sub> en situation d'incendie</td><td>γ<sub>M,fi</sub> = 1,00</td><td>γ<sub>M,fi</sub> = 1,00 (identique)</td></tr>
+      <tr><td>Nuances et f<sub>y</sub></td><td>EN 10025</td><td>EN 10025, reprises en <span class="c">SIA 263 tab. 1</span></td></tr>
+      <tr><td>Durée exigée (R30…R120)</td><td>Annexe nationale / réglementation</td><td>prescriptions <strong>AEAI</strong> (AICAA/VKF) selon affectation et géométrie du bâtiment</td></tr>
+      <tr><td>Produits de protection</td><td>ETE</td><td>homologation / <strong>reconnaissance AEAI</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="tag">Conséquence pratique importante</span>
+    <p>Le passage de γ<sub>M1</sub> = 1,05 (SIA, à froid) à γ<sub>M,fi</sub> = 1,00 (feu) apporte à lui seul <strong>+5 % de résistance</strong> en situation d'incendie, en plus de la baisse des charges. Le code doit donc rapporter μ₀ à la résistance calculée avec γ<sub>M,fi</sub> = 1,0, et non réutiliser le taux de travail ELU du logiciel de calcul de l'utilisateur — c'est une source d'erreur classique et le rapport le rendra explicite.</p>
+  </div>
+
+  <h4>Implémentation</h4>
+  <p>Un objet <code>ContexteNormatif</code> porte l'ensemble des paramètres dépendant du référentiel&nbsp;: coefficients ψ, γ<sub>M</sub>, choix ψ₁/ψ₂, valeur par défaut de η<sub>fi</sub>, températures critiques conventionnelles. Deux instances préconfigurées&nbsp;: <code>SUISSE_SIA</code> (par défaut) et <code>EUROCODE_REC</code>. Tout le reste du code est indépendant du référentiel, ce qui rend les deux voies comparables sur un même cas et facilite la validation.</p>
+
+  <h4>Températures critiques conventionnelles suisses</h4>
+  <p>La pratique suisse et la documentation SZS admettent, en l'absence de calcul de μ₀, des valeurs forfaitaires sécuritaires&nbsp;: 500 °C pour les éléments comprimés ou en compression-flexion, 540 °C pour les poutres isostatiques et les éléments tendus, 570 °C pour les poutres hyperstatiques. Elles seront disponibles en mode « forfaitaire », avec mention explicite que le calcul de μ₀ est plus économique.</p>
+
+  </div>
+</section>
+
+<!-- ============ 15 ============ -->
+<section id="s15">
+  <div class="sechead"><span class="secnum">15</span><h2>API et interface CLI</h2></div>
+  <div class="body">
+
+  <p class="lead-in">Livraison en deux temps, selon votre choix&nbsp;: d'abord bibliothèque + CLI, puis interface graphique une fois le fonctionnement vérifié. L'API est conçue dès maintenant pour que l'interface graphique n'en soit qu'une couche de présentation — aucune logique de calcul ne vivra dans la CLI.</p>
+
+  <h4>API</h4>
+<pre>from nommogramme import (
+    catalogue, Nuance, Protection, CasDeCharge,
+    Exposition, CourbeFeu, verifier,
+)
+
+profil = catalogue["HEB 300"]
+
+cas = CasDeCharge(
+    N_fi_Ed   = 850e3,          <span class="cm"># N, compression</span>
+    My_fi_Ed  = 120e3,          <span class="cm"># N·m</span>
+    Mz_fi_Ed  = 0.0,
+    L         = 4.0,            <span class="cm"># m, longueur d'épure</span>
+    l_fi_y    = 2.0,            <span class="cm"># m, poteau continu étage intermédiaire</span>
+    l_fi_z    = 2.0,
+    beta_M_y  = 1.4,
+)
+
+res = verifier(
+    profil     = profil,
+    nuance     = Nuance.S355,
+    cas        = cas,
+    exposition = Exposition.CONTOUR_4_FACES,
+    protection = Protection.depuis_catalogue("flocage_fibreux", d_p=0.015),
+    feu        = CourbeFeu.ISO834,
+    duree_requise_min = 60,
+    contexte   = ContexteNormatif.SUISSE_SIA,
+)
+
+res.mu_0                <span class="cm"># 0.42   — degré d'utilisation</span>
+res.theta_cr            <span class="cm"># 612.4  — °C, éq. (4.22)</span>
+res.theta_cr_exact      <span class="cm"># 597.1  — °C, vérification croisée §12–13</span>
+res.Am_sur_V            <span class="cm"># 116.2  — m⁻¹</span>
+res.theta_a_a_duree     <span class="cm"># 543.8  — °C à 60 min</span>
+res.t_fi_d              <span class="cm"># 78.5   — min</span>
+res.verdict             <span class="cm"># Verdict.SATISFAIT</span>
+res.gouverne_par        <span class="cm"># "éq. (4.21b) — déversement"</span>
+res.avertissements      <span class="cm"># [] </span>
+
+print(res.note_de_calcul())     <span class="cm"># Markdown, avec clauses citées</span>
+res.tracer_nomogramme("hb300.svg")</pre>
+
+  <h4>CLI</h4>
+<pre><span class="cm"># Vérifier un élément protégé sur une durée exigée</span>
+nommo verifier HEB300 --nuance S355 \
+      --N 850 --My 120 --L 4.0 --lfi 2.0 \
+      --exposition contour4 \
+      --protection flocage_fibreux --dp 15 \
+      --duree R60
+
+<span class="cm"># Épaisseur de protection nécessaire</span>
+nommo dimensionner IPE300 --nuance S235 --mu0 0.45 \
+      --exposition contour3 --protection plaques_platre --duree R90
+
+<span class="cm"># Élément nu : durée atteinte sans protection</span>
+nommo verifier IPE300 --nuance S235 --mu0 0.45 --exposition contour4 --nu
+
+<span class="cm"># Balayage : quels profilés tiennent R60 nus sous ce chargement ?</span>
+nommo balayer --famille HEB --mu0 0.4 --duree R60 --nu --format csv
+
+<span class="cm"># Catalogue</span>
+nommo profils --famille HEA --colonnes A,Wply,AmV_contour4</pre>
+
+  <p>Sorties&nbsp;: texte lisible par défaut, <code>--format json</code> pour l'enchaînement de scripts, <code>--format csv</code> pour les balayages, <code>--rapport note.md</code> pour la note de calcul complète.</p>
+
+  <h4>Vers l'interface graphique</h4>
+  <p>La v2 sera une application Streamlit s'appuyant sur exactement la même fonction <code>verifier()</code>&nbsp;: sélection du profilé, curseurs de chargement, tracé interactif θ<sub>a</sub>(t) contre θ<sub>cr</sub>, et export de la note de calcul. Aucune duplication de logique.</p>
+
+  </div>
+</section>
+
+<!-- ============ 16 ============ -->
+<section id="s16">
+  <div class="sechead"><span class="secnum">16</span><h2>Validation et tests</h2></div>
+  <div class="body">
+
+  <p>Un outil de dimensionnement au feu ne vaut que par sa validation. Quatre niveaux&nbsp;:</p>
+
+  <h4>1 — Propriétés matériaux</h4>
+  <p>Reproduction exacte des 13 lignes du tableau 3.1&nbsp;; continuité de c<sub>a</sub>(θ) aux bornes 600 / 735 / 900 °C&nbsp;; pic de c<sub>a</sub> à 735 °C&nbsp;; valeurs ISO 834 aux instants remarquables.</p>
+
+  <h4>2 — Géométrie</h4>
+  <p>A<sub>m</sub>/V calculés contre les valeurs publiées (IPE 300 = 216 m⁻¹, HEB 300 = 116 m⁻¹, déjà vérifiés) et contre la colonne U<sub>m</sub> du fichier SZS sur les 277 profilés, avec tolérance 2 %.</p>
+
+  <h4>3 — Thermique</h4>
+  <ul>
+    <li><strong>Convergence en pas de temps</strong>&nbsp;: θ<sub>a</sub>(60 min) doit varier de moins de 1 °C entre Δt = 2 s et Δt = 0,5 s.</li>
+    <li><strong>Cohérence physique</strong>&nbsp;: θ<sub>a</sub> monotone croissante, θ<sub>a</sub> &lt; θ<sub>g</sub> à tout instant, convergence asymptotique vers θ<sub>g</sub>.</li>
+    <li><strong>Règle Δθ<sub>a</sub> ≥ 0</strong> pour l'élément protégé&nbsp;: test dédié avec un isolant très capacitif (φ élevé), qui doit déclencher la règle.</li>
+    <li><strong>Cas limite</strong>&nbsp;: d<sub>p</sub> → 0 dans l'éq. (4.27) doit tendre vers le comportement non protégé (à k<sub>sh</sub> près).</li>
+  </ul>
+
+  <h4>4 — Exemples normatifs complets</h4>
+  <p>Le juge de paix. Reprise d'exemples publiés — recueils d'exemples de calcul Eurocode (JRC, SCI P375, guides Infosteel), documentation SZS — et comparaison poste par poste&nbsp;: μ₀, θ<sub>cr</sub>, A<sub>m</sub>/V, θ<sub>a</sub>(t), verdict. Tolérance 2 % sur les températures, 5 % sur les épaisseurs de protection. Chaque exemple est un test versionné, avec sa source citée.</p>
+
+  <div class="note">
+    <span class="tag">Contrôle croisé recommandé</span>
+    <p>Avant tout usage en projet, je recommande de recouper trois ou quatre cas réels que vous avez déjà dimensionnés par un autre moyen (abaque SZS papier, logiciel du bureau, feuille de calcul existante). Ces cas deviendront des tests de non-régression et vaudront plus que n'importe quel exemple de la littérature.</p>
+  </div>
+
+  </div>
+</section>
+
+<!-- ============ 17 ============ -->
+<section id="s17">
+  <div class="sechead"><span class="secnum">17</span><h2>Lots de développement</h2></div>
+  <div class="body">
+
+  <div class="tw">
+  <table>
+    <thead><tr><th class="num">Lot</th><th>Contenu</th><th>Livrable vérifiable</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Catalogue de profilés&nbsp;: chargeur xlsx, modèle <code>Profil</code>, géométrie, A<sub>m</sub>/V, k<sub>sh</sub>, export CSV</td><td>277 profilés chargés, A<sub>m</sub>/V recoupés à U<sub>m</sub></td></tr>
+      <tr><td class="num">2</td><td>Matériaux&nbsp;: tableau 3.1, c<sub>a</sub>(θ), λ<sub>a</sub>(θ), nuances</td><td>tests unitaires sur les 13 lignes du tableau</td></tr>
+      <tr><td class="num">3</td><td>Thermique&nbsp;: courbes de feu, flux net, intégration nu et protégé, solveur d<sub>p</sub></td><td>reproduction du tableau d'échauffement du §9</td></tr>
+      <tr><td class="num">4</td><td>Mécanique&nbsp;: actions, classification, résistances, χ<sub>fi</sub>, χ<sub>LT,fi</sub></td><td>résistances à 20 °C recoupées à l'EN 1993-1-1</td></tr>
+      <tr><td class="num">5</td><td>Interaction N + M, μ₀ combiné, éq. (4.22) et son inverse</td><td>nomogramme numérique complet</td></tr>
+      <tr><td class="num">6</td><td>Orchestration&nbsp;: <code>verifier()</code>, vérification croisée, note de calcul</td><td>API stable, note traçable</td></tr>
+      <tr><td class="num">7</td><td>CLI et tracé du nomogramme</td><td>outil utilisable en ligne de commande</td></tr>
+      <tr><td class="num">8</td><td>Validation sur exemples normatifs et sur vos cas réels</td><td>suite de non-régression</td></tr>
+      <tr><td class="num">9</td><td><em>Ultérieur</em>&nbsp;: interface graphique Streamlit</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Les lots 1 à 3 sont indépendants des lots 4 et 5 et peuvent être menés en parallèle. Le lot 6 les assemble.</p>
+
+  </div>
+</section>
+
+<!-- ============ 18 ============ -->
+<section id="s18">
+  <div class="sechead"><span class="secnum">18</span><h2>Points à recouper</h2></div>
+  <div class="body">
+
+  <p>Le proxy réseau de la session bloque l'accès à szs.ch, aux serveurs Eurocodes de la Commission et à steelconstruction.info&nbsp;; les normes elles-mêmes sont sous droits. Les équations ci-dessus proviennent de ma connaissance du corpus, et leur contenu physique est vérifié par les recoupements numériques présentés (A<sub>m</sub>/V contre les tables publiées, échauffement contre les ordres de grandeur connus). <strong>Les points suivants méritent une confrontation directe à vos exemplaires avant tout usage en projet</strong>&nbsp;:</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>À vérifier</th><th>Confiance</th><th>Où</th></tr></thead>
+    <tbody>
+      <tr><td>Éq. (4.22), (4.25)–(4.28), tableau 3.1, éq. (3.2a–d)</td><td>élevée</td><td>EN 1993-1-2 §3.4.1, §4.2.4, §4.2.5</td></tr>
+      <tr><td>Numérotation exacte des équations des facteurs d'interaction k<sub>y</sub>, k<sub>z</sub>, k<sub>LT</sub></td><td><strong>à confirmer</strong></td><td>EN 1993-1-2 §4.2.3.5</td></tr>
+      <tr><td>Numéro de chiffre SIA 263 traitant la résistance au feu</td><td><strong>à confirmer</strong></td><td>SIA 263:2013 + SIA 263-C2:2016</td></tr>
+      <tr><td>Choix ψ₁ / ψ₂ pour l'action variable dominante</td><td>élevée (ψ₂ en pratique suisse)</td><td>SIA 260 §4.4.3.5</td></tr>
+      <tr><td>Valeurs et conditions d'emploi des θ<sub>cr</sub> forfaitaires suisses (500/540/570 °C)</td><td>moyenne</td><td>SZS steeltec 02:2017 <em>Protection incendie des structures</em></td></tr>
+      <tr><td>Choix de l'Annexe nationale suisse pour la classe 4 (350 °C)</td><td>moyenne</td><td>EN 1993-1-2 Annexe E</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Le document <strong>SZS steeltec 02:2017, « Protection incendie des structures »</strong> est la référence suisse directe pour la méthode du nomogramme&nbsp;: il contient le nomogramme lui-même, les facteurs de massiveté U/A tabulés et les formulaires de vérification. Si vous en disposez, ses tables de A<sub>m</sub>/V constitueront le meilleur jeu de validation possible pour le lot 1, puisqu'elles portent exactement sur les profilés de votre catalogue.</p>
+
+  </div>
+</section>
+
+</main>
+
+<hr class="end">
+<p class="colophon">Spécification établie pour le dépôt <strong>damthon/Nommogramme</strong>, branche <code>claude/fire-resistance-metal-profiles-u2512i</code>. Toutes les valeurs numériques citées comme « calculées » ont été produites par une implémentation de référence des équations ci-dessus, à partir de <code>Profilé SZS.xlsx</code>. Ce document n'a pas valeur normative&nbsp;: il décrit une intention d'implémentation et cite les normes applicables, qui restent seules opposables.</p>
+
+</div>
