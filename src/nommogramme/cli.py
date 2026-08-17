@@ -1,12 +1,16 @@
 """Interface en ligne de commande.
 
-Couverture des lots 1 à 3 : consultation du catalogue, facteurs de massiveté,
-échauffement de l'acier et dimensionnement de la protection à température
-critique imposée.
+Sept commandes :
 
-Le calcul de la température critique depuis le chargement (méthode du
-nomogramme proprement dite) relève des lots suivants ; en attendant,
-``--theta-cr`` doit être fourni explicitement.
+* ``verifier`` — la vérification complète N + M par la méthode du nomogramme,
+  avec note de calcul et tracés ;
+* ``echauffement`` — la seule voie thermique, à température critique imposée ;
+* ``dimensionner`` — l'épaisseur de protection requise ;
+* ``balayer`` — la durée atteinte par toute une famille de profilés ;
+* ``profils``, ``protections``, ``controler`` — consultation et audit.
+
+Aucune logique de calcul ne vit ici : la couche graphique à venir se branchera
+sur les mêmes fonctions.
 """
 
 from __future__ import annotations
@@ -55,8 +59,8 @@ def _construire_analyseur() -> argparse.ArgumentParser:
     analyseur = argparse.ArgumentParser(
         prog="nommo",
         description=(
-            "Résistance au feu de profilés métalliques — SIA 263 / EN 1993-1-2. "
-            "Lots 1 à 3 : catalogue, matériaux, diffusion de chaleur."
+            "Résistance au feu de profilés métalliques — SIA 263 / EN 1993-1-2, "
+            "par la méthode du nomogramme."
         ),
     )
     sous = analyseur.add_subparsers(dest="commande", required=True)
@@ -148,6 +152,11 @@ def _construire_analyseur() -> argparse.ArgumentParser:
     p_ver.add_argument("--dp", type=float, help="Épaisseur de protection [mm]")
     p_ver.add_argument("--contexte", choices=("sia", "eurocode"), default="sia")
     p_ver.add_argument("--rapport", help="Écrire la note de calcul dans ce fichier")
+    p_ver.add_argument("--tracer", help="Écrire le nomogramme dans ce fichier image")
+    p_ver.add_argument(
+        "--tracer-echauffement", help="Écrire la courbe θ_a(t) dans ce fichier image"
+    )
+    p_ver.add_argument("--theme", choices=("clair", "sombre"), default="clair")
 
     p_ctrl = sous.add_parser(
         "controler",
@@ -262,6 +271,17 @@ def _cmd_verifier(a: argparse.Namespace) -> int:
         with open(a.rapport, "w", encoding="utf-8") as fichier:
             fichier.write(resultat.note_de_calcul())
         print(f"Note de calcul écrite dans {a.rapport}")
+
+    if a.tracer or a.tracer_echauffement:
+        from .nomogramme.trace import tracer_echauffement, tracer_nomogramme
+
+        if a.tracer:
+            print(f"Nomogramme écrit dans {tracer_nomogramme(resultat, a.tracer, a.theme)}")
+        if a.tracer_echauffement:
+            print(
+                "Courbe d'échauffement écrite dans "
+                f"{tracer_echauffement(resultat, a.tracer_echauffement, a.theme)}"
+            )
 
     print(f"Profilé          : {profil.nom} — {a.nuance}")
     print(f"Référentiel      : {contexte.nom}")

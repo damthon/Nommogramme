@@ -23,7 +23,7 @@ est complète** : la température critique se déduit maintenant du chargement.
 | 4 | Résistances mécaniques à chaud, χ_fi, χ_LT,fi | fait |
 | 5 | Interaction N + M, degré d'utilisation, éq. (4.22) | fait |
 | 6 | Orchestration, vérification croisée, note de calcul | fait |
-| 7 | Tracé du nomogramme | à venir |
+| 7 | Tracé du nomogramme | fait |
 | 8 | Validation | **partiel** — voir [`docs/validation.md`](docs/validation.md) |
 | 9 | Interface graphique | à venir |
 
@@ -50,9 +50,9 @@ Python 3.11 ou plus récent. Aucune dépendance obligatoire à l'exécution :
 nommo verifier "HEB 300" --nuance S355 --N 850 --My 120 \
       --L 4 --lfi 2 --duree R60 --protection flocage_fibreux --dp 25
 
-# La même, en écrivant la note de calcul
+# La même, avec note de calcul et figures
 nommo verifier "HEB 300" --N 850 --My 120 --L 4 --lfi 2 --duree R60 \
-      --rapport note.md
+      --rapport note.md --tracer nomogramme.png --tracer-echauffement courbe.png
 
 # Catalogue et facteurs de massiveté
 nommo profils --famille HEB
@@ -83,7 +83,7 @@ Options communes : `--exposition {contour4,contour3,caisson4,caisson3}`,
 Propres à `verifier` : `--contexte {sia,eurocode}` pour changer de référentiel,
 `--maintien-lateral` quand la semelle comprimée est bloquée par une dalle,
 `--kappa1` et `--kappa2` pour les facteurs d'adaptation du §4.2.3.3, `--C1` pour
-le diagramme de moment. Le code de sortie vaut 0 si l'exigence est satisfaite,
+le diagramme de moment, `--theme clair|sombre` pour les figures. Le code de sortie vaut 0 si l'exigence est satisfaite,
 2 sinon — utilisable en script.
 
 ## Utilisation comme bibliothèque
@@ -123,6 +123,28 @@ r.avertissements
 
 print(r.note_de_calcul())   # note Markdown, avec les clauses citées
 ```
+
+### Figures
+
+```python
+from nommogramme.nomogramme.trace import tracer_nomogramme, tracer_echauffement
+
+tracer_nomogramme(r, "nomogramme.png")        # les deux quadrants + le chemin de lecture
+tracer_echauffement(r, "courbe.png", theme="sombre")
+```
+
+Le nomogramme montre les deux quadrants partageant l'axe des températures :
+à gauche μ₀ → θ_cr par l'équation (4.22), à droite l'échauffement sous la
+courbe de feu. Quand la vérification croisée abaisse la température critique,
+le décrochement est tracé et chiffré sur l'axe partagé — c'est le fait
+marquant de la figure, et sans annotation il passerait pour une erreur de
+tracé.
+
+Les deux teintes de série viennent d'une palette validée pour la déficience de
+vision des couleurs : séparation ΔE 24,7 en clair et 26,8 en sombre, pour un
+seuil de 8. Chaque courbe porte aussi son étiquette directe, l'identité ne
+reposant jamais sur la seule couleur. `matplotlib` est un extra :
+`pip install 'nommogramme[trace]'`.
 
 ### Thermique seule
 
@@ -195,7 +217,7 @@ retenu (ETE, reconnaissance AEAI).
 python -m pytest
 ```
 
-247 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
+269 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
 pic de transformation de phase à 735 °C, les valeurs de référence des courbes
 de feu, les facteurs de massiveté comparés aux tables publiées, la convergence
 en pas de temps, les invariants physiques de l'échauffement, les huit valeurs
@@ -209,6 +231,11 @@ accumulation numérique, éq. (4.22) contre interpolation du tableau 3.1.
 
 `tests/cas_reference.toml` accueille vos propres cas vérifiés : chacun devient
 un test de non-régression, sans écrire de code.
+
+Les tests de tracé vérifient que les figures se produisent pour chaque cas de
+figure structurellement différent, que les annotations attendues y sont et que
+les couleurs sont bien celles de la palette validée. Ils ne peuvent pas juger
+qu'une figure est lisible : cela a demandé de les regarder.
 
 ## Avertissement
 
