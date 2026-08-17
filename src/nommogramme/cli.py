@@ -149,6 +149,12 @@ def _construire_analyseur() -> argparse.ArgumentParser:
     p_ver.add_argument("--contexte", choices=("sia", "eurocode"), default="sia")
     p_ver.add_argument("--rapport", help="Écrire la note de calcul dans ce fichier")
 
+    p_ctrl = sous.add_parser(
+        "controler",
+        help="Auditer la cohérence interne du catalogue de profilés",
+    )
+    p_ctrl.add_argument("--famille", help="Restreindre à une famille")
+
     sous.add_parser("protections", help="Lister les produits de protection disponibles")
 
     return analyseur
@@ -176,7 +182,47 @@ def _executer(a: argparse.Namespace) -> int:
         return _cmd_balayer(a)
     if a.commande == "verifier":
         return _cmd_verifier(a)
+    if a.commande == "controler":
+        return _cmd_controler(a)
     raise ValueError(f"Commande inconnue : {a.commande}")
+
+
+def _cmd_controler(a: argparse.Namespace) -> int:
+    from .profils import Gravite, auditer_catalogue
+
+    cat = charger_csv()
+    profils = cat.famille(a.famille) if a.famille else list(cat)
+    anomalies = auditer_catalogue(profils)
+
+    corriges = [p for p in profils if p.iz_tabule is not None]
+    if corriges:
+        print(
+            f"{len(corriges)} profilés dont i_z a été recalculé à la lecture "
+            "(colonne figée dans le classeur SZS) :"
+        )
+        for profil in corriges[:5]:
+            print(
+                f"  {profil.nom:20s} {profil.iz_tabule * 1e3:7.2f} → "
+                f"{profil.iz * 1e3:7.2f} mm"
+            )
+        if len(corriges) > 5:
+            print(f"  … et {len(corriges) - 5} autres")
+        print()
+
+    if not anomalies:
+        print(f"{len(profils)} profilés contrôlés : aucune anomalie résiduelle.")
+        return 0
+
+    erreurs = [a for a in anomalies if a.gravite is Gravite.ERREUR]
+    print(f"{len(profils)} profilés contrôlés, {len(anomalies)} anomalie(s) :\n")
+    for anomalie in anomalies:
+        print(f"  [{anomalie.gravite.value:13s}] {anomalie}")
+    print(
+        "\nCes écarts sont à recouper avec les tables SZS d'origine. "
+        "Un avertissement peut relever de l'arrondi de tabulation ; "
+        "une erreur traduit une donnée fausse."
+    )
+    return 1 if erreurs else 0
 
 
 def _cmd_verifier(a: argparse.Namespace) -> int:

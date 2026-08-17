@@ -16,6 +16,7 @@ valeurs. La lecture les applique, puis convertit en unités SI.
 from __future__ import annotations
 
 import csv
+import math
 import re
 from collections.abc import Iterator
 from pathlib import Path
@@ -83,7 +84,7 @@ _CONVERSIONS = {
 _CHAMPS_CSV = [
     "nom", "famille", "masse", "A", "h", "b", "tw", "tf", "r",
     "Iy", "Iz", "Wely", "Wply", "Welz", "Wplz", "iy", "iz",
-    "Um", "It", "Av", "Aw",
+    "Um", "iz_tabule", "It", "Av", "Aw",
 ]
 
 _RATIO_RAYON_PROFIL_CREUX = 2.0
@@ -258,6 +259,8 @@ def _profil_depuis_ligne(
         if epaisseur is not None:
             brut["r"] = _RATIO_RAYON_PROFIL_CREUX * epaisseur
 
+    iz_tabule = _corriger_rayon_giration_profils_creux(brut, famille, nom)
+
     obligatoires = ["masse", "A", "h", "b", "tw", "tf", "r", "Iy", "Iz",
                     "Wely", "Wply", "Welz", "Wplz", "iy", "iz", "Um"]
     absentes = [champ for champ in obligatoires if brut.get(champ) is None]
@@ -285,10 +288,53 @@ def _profil_depuis_ligne(
         iy=brut["iy"],  # type: ignore[arg-type]
         iz=brut["iz"],  # type: ignore[arg-type]
         Um=brut["Um"],  # type: ignore[arg-type]
+        iz_tabule=iz_tabule,
         It=brut.get("It"),
         Av=brut.get("Av"),
         Aw=brut.get("Aw"),
     )
+
+
+def _corriger_rayon_giration_profils_creux(
+    brut: dict[str, float | None], famille: Famille, nom: str
+) -> float | None:
+    """Rétablit i_z pour les tubes RRW, et renvoie la valeur d'origine.
+
+    La colonne ``iz3`` du classeur SZS est **figée à 15,0018 mm sur les 108
+    lignes RRW** : c'est la valeur du premier tube de la série, RRW 40/40/3,
+    recopiée en dur au lieu d'être calculée. Le contrôle i = √(I/A) de
+    ``coherence.auditer`` détecte l'anomalie sur 106 des 108 lignes.
+
+    La correction est sans ambiguïté : tous les tubes du catalogue sont
+    carrés, donc I_z = I_y et i_z = i_y = √(I_z/A). La valeur tabulée est
+    conservée dans ``Profil.iz_tabule`` pour mémoire.
+
+    Elle s'applique à **toute la famille**, sans condition d'écart. Le premier
+    tube de la série porte par construction la bonne valeur, et deux autres
+    s'en approchent à moins de 1 % par coïncidence ; les épargner sur ce seul
+    critère laisserait des valeurs fausses derrière un seuil arbitraire, alors
+    que la cause est identifiée et vaut pour toutes les lignes.
+
+    L'enjeu n'est pas cosmétique : i_z pilote l'élancement de flambement dans
+    le plan faible. Pour un poteau RRW 400/400/10 de 6 m en S355, i_z = 15 mm
+    au lieu de 159 mm donne λ̄ = 5,23 au lieu de 0,49, soit une résistance au
+    flambement de 182 kN au lieu de 4165 kN — sous-estimée d'un facteur 23.
+
+    Aucune correction n'est appliquée aux autres familles : l'incohérence du
+    HHD 320.74 est de nature inverse — c'est son I_z tabulé qui paraît bas de
+    8 %, son i_z concordant avec la géométrie — et la trancher demanderait les
+    tables SZS d'origine. Elle est donc seulement signalée.
+    """
+    if famille is not Famille.RRW:
+        return None
+
+    iz_tabule = brut.get("iz")
+    Iz, A = brut.get("Iz"), brut.get("A")
+    if Iz is None or A is None or A <= 0.0:
+        return None
+
+    brut["iz"] = math.sqrt(Iz / A)
+    return iz_tabule
 
 
 def ecrire_csv(cat: Catalogue, chemin: Path | str | None = None) -> Path:
@@ -312,11 +358,22 @@ def ecrire_csv(cat: Catalogue, chemin: Path | str | None = None) -> Path:
 
 def _regenerer() -> None:
     """Régénère le CSV depuis le classeur et rapporte les contrôles croisés."""
+    from .coherence import auditer_catalogue
     from .geometrie import ecart_relatif_um
 
     cat = lire_xlsx()
     destination = ecrire_csv(cat)
     print(f"{len(cat)} profilés écrits dans {destination}")
+
+    corriges = [p for p in cat if p.iz_tabule is not None]
+    if corriges:
+        print(f"\ni_z recalculé sur {len(corriges)} profilés creux "
+              "(colonne figée dans le classeur) :")
+        for profil in corriges[:3]:
+            print(f"  {profil.nom:20s} {profil.iz_tabule * 1e3:6.2f} → "
+                  f"{profil.iz * 1e3:6.2f} mm")
+        if len(corriges) > 3:
+            print(f"  … et {len(corriges) - 3} autres")
 
     ecarts = [
         (abs(ecart), profil.nom, ecart)
@@ -325,10 +382,15 @@ def _regenerer() -> None:
     ]
     ecarts.sort(reverse=True)
     moyen = sum(e[0] for e in ecarts) / len(ecarts)
-    print(f"Contrôle croisé du périmètre contre Um : écart moyen {moyen:.2%}")
+    print(f"\nContrôle croisé du périmètre contre Um : écart moyen {moyen:.2%}")
     print("Écarts les plus élevés :")
     for _, nom, ecart in ecarts[:5]:
         print(f"  {nom:20s} {ecart:+.2%}")
+
+    anomalies = auditer_catalogue(cat)
+    print(f"\nAudit de cohérence : {len(anomalies)} anomalie(s)")
+    for anomalie in anomalies:
+        print(f"  [{anomalie.gravite.value}] {anomalie}")
 
 
 if __name__ == "__main__":  # pragma: no cover

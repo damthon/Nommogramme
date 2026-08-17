@@ -24,11 +24,15 @@ est complète** : la température critique se déduit maintenant du chargement.
 | 5 | Interaction N + M, degré d'utilisation, éq. (4.22) | fait |
 | 6 | Orchestration, vérification croisée, note de calcul | fait |
 | 7 | Tracé du nomogramme | à venir |
-| 8 | Validation sur exemples normatifs | à venir |
+| 8 | Validation | **partiel** — voir [`docs/validation.md`](docs/validation.md) |
 | 9 | Interface graphique | à venir |
 
-Reste à faire : le tracé graphique du nomogramme, la validation sur exemples
-normatifs publiés, et l'interface graphique.
+Le lot 8 n'a pu être mené qu'en partie : le proxy réseau de l'environnement de
+développement bloque l'accès aux recueils d'exemples normatifs, et les normes
+sont sous droits. **Aucun résultat n'a été comparé à un calcul de référence
+externe.** La validation menée à la place — recoupements analytiques
+indépendants — est décrite dans [`docs/validation.md`](docs/validation.md),
+avec un harnais prêt à recevoir vos propres cas vérifiés.
 
 ## Installation
 
@@ -68,6 +72,9 @@ nommo balayer --famille HEM --theta-cr 550
 
 # Produits de protection disponibles
 nommo protections
+
+# Audit de cohérence du catalogue
+nommo controler
 ```
 
 Options communes : `--exposition {contour4,contour3,caisson4,caisson3}`,
@@ -167,6 +174,15 @@ python -m nommogramme.profils.chargeur
 La conversion recoupe systématiquement le périmètre calculé géométriquement
 avec la colonne `Um` du SZS : **écart moyen 0,61 %** sur les 277 profilés.
 
+⚠️ **Une erreur a été trouvée dans le classeur.** La colonne `iz3` y est figée
+à 15,0018 mm sur les 108 lignes RRW — la valeur du premier tube, recopiée en
+dur. Pour un poteau RRW 400/400/10 de 6 m, cela sous-estimerait la résistance
+au flambement d'un facteur 23. Le chargeur recalcule `i_z = √(I_z/A)` pour
+toute la famille et conserve la valeur d'origine dans `Profil.iz_tabule` ; le
+fichier source n'est pas modifié. Une seconde anomalie, sur le HHD 320.74, est
+signalée mais non corrigée : elle demande vos tables SZS. Détails et impact
+dans [`docs/validation.md`](docs/validation.md).
+
 Les propriétés des produits de protection
 (`src/nommogramme/data/protections.toml`) sont des **valeurs génériques de la
 littérature**, destinées au développement et aux études de faisabilité. Une
@@ -179,17 +195,26 @@ retenu (ETE, reconnaissance AEAI).
 python -m pytest
 ```
 
-191 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
+247 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
 pic de transformation de phase à 735 °C, les valeurs de référence des courbes
 de feu, les facteurs de massiveté comparés aux tables publiées, la convergence
 en pas de temps, les invariants physiques de l'échauffement, les huit valeurs
 de référence de l'équation (4.22) et son inversion, et le comportement attendu
 de la vérification croisée sur éléments trapus et élancés.
 
+`tests/test_validation.py` va plus loin : il confronte chaque résultat à une
+solution du même problème obtenue par une voie différente — quadrature en
+température contre pas-à-pas en temps, enthalpie en forme close contre
+accumulation numérique, éq. (4.22) contre interpolation du tableau 3.1.
+
+`tests/cas_reference.toml` accueille vos propres cas vérifiés : chacun devient
+un test de non-régression, sans écrire de code.
+
 ## Avertissement
 
-Cet outil est en développement et n'a pas encore été confronté à des exemples
-normatifs complets (lot 8). Il ne doit pas servir de justification de projet en
-l'état. Les clauses citées dans le code proviennent de la connaissance du
+Cet outil est en développement. **Aucun de ses résultats n'a été comparé à un
+calcul de référence externe** — les sources d'exemples normatifs sont
+inaccessibles depuis l'environnement de développement. Il ne doit pas servir de
+justification de projet en l'état. Les clauses citées dans le code proviennent de la connaissance du
 corpus normatif et sont à recouper avec les exemplaires officiels des normes —
 la liste des points à vérifier figure au §18 du plan de conception.
