@@ -1,0 +1,58 @@
+# Base de matériaux de protection incendie.
+#
+# ATTENTION — valeurs génériques d'ordre de grandeur, tirées de la littérature
+# technique. Elles servent au développement, aux tests et aux études de
+# faisabilité. Toute étude de projet doit utiliser les valeurs de l'agrément
+# technique du produit retenu (ETE, reconnaissance AEAI).
+#
+# lambda_p : conductivité thermique [W/m·K]
+# rho_p    : masse volumique [kg/m³]
+# c_p      : chaleur spécifique [J/kg·K]
+# dp_min   : épaisseur usuelle minimale [m]
+# dp_max   : épaisseur usuelle maximale [m]
+# pose     : "contour" (suit la forme du profilé) ou "caisson" (encaissement)
+
+[flocage_fibreux]
+libelle = "Flocage fibreux (laine minérale projetée)"
+lambda_p = 0.12
+rho_p = 300.0
+c_p = 1200.0
+dp_min = 0.010
+dp_max = 0.050
+pose = "contour"
+
+[flocage_pateux]
+libelle = "Flocage pâteux (vermiculite-ciment)"
+lambda_p = 0.15
+rho_p = 550.0
+c_p = 1100.0
+dp_min = 0.010
+dp_max = 0.050
+pose = "contour"
+
+[plaques_platre]
+libelle = "Plaques de plâtre coupe-feu (type F)"
+lambda_p = 0.20
+rho_p = 800.0
+c_p = 1700.0
+dp_min = 0.0125
+dp_max = 0.050
+pose = "caisson"
+
+[plaques_silicate]
+libelle = "Plaques de silicate de calcium"
+lambda_p = 0.15
+rho_p = 450.0
+c_p = 1200.0
+dp_min = 0.015
+dp_max = 0.050
+pose = "caisson"
+
+[laine_de_roche]
+libelle = "Panneaux de laine de roche"
+lambda_p = 0.12
+rho_p = 150.0
+c_p = 1200.0
+dp_min = 0.020
+dp_max = 0.060
+pose = "caisson"
