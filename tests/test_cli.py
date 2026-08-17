@@ -127,6 +127,72 @@ class TestBalayer:
         assert duree_plus_trapu > duree_plus_massif
 
 
+class TestVerifier:
+    def test_verification_complete(self, capsys) -> None:
+        code = main(
+            [
+                "verifier", "HEB 300", "--nuance", "S355",
+                "--N", "850", "--My", "120", "--L", "4", "--lfi", "2",
+                "--duree", "R60",
+            ]
+        )
+        sortie = capsys.readouterr().out
+        assert "μ₀" in sortie
+        assert "θ_cr éq. (4.22)" in sortie
+        assert "θ_cr vérif. croisée" in sortie
+        assert code in (0, 2)
+
+    def test_code_de_sortie_signale_l_echec(self, capsys) -> None:
+        """Un élément nu sous forte charge ne tient pas R90 : code 2."""
+        code = main(
+            ["verifier", "HEB 300", "--N", "850", "--My", "120",
+             "--L", "4", "--lfi", "2", "--duree", "R90"]
+        )
+        assert code == 2
+        assert "NON SATISFAIT" in capsys.readouterr().out
+
+    def test_la_protection_fait_passer(self, capsys) -> None:
+        code = main(
+            ["verifier", "HEB 300", "--N", "850", "--My", "120",
+             "--L", "4", "--lfi", "2", "--duree", "R60",
+             "--protection", "flocage_fibreux", "--dp", "25"]
+        )
+        assert code == 0
+        assert "SATISFAIT" in capsys.readouterr().out
+
+    def test_avertissement_si_le_nomogramme_est_optimiste(self, capsys) -> None:
+        main(
+            ["verifier", "HEB 300", "--N", "850", "--My", "120",
+             "--L", "8", "--lfi", "8", "--duree", "R60"]
+        )
+        assert "non conservatif" in capsys.readouterr().out
+
+    def test_maintien_lateral(self, capsys) -> None:
+        main(
+            ["verifier", "IPE 300", "--nuance", "S235", "--My", "60",
+             "--L", "6", "--duree", "R30", "--maintien-lateral"]
+        )
+        assert "4.21a" in capsys.readouterr().out
+
+    def test_choix_du_referentiel(self, capsys) -> None:
+        main(["verifier", "HEB 300", "--N", "500", "--L", "4",
+              "--duree", "R30", "--contexte", "eurocode"])
+        assert "Eurocode" in capsys.readouterr().out
+
+    def test_ecriture_de_la_note(self, tmp_path, capsys) -> None:
+        destination = tmp_path / "note.md"
+        main(
+            ["verifier", "HEB 300", "--N", "850", "--My", "120",
+             "--L", "4", "--lfi", "2", "--duree", "R60",
+             "--rapport", str(destination)]
+        )
+        capsys.readouterr()
+        contenu = destination.read_text(encoding="utf-8")
+        assert contenu.startswith("# Vérification au feu — HEB300")
+        assert "éq. (4.22)" in contenu
+        assert "## Verdict" in contenu
+
+
 class TestProtections:
     def test_liste(self, capsys) -> None:
         assert main(["protections"]) == 0

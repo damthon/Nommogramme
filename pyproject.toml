@@ -27,4 +27,5 @@ where = ["src"]
 nommogramme = ["data/*.csv", "data/*.toml"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "src"]
+addopts = "--doctest-modules"

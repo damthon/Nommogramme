@@ -12,23 +12,23 @@ plutôt la version mise en page :
 
 ## État d'avancement
 
-Trois des neuf lots prévus sont implantés et testés.
+Six des neuf lots prévus sont implantés et testés. **La méthode du nomogramme
+est complète** : la température critique se déduit maintenant du chargement.
 
 | Lot | Contenu | État |
 |:---:|---|:---|
 | 1 | Catalogue SZS, géométrie d'exposition, A_m/V, k_sh | fait |
 | 2 | Acier à chaud (tableau 3.1, c_a(θ), λ_a(θ)), protections | fait |
 | 3 | Courbes de feu, flux net, diffusion de chaleur, solveur d_p | fait |
-| 4 | Résistances mécaniques à chaud, χ_fi, χ_LT,fi | à venir |
-| 5 | Interaction N + M, degré d'utilisation, éq. (4.22) | à venir |
-| 6 | Orchestration, vérification croisée, note de calcul | à venir |
+| 4 | Résistances mécaniques à chaud, χ_fi, χ_LT,fi | fait |
+| 5 | Interaction N + M, degré d'utilisation, éq. (4.22) | fait |
+| 6 | Orchestration, vérification croisée, note de calcul | fait |
 | 7 | Tracé du nomogramme | à venir |
 | 8 | Validation sur exemples normatifs | à venir |
 | 9 | Interface graphique | à venir |
 
-**Conséquence pratique :** la température critique n'est pas encore calculée
-depuis le chargement. Elle doit être fournie explicitement (`--theta-cr`). Tout
-ce qui relève de la diffusion de chaleur est en revanche opérationnel.
+Reste à faire : le tracé graphique du nomogramme, la validation sur exemples
+normatifs publiés, et l'interface graphique.
 
 ## Installation
 
@@ -42,11 +42,19 @@ Python 3.11 ou plus récent. Aucune dépendance obligatoire à l'exécution :
 ## Utilisation en ligne de commande
 
 ```bash
+# Vérification complète N + M par la méthode du nomogramme
+nommo verifier "HEB 300" --nuance S355 --N 850 --My 120 \
+      --L 4 --lfi 2 --duree R60 --protection flocage_fibreux --dp 25
+
+# La même, en écrivant la note de calcul
+nommo verifier "HEB 300" --N 850 --My 120 --L 4 --lfi 2 --duree R60 \
+      --rapport note.md
+
 # Catalogue et facteurs de massiveté
 nommo profils --famille HEB
 nommo profils --nom "IPE 300" --exposition contour3
 
-# Échauffement d'un profilé nu, avec vérification d'une température critique
+# Échauffement seul, à température critique imposée
 nommo echauffement "IPE 300" --duree R60 --theta-cr 600
 
 # Échauffement d'un profilé protégé
@@ -65,7 +73,51 @@ nommo protections
 Options communes : `--exposition {contour4,contour3,caisson4,caisson3}`,
 `--feu {iso834,hydrocarbure,exterieur}`, `--format {texte,csv}`.
 
+Propres à `verifier` : `--contexte {sia,eurocode}` pour changer de référentiel,
+`--maintien-lateral` quand la semelle comprimée est bloquée par une dalle,
+`--kappa1` et `--kappa2` pour les facteurs d'adaptation du §4.2.3.3, `--C1` pour
+le diagramme de moment. Le code de sortie vaut 0 si l'exigence est satisfaite,
+2 sinon — utilisable en script.
+
 ## Utilisation comme bibliothèque
+
+### Vérification complète
+
+```python
+from nommogramme import (
+    catalogue, CasDeCharge, Exposition, Nuance, Protection, verifier,
+)
+
+cas = CasDeCharge(
+    N_fi_Ed=850e3,      # N, positif en compression
+    My_fi_Ed=120e3,     # N·m
+    L=4.0,              # m, longueur d'épure
+    l_fi_y=2.0,         # m, poteau continu d'étage courant : 0,5·L
+    l_fi_z=2.0,
+    beta_M_y=1.4,
+)
+
+r = verifier(
+    profil=catalogue["HEB 300"],
+    nuance=Nuance.S355,
+    cas=cas,
+    exposition=Exposition.CONTOUR_4_FACES,
+    duree_requise_min=60,
+    protection=Protection.depuis_catalogue("flocage_fibreux", d_p=0.025),
+)
+
+r.mu_0                  # degré d'utilisation à 20 °C
+r.theta_cr_nomogramme   # °C, éq. (4.22)
+r.theta_cr_exact        # °C, vérification croisée §4.2.3
+r.theta_cr              # °C, la plus défavorable des deux
+r.t_fi_d_minutes        # durée avant d'atteindre θ_cr
+r.verdict               # Verdict.SATISFAIT
+r.avertissements
+
+print(r.note_de_calcul())   # note Markdown, avec les clauses citées
+```
+
+### Thermique seule
 
 ```python
 from nommogramme import catalogue, Exposition, Protection, echauffement, minutes
@@ -127,10 +179,12 @@ retenu (ETE, reconnaissance AEAI).
 python -m pytest
 ```
 
-115 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
+191 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
 pic de transformation de phase à 735 °C, les valeurs de référence des courbes
 de feu, les facteurs de massiveté comparés aux tables publiées, la convergence
-en pas de temps, et les invariants physiques de l'échauffement.
+en pas de temps, les invariants physiques de l'échauffement, les huit valeurs
+de référence de l'équation (4.22) et son inversion, et le comportement attendu
+de la vérification croisée sur éléments trapus et élancés.
 
 ## Avertissement
 

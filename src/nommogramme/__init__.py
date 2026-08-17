@@ -4,27 +4,31 @@ Normes de référence : SIA 263 et EN 1993-1-2, actions de feu selon
 EN 1991-1-2. La conception d'ensemble est décrite dans
 ``docs/plan-conception.html``.
 
-État d'avancement — lots 1 à 3 des neuf prévus :
+État d'avancement — lots 1 à 6 des neuf prévus :
 
 * catalogue SZS, géométrie d'exposition, facteurs de massiveté ;
 * propriétés de l'acier à chaud et matériaux de protection ;
-* courbes de feu, flux thermique net, diffusion de chaleur.
+* courbes de feu, flux thermique net, diffusion de chaleur ;
+* résistances mécaniques à chaud, χ_fi et χ_LT,fi ;
+* interaction N + M, degré d'utilisation, équation (4.22) ;
+* orchestration, vérification croisée, note de calcul.
 
-Ne sont pas encore implantés : les résistances mécaniques à chaud, le degré
-d'utilisation, la température critique de l'équation (4.22) et la
-vérification croisée en interaction N + M.
+Restent à faire : le tracé du nomogramme, la validation sur exemples
+normatifs et l'interface graphique.
 
 Exemple :
 
-    >>> from nommogramme import catalogue, Exposition, echauffement, minutes
-    >>> ipe = catalogue["IPE 300"]
-    >>> resultat = echauffement(ipe, Exposition.CONTOUR_4_FACES, minutes(15))
-    >>> round(resultat.temperature_finale)
-    635
+    >>> from nommogramme import catalogue, Exposition, CasDeCharge, Nuance, verifier
+    >>> cas = CasDeCharge(N_fi_Ed=850e3, My_fi_Ed=120e3, L=4.0, l_fi_y=2.0, l_fi_z=2.0)
+    >>> r = verifier(catalogue["HEB 300"], Nuance.S355, cas,
+    ...              Exposition.CONTOUR_4_FACES, duree_requise_min=60)
+    >>> round(r.mu_0, 3)
+    0.407
 """
 
 from __future__ import annotations
 
+from .contexte import EUROCODE_REC, SUISSE_SIA, ContexteNormatif
 from .materiaux import (
     RHO_A,
     TABLEAU_3_1,
@@ -37,6 +41,25 @@ from .materiaux import (
     k_p,
     k_y,
     limite_elasticite,
+)
+from .mecanique import (
+    CasDeCharge,
+    ClassificationSection,
+    Resistances,
+    TauxUtilisation,
+    beta_M_lineaire,
+    chi_LT_fi,
+    chi_fi,
+    classifier,
+    combinaison_accidentelle,
+    eta_fi,
+)
+from .nomogramme import (
+    ResultatVerification,
+    Verdict,
+    degre_utilisation_pour,
+    temperature_critique,
+    verifier,
 )
 from .profils import (
     Catalogue,
@@ -67,7 +90,11 @@ __version__ = "0.1.0"
 
 __all__ = [
     "Catalogue",
+    "CasDeCharge",
+    "ClassificationSection",
+    "ContexteNormatif",
     "CourbeFeu",
+    "EUROCODE_REC",
     "EpaisseurRequise",
     "Exposition",
     "FEU_EXTERIEUR",
@@ -78,19 +105,31 @@ __all__ = [
     "Profil",
     "Protection",
     "RHO_A",
+    "Resistances",
     "ResultatThermique",
+    "ResultatVerification",
+    "SUISSE_SIA",
     "TABLEAU_3_1",
+    "TauxUtilisation",
+    "Verdict",
     "__version__",
+    "beta_M_lineaire",
     "catalogue",
     "catalogue_protections",
     "chaleur_specifique",
     "charger_csv",
+    "chi_LT_fi",
+    "chi_fi",
+    "classifier",
+    "combinaison_accidentelle",
     "conductivite",
+    "degre_utilisation_pour",
     "duree_avant_temperature",
     "echauffement",
     "en_minutes",
     "epaisseur_requise",
     "epaisseur_requise_minutes",
+    "eta_fi",
     "facteur_massivete",
     "facteur_ombre",
     "flux_net",
@@ -103,6 +142,8 @@ __all__ = [
     "minutes",
     "mm",
     "perimetre_expose",
+    "temperature_critique",
+    "verifier",
 ]
 
 

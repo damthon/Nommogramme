@@ -308,7 +308,7 @@ hr.end{border:none;border-top:2px solid var(--ink);margin:3.5rem 0 1.2rem}
     <div><dt>Branche</dt><dd>claude/fire-resistance-<wbr>metal-profiles-u2512i</dd></div>
     <div><dt>Base profilés</dt><dd>SZS C5 — 277 profilés</dd></div>
     <div><dt>Langage</dt><dd>Python ≥ 3.11</dd></div>
-    <div><dt>Avancement</dt><dd>lots 1–3 sur 9 · 115 tests</dd></div>
+    <div><dt>Avancement</dt><dd>lots 1–6 sur 9 · 191 tests</dd></div>
   </dl>
 
   <nav class="toc" aria-label="Sommaire">
@@ -1049,7 +1049,7 @@ k_z  = 1 − μ_z·N_fi,Ed / (χ_z,fi·A·k_y,θ·f_y/γ_M,fi)       ≤ 3
 
   <div class="note">
     <span class="tag">Limite reconnue de la méthode</span>
-    <p>L'équation (4.22) suppose que la résistance décroît proportionnellement à k<sub>y,θ</sub>. Pour un élément où le flambement gouverne, χ<sub>fi</sub> décroît <em>en plus</em> de k<sub>y,θ</sub> (par l'élancement qui augmente avec √(k<sub>y,θ</sub>/k<sub>E,θ</sub>)), et l'éq. (4.22) devient <strong>non conservative</strong>. Ordre de grandeur&nbsp;: 20 à 60 °C d'écart sur θ<sub>cr</sub> pour un poteau élancé. C'est précisément ce que la vérification croisée du §12 capture, et la raison pour laquelle elle n'est pas optionnelle dans cet outil.</p>
+    <p>L'équation (4.22) suppose que la résistance décroît proportionnellement à k<sub>y,θ</sub>. Pour un élément où le flambement gouverne, χ<sub>fi</sub> décroît <em>en plus</em> de k<sub>y,θ</sub> (par l'élancement qui augmente avec √(k<sub>y,θ</sub>/k<sub>E,θ</sub>)), et l'éq. (4.22) devient <strong>non conservative</strong>. Ordre de grandeur mesuré sur l'implémentation&nbsp;: <strong>92 °C</strong> d'écart sur θ<sub>cr</sub> pour un HEB 300 en 850 kN + 120 kN·m avec l<sub>fi</sub> = 8 m (493 °C par l'éq. 4.22 contre 401 °C par la vérification croisée), contre 1 °C sur le même profilé à l<sub>fi</sub> = 2 m. C'est précisément ce que la vérification croisée du §12 capture, et la raison pour laquelle elle n'est pas optionnelle dans cet outil.</p>
   </div>
 
   <h4>Résolution</h4>
@@ -1216,9 +1216,9 @@ nommo profils --famille HEA --colonnes A,Wply,AmV_contour4</pre>
       <tr><td class="num">1</td><td>Catalogue de profilés&nbsp;: chargeur xlsx, modèle <code>Profil</code>, géométrie, A<sub>m</sub>/V, k<sub>sh</sub>, export CSV</td><td>277 profilés chargés, A<sub>m</sub>/V recoupés à U<sub>m</sub></td><td><strong>fait</strong></td></tr>
       <tr><td class="num">2</td><td>Matériaux&nbsp;: tableau 3.1, c<sub>a</sub>(θ), λ<sub>a</sub>(θ), nuances</td><td>tests unitaires sur les 13 lignes du tableau</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">3</td><td>Thermique&nbsp;: courbes de feu, flux net, intégration nu et protégé, solveur d<sub>p</sub></td><td>reproduction du tableau d'échauffement du §9</td><td><strong>fait</strong></td></tr>
-      <tr><td class="num">4</td><td>Mécanique&nbsp;: actions, classification, résistances, χ<sub>fi</sub>, χ<sub>LT,fi</sub></td><td>résistances à 20 °C recoupées à l'EN 1993-1-1</td><td>à venir</td></tr>
-      <tr><td class="num">5</td><td>Interaction N + M, μ₀ combiné, éq. (4.22) et son inverse</td><td>nomogramme numérique complet</td><td>à venir</td></tr>
-      <tr><td class="num">6</td><td>Orchestration&nbsp;: <code>verifier()</code>, vérification croisée, note de calcul</td><td>API stable, note traçable</td><td>à venir</td></tr>
+      <tr><td class="num">4</td><td>Mécanique&nbsp;: actions, classification, résistances, χ<sub>fi</sub>, χ<sub>LT,fi</sub></td><td>résistances à 20 °C recoupées à l'EN 1993-1-1</td><td><strong>fait</strong></td></tr>
+      <tr><td class="num">5</td><td>Interaction N + M, μ₀ combiné, éq. (4.22) et son inverse</td><td>nomogramme numérique complet</td><td><strong>fait</strong></td></tr>
+      <tr><td class="num">6</td><td>Orchestration&nbsp;: <code>verifier()</code>, vérification croisée, note de calcul</td><td>API stable, note traçable</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">7</td><td>CLI et tracé du nomogramme</td><td>outil utilisable en ligne de commande</td><td>à venir</td></tr>
       <tr><td class="num">8</td><td>Validation sur exemples normatifs et sur vos cas réels</td><td>suite de non-régression</td><td>à venir</td></tr>
       <tr><td class="num">9</td><td><em>Ultérieur</em>&nbsp;: interface graphique Streamlit</td><td>—</td><td>à venir</td></tr>
