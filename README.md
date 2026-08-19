@@ -38,11 +38,19 @@ avec un harnais prêt à recevoir vos propres cas vérifiés.
 ## Installation
 
 ```bash
-pip install -e ".[dev]"
+python -m venv .venv
+source .venv/bin/activate        # Windows : .\.venv\Scripts\Activate.ps1
+pip install -e ".[dev,trace]"
+python -m pytest                 # 269 tests attendus au vert
 ```
 
 Python 3.11 ou plus récent. Aucune dépendance obligatoire à l'exécution :
-`openpyxl` ne sert qu'à régénérer le catalogue depuis le classeur SZS.
+`openpyxl` ne sert qu'à régénérer le catalogue depuis le classeur SZS, et
+`matplotlib` qu'aux figures.
+
+Vous débutez avec Git ou Python ? Le guide
+[`docs/demarrage.md`](docs/demarrage.md) reprend tout pas à pas depuis
+l'installation, avec Visual Studio Code.
 
 ## Utilisation en ligne de commande
 
