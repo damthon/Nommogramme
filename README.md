@@ -12,8 +12,9 @@ plutôt la version mise en page :
 
 ## État d'avancement
 
-Six des neuf lots prévus sont implantés et testés. **La méthode du nomogramme
-est complète** : la température critique se déduit maintenant du chargement.
+Sept des neuf lots sont implantés et testés, le huitième partiellement.
+**La méthode du nomogramme est complète** : la température critique se déduit
+du chargement, et se lit sur une figure.
 
 | Lot | Contenu | État |
 |:---:|---|:---|
@@ -83,8 +84,8 @@ Options communes : `--exposition {contour4,contour3,caisson4,caisson3}`,
 Propres à `verifier` : `--contexte {sia,eurocode}` pour changer de référentiel,
 `--maintien-lateral` quand la semelle comprimée est bloquée par une dalle,
 `--kappa1` et `--kappa2` pour les facteurs d'adaptation du §4.2.3.3, `--C1` pour
-le diagramme de moment, `--theme clair|sombre` pour les figures. Le code de sortie vaut 0 si l'exigence est satisfaite,
-2 sinon — utilisable en script.
+le diagramme de moment, `--theme clair|sombre` pour les figures. Le code de
+sortie vaut 0 si l'exigence est satisfaite, 2 sinon — utilisable en script.
 
 ## Utilisation comme bibliothèque
 
