@@ -1,12 +1,16 @@
 """Interface en ligne de commande.
 
-Couverture des lots 1 à 3 : consultation du catalogue, facteurs de massiveté,
-échauffement de l'acier et dimensionnement de la protection à température
-critique imposée.
+Sept commandes :
 
-Le calcul de la température critique depuis le chargement (méthode du
-nomogramme proprement dite) relève des lots suivants ; en attendant,
-``--theta-cr`` doit être fourni explicitement.
+* ``verifier`` — la vérification complète N + M par la méthode du nomogramme,
+  avec note de calcul et tracés ;
+* ``echauffement`` — la seule voie thermique, à température critique imposée ;
+* ``dimensionner`` — l'épaisseur de protection requise ;
+* ``balayer`` — la durée atteinte par toute une famille de profilés ;
+* ``profils``, ``protections``, ``controler`` — consultation et audit.
+
+Aucune logique de calcul ne vit ici : la couche graphique à venir se branchera
+sur les mêmes fonctions.
 """
 
 from __future__ import annotations
@@ -16,12 +20,16 @@ import csv
 import sys
 from collections.abc import Sequence
 
-from .materiaux.protection import Protection, catalogue_protections
+from .contexte import EUROCODE_REC, SUISSE_SIA
+from .materiaux.acier import Nuance
+from .materiaux.protection import Protection
+from .mecanique.actions import CasDeCharge
+from .nomogramme.verification import verifier
 from .profils import Exposition, charger_csv, facteur_massivete, facteur_ombre
 from .thermique import echauffement
 from .thermique.courbes import COURBES, courbe as courbe_par_nom
 from .thermique.solveur import epaisseur_requise_minutes
-from .unites import en_minutes, minutes
+from .unites import kN, kNm, minutes
 
 _EXPOSITIONS = {
     "contour4": Exposition.CONTOUR_4_FACES,
@@ -51,8 +59,8 @@ def _construire_analyseur() -> argparse.ArgumentParser:
     analyseur = argparse.ArgumentParser(
         prog="nommo",
         description=(
-            "Résistance au feu de profilés métalliques — SIA 263 / EN 1993-1-2. "
-            "Lots 1 à 3 : catalogue, matériaux, diffusion de chaleur."
+            "Résistance au feu de profilés métalliques — SIA 263 / EN 1993-1-2, "
+            "par la méthode du nomogramme."
         ),
     )
     sous = analyseur.add_subparsers(dest="commande", required=True)
@@ -109,6 +117,53 @@ def _construire_analyseur() -> argparse.ArgumentParser:
     p_bal.add_argument("--feu", choices=sorted(COURBES), default="iso834")
     p_bal.add_argument("--format", choices=("texte", "csv"), default="texte")
 
+    # --- verifier ------------------------------------------------------------
+    p_ver = sous.add_parser(
+        "verifier",
+        help="Vérification complète N + M par la méthode du nomogramme",
+    )
+    p_ver.add_argument("profil")
+    p_ver.add_argument("--nuance", choices=[n.value for n in Nuance], default="S355")
+    p_ver.add_argument("--duree", type=_duree_minutes, required=True, help="En minutes")
+    p_ver.add_argument("--N", type=float, default=0.0,
+                       help="Effort normal [kN], positif en compression")
+    p_ver.add_argument("--My", type=float, default=0.0, help="Moment axe fort [kN·m]")
+    p_ver.add_argument("--Mz", type=float, default=0.0, help="Moment axe faible [kN·m]")
+    p_ver.add_argument("--L", type=float, default=0.0, help="Longueur d'épure [m]")
+    p_ver.add_argument("--lfi", type=float, help="Longueur de flambement en incendie [m]")
+    p_ver.add_argument("--lfi-y", type=float, help="Idem, plan fort [m]")
+    p_ver.add_argument("--lfi-z", type=float, help="Idem, plan faible [m]")
+    p_ver.add_argument("--L-LT", type=float, help="Longueur de déversement [m]")
+    p_ver.add_argument(
+        "--maintien-lateral", action="store_true",
+        help="Semelle comprimée maintenue : écarte le critère de déversement",
+    )
+    p_ver.add_argument("--beta-M", type=float, default=1.3,
+                       help="Facteur de moment uniforme équivalent [-]")
+    p_ver.add_argument("--kappa1", type=float, default=1.0,
+                       help="Facteur d'adaptation sur la section [-]")
+    p_ver.add_argument("--kappa2", type=float, default=1.0,
+                       help="Facteur d'adaptation sur la longueur [-]")
+    p_ver.add_argument("--C1", type=float, default=1.0,
+                       help="Facteur de forme du diagramme de moment [-]")
+    p_ver.add_argument("--exposition", choices=sorted(_EXPOSITIONS), default="contour4")
+    p_ver.add_argument("--feu", choices=sorted(COURBES), default="iso834")
+    p_ver.add_argument("--protection")
+    p_ver.add_argument("--dp", type=float, help="Épaisseur de protection [mm]")
+    p_ver.add_argument("--contexte", choices=("sia", "eurocode"), default="sia")
+    p_ver.add_argument("--rapport", help="Écrire la note de calcul dans ce fichier")
+    p_ver.add_argument("--tracer", help="Écrire le nomogramme dans ce fichier image")
+    p_ver.add_argument(
+        "--tracer-echauffement", help="Écrire la courbe θ_a(t) dans ce fichier image"
+    )
+    p_ver.add_argument("--theme", choices=("clair", "sombre"), default="clair")
+
+    p_ctrl = sous.add_parser(
+        "controler",
+        help="Auditer la cohérence interne du catalogue de profilés",
+    )
+    p_ctrl.add_argument("--famille", help="Restreindre à une famille")
+
     sous.add_parser("protections", help="Lister les produits de protection disponibles")
 
     return analyseur
@@ -134,7 +189,134 @@ def _executer(a: argparse.Namespace) -> int:
         return _cmd_dimensionner(a)
     if a.commande == "balayer":
         return _cmd_balayer(a)
+    if a.commande == "verifier":
+        return _cmd_verifier(a)
+    if a.commande == "controler":
+        return _cmd_controler(a)
     raise ValueError(f"Commande inconnue : {a.commande}")
+
+
+def _cmd_controler(a: argparse.Namespace) -> int:
+    from .profils import Gravite, auditer_catalogue
+
+    cat = charger_csv()
+    profils = cat.famille(a.famille) if a.famille else list(cat)
+    anomalies = auditer_catalogue(profils)
+
+    corriges = [p for p in profils if p.iz_tabule is not None]
+    if corriges:
+        print(
+            f"{len(corriges)} profilés dont i_z a été recalculé à la lecture "
+            "(colonne figée dans le classeur SZS) :"
+        )
+        for profil in corriges[:5]:
+            print(
+                f"  {profil.nom:20s} {profil.iz_tabule * 1e3:7.2f} → "
+                f"{profil.iz * 1e3:7.2f} mm"
+            )
+        if len(corriges) > 5:
+            print(f"  … et {len(corriges) - 5} autres")
+        print()
+
+    if not anomalies:
+        print(f"{len(profils)} profilés contrôlés : aucune anomalie résiduelle.")
+        return 0
+
+    erreurs = [a for a in anomalies if a.gravite is Gravite.ERREUR]
+    print(f"{len(profils)} profilés contrôlés, {len(anomalies)} anomalie(s) :\n")
+    for anomalie in anomalies:
+        print(f"  [{anomalie.gravite.value:13s}] {anomalie}")
+    print(
+        "\nCes écarts sont à recouper avec les tables SZS d'origine. "
+        "Un avertissement peut relever de l'arrondi de tabulation ; "
+        "une erreur traduit une donnée fausse."
+    )
+    return 1 if erreurs else 0
+
+
+def _cmd_verifier(a: argparse.Namespace) -> int:
+    cat = charger_csv()
+    profil = cat[a.profil]
+    contexte = SUISSE_SIA if a.contexte == "sia" else EUROCODE_REC
+
+    cas = CasDeCharge(
+        N_fi_Ed=kN(a.N),
+        My_fi_Ed=kNm(a.My),
+        Mz_fi_Ed=kNm(a.Mz),
+        L=a.L,
+        l_fi_y=a.lfi_y if a.lfi_y is not None else a.lfi,
+        l_fi_z=a.lfi_z if a.lfi_z is not None else a.lfi,
+        L_LT=a.L_LT,
+        beta_M_y=a.beta_M,
+        beta_M_z=a.beta_M,
+        beta_M_LT=a.beta_M,
+        maintien_lateral=a.maintien_lateral,
+    )
+
+    resultat = verifier(
+        profil=profil,
+        nuance=Nuance(a.nuance),
+        cas=cas,
+        exposition=_EXPOSITIONS[a.exposition],
+        duree_requise_min=a.duree,
+        protection=_protection_depuis_arguments(a),
+        courbe=courbe_par_nom(a.feu),
+        contexte=contexte,
+        kappa_1=a.kappa1,
+        kappa_2=a.kappa2,
+        C1=a.C1,
+    )
+
+    if a.rapport:
+        with open(a.rapport, "w", encoding="utf-8") as fichier:
+            fichier.write(resultat.note_de_calcul())
+        print(f"Note de calcul écrite dans {a.rapport}")
+
+    if a.tracer or a.tracer_echauffement:
+        from .nomogramme.trace import tracer_echauffement, tracer_nomogramme
+
+        if a.tracer:
+            print(f"Nomogramme écrit dans {tracer_nomogramme(resultat, a.tracer, a.theme)}")
+        if a.tracer_echauffement:
+            print(
+                "Courbe d'échauffement écrite dans "
+                f"{tracer_echauffement(resultat, a.tracer_echauffement, a.theme)}"
+            )
+
+    print(f"Profilé          : {profil.nom} — {a.nuance}")
+    print(f"Référentiel      : {contexte.nom}")
+    print(f"Classification   : {resultat.classification}")
+    print()
+    print("Voie mécanique")
+    print(f"  critère gouvernant : {resultat.gouverne_par}")
+    print(f"  μ₀                 : {resultat.mu_0:.3f}")
+    if resultat.theta_cr_nomogramme is not None:
+        print(f"  θ_cr éq. (4.22)    : {resultat.theta_cr_nomogramme:.0f} °C")
+    if resultat.theta_cr_exact is not None:
+        print(f"  θ_cr vérif. croisée: {resultat.theta_cr_exact:.0f} °C")
+    if resultat.ecart_nomogramme is not None:
+        print(f"  écart              : {resultat.ecart_nomogramme:+.0f} °C")
+    print(f"  θ_cr retenue       : {resultat.theta_cr:.0f} °C  ({resultat.source_theta_cr})")
+    print()
+    print("Voie thermique")
+    print(f"  A_m/V              : {resultat.Am_sur_V:.1f} m⁻¹")
+    print(f"  k_sh               : {resultat.k_sh:.3f}")
+    if resultat.thermique.phi is not None:
+        print(f"  φ (éq. 4.28)       : {resultat.thermique.phi:.3f}")
+    print(f"  θ_a à {a.duree:.0f} min      : {resultat.theta_a_a_echeance:.0f} °C")
+    print()
+    duree_atteinte = (
+        f"{resultat.t_fi_d_minutes:.1f} min"
+        if resultat.t_fi_d_minutes is not None
+        else "non atteinte sur la durée simulée"
+    )
+    print(f"t_fi,d             : {duree_atteinte}")
+    print(f"Marge              : {resultat.marge_temperature:+.0f} °C")
+    print(f"R{a.duree:.0f}                : {resultat.verdict.value.upper()}")
+
+    for avertissement in resultat.avertissements:
+        print(f"\nAvertissement : {avertissement}")
+    return 0 if resultat.verdict else 2
 
 
 def _cmd_protections() -> int:

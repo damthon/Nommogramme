@@ -96,6 +96,13 @@ class Profil:
     croisé pour la formule géométrique.
     """
 
+    iz_tabule: float | None = None
+    """Rayon de giration faible tel que tabulé par le SZS [m].
+
+    Renseigné uniquement lorsque la valeur retenue dans ``iz`` a dû être
+    recalculée : voir ``chargeur._corriger_rayon_giration_profils_creux``.
+    """
+
     It: float | None = None
     """Moment d'inertie de torsion uniforme [m⁴]."""
     Av: float | None = None

@@ -1,0 +1,135 @@
+# Cas de référence — vérifications dont le résultat est connu par ailleurs.
+#
+# C'est ici que se déposent VOS cas déjà dimensionnés par un autre moyen :
+# abaque SZS papier, logiciel du bureau, feuille de calcul existante, exemple
+# d'un recueil. Chaque cas ajouté devient un test de non-régression.
+#
+# Champs obligatoires : libelle, source, profil, exposition, duree_min, et au
+# moins une valeur dans [cas.attendu].
+#
+# Champs de chargement (tous facultatifs, valeur par défaut nulle) :
+#   N_fi_Ed_kN     effort normal, POSITIF EN COMPRESSION
+#   My_fi_Ed_kNm   moment autour de l'axe fort
+#   Mz_fi_Ed_kNm   moment autour de l'axe faible
+#   L              longueur d'épure [m]
+#   l_fi_y, l_fi_z longueurs de flambement en situation d'incendie [m]
+#   L_LT           longueur de déversement [m]
+#   beta_M         facteur de moment uniforme équivalent
+#   maintien_lateral   true si la semelle comprimée est bloquée
+#   kappa_1, kappa_2   facteurs d'adaptation du §4.2.3.3
+#
+# Protection (facultative) :
+#   protection     identifiant dans protections.toml
+#   dp_mm          épaisseur
+#
+# Autres : nuance (défaut S355), feu (défaut iso834), contexte (défaut sia).
+#
+# Valeurs vérifiables dans [cas.attendu] :
+#   mu_0, theta_cr, theta_cr_nomogramme, theta_cr_exact,
+#   Am_sur_V, k_sh, theta_a_a_echeance, t_fi_d_min, verdict
+#
+# `tolerance` est l'écart relatif admis (défaut 0,02). `verdict` se compare
+# exactement : "satisfait" ou "non satisfait".
+
+# ---------------------------------------------------------------------------
+# Les cas ci-dessous ne sont PAS des références externes : ce sont les valeurs
+# produites par l'outil lui-même, figées pour détecter toute régression. Ils
+# n'attestent en rien de la justesse du calcul — voir docs/validation.md.
+# Les remplacer par de vraies références vérifiées est l'objectif.
+# ---------------------------------------------------------------------------
+
+[[cas]]
+libelle = "Poteau HEB 300 trapu, comprimé et fléchi, nu"
+source = "non-régression — valeur produite par l'outil, non vérifiée"
+reference_externe = false
+profil = "HEB 300"
+nuance = "S355"
+N_fi_Ed_kN = 850.0
+My_fi_Ed_kNm = 120.0
+L = 4.0
+l_fi_y = 2.0
+l_fi_z = 2.0
+beta_M = 1.4
+exposition = "contour4"
+duree_min = 60.0
+tolerance = 0.02
+[cas.attendu]
+mu_0 = 0.407
+theta_cr = 617.0
+Am_sur_V = 116.1
+k_sh = 0.624
+verdict = "non satisfait"
+
+[[cas]]
+libelle = "Le même poteau, élancé : le nomogramme devient non conservatif"
+source = "non-régression — illustre l'écart capté par la vérification croisée"
+reference_externe = false
+profil = "HEB 300"
+nuance = "S355"
+N_fi_Ed_kN = 850.0
+My_fi_Ed_kNm = 120.0
+L = 8.0
+l_fi_y = 8.0
+l_fi_z = 8.0
+beta_M = 1.4
+exposition = "contour4"
+duree_min = 60.0
+tolerance = 0.02
+[cas.attendu]
+mu_0 = 0.809
+theta_cr_nomogramme = 493.0
+theta_cr_exact = 401.0
+theta_cr = 401.0
+
+[[cas]]
+libelle = "Poteau HEB 300 protégé par 25 mm de flocage, R60"
+source = "non-régression — valeur produite par l'outil, non vérifiée"
+reference_externe = false
+profil = "HEB 300"
+nuance = "S355"
+N_fi_Ed_kN = 850.0
+My_fi_Ed_kNm = 120.0
+L = 4.0
+l_fi_y = 2.0
+l_fi_z = 2.0
+beta_M = 1.4
+exposition = "contour4"
+protection = "flocage_fibreux"
+dp_mm = 25.0
+duree_min = 60.0
+tolerance = 0.02
+[cas.attendu]
+verdict = "satisfait"
+
+[[cas]]
+libelle = "Poutre IPE 300 maintenue latéralement, dalle béton, trois faces"
+source = "non-régression — valeur produite par l'outil, non vérifiée"
+reference_externe = false
+profil = "IPE 300"
+nuance = "S235"
+My_fi_Ed_kNm = 60.0
+L = 6.0
+maintien_lateral = true
+kappa_1 = 0.70
+exposition = "contour3"
+duree_min = 30.0
+tolerance = 0.02
+[cas.attendu]
+Am_sur_V = 187.7
+
+[[cas]]
+libelle = "Poteau tubulaire RRW 200/200/10, i_z corrigé"
+source = "non-régression — couvre la correction du rayon de giration"
+reference_externe = false
+profil = "RRW 200/200/10"
+nuance = "S355"
+N_fi_Ed_kN = 900.0
+L = 6.0
+l_fi_y = 6.0
+l_fi_z = 6.0
+exposition = "contour4"
+duree_min = 30.0
+tolerance = 0.02
+[cas.attendu]
+Am_sur_V = 102.2
+k_sh = 1.0

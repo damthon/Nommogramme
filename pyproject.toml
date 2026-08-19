@@ -15,7 +15,7 @@ dependencies = []
 [project.optional-dependencies]
 xlsx = ["openpyxl>=3.1"]
 trace = ["matplotlib>=3.7"]
-dev = ["pytest>=7.4", "openpyxl>=3.1"]
+dev = ["pytest>=7.4", "openpyxl>=3.1", "matplotlib>=3.7"]
 
 [project.scripts]
 nommo = "nommogramme.cli:main"
@@ -27,4 +27,5 @@ where = ["src"]
 nommogramme = ["data/*.csv", "data/*.toml"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "src"]
+addopts = "--doctest-modules"
