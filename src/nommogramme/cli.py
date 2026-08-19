@@ -7,10 +7,11 @@ Sept commandes :
 * ``echauffement`` — la seule voie thermique, à température critique imposée ;
 * ``dimensionner`` — l'épaisseur de protection requise ;
 * ``balayer`` — la durée atteinte par toute une famille de profilés ;
-* ``profils``, ``protections``, ``controler`` — consultation et audit.
+* ``profils``, ``protections``, ``controler`` — consultation et audit ;
+* ``interface`` — l'interface graphique dans le navigateur.
 
-Aucune logique de calcul ne vit ici : la couche graphique à venir se branchera
-sur les mêmes fonctions.
+Aucune logique de calcul ne vit ici, pas plus que dans l'interface graphique :
+les deux se branchent sur les mêmes fonctions.
 """
 
 from __future__ import annotations
@@ -158,6 +159,10 @@ def _construire_analyseur() -> argparse.ArgumentParser:
     )
     p_ver.add_argument("--theme", choices=("clair", "sombre"), default="clair")
 
+    sous.add_parser(
+        "interface", help="Lancer l'interface graphique dans le navigateur"
+    )
+
     p_ctrl = sous.add_parser(
         "controler",
         help="Auditer la cohérence interne du catalogue de profilés",
@@ -193,6 +198,10 @@ def _executer(a: argparse.Namespace) -> int:
         return _cmd_verifier(a)
     if a.commande == "controler":
         return _cmd_controler(a)
+    if a.commande == "interface":
+        from .interface import lancer
+
+        return lancer() or 0
     raise ValueError(f"Commande inconnue : {a.commande}")
 
 

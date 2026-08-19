@@ -12,9 +12,10 @@ plutôt la version mise en page :
 
 ## État d'avancement
 
-Sept des neuf lots sont implantés et testés, le huitième partiellement.
-**La méthode du nomogramme est complète** : la température critique se déduit
-du chargement, et se lit sur une figure.
+Les neuf lots sont implantés, le huitième partiellement. **La méthode du
+nomogramme est complète** : la température critique se déduit du chargement,
+se lit sur une figure, et se calcule aussi bien en ligne de commande que dans
+un navigateur.
 
 | Lot | Contenu | État |
 |:---:|---|:---|
@@ -26,7 +27,7 @@ du chargement, et se lit sur une figure.
 | 6 | Orchestration, vérification croisée, note de calcul | fait |
 | 7 | Tracé du nomogramme | fait |
 | 8 | Validation | **partiel** — voir [`docs/validation.md`](docs/validation.md) |
-| 9 | Interface graphique | à venir |
+| 9 | Interface graphique | fait |
 
 Le lot 8 n'a pu être mené qu'en partie : le proxy réseau de l'environnement de
 développement bloque l'accès aux recueils d'exemples normatifs, et les normes
@@ -40,8 +41,8 @@ avec un harnais prêt à recevoir vos propres cas vérifiés.
 ```bash
 python -m venv .venv
 source .venv/bin/activate        # Windows : .\.venv\Scripts\Activate.ps1
-pip install -e ".[dev,trace]"
-python -m pytest                 # 269 tests attendus au vert
+pip install -e ".[dev,trace,ui]"
+python -m pytest                 # 287 tests attendus au vert
 ```
 
 Python 3.11 ou plus récent. Aucune dépendance obligatoire à l'exécution :
@@ -84,6 +85,9 @@ nommo protections
 
 # Audit de cohérence du catalogue
 nommo controler
+
+# Interface graphique dans le navigateur
+nommo interface
 ```
 
 Options communes : `--exposition {contour4,contour3,caisson4,caisson3}`,
@@ -154,6 +158,25 @@ vision des couleurs : séparation ΔE 24,7 en clair et 26,8 en sombre, pour un
 seuil de 8. Chaque courbe porte aussi son étiquette directe, l'identité ne
 reposant jamais sur la seule couleur. `matplotlib` est un extra :
 `pip install 'nommogramme[trace]'`.
+
+## Interface graphique
+
+```bash
+pip install -e ".[ui]"
+nommo interface
+```
+
+Un navigateur s'ouvre sur `localhost:8501`. La barre latérale porte tous les
+paramètres — profilé, nuance, charges, longueurs, exposition, courbe de feu,
+protection, durée exigée, référentiel — et l'écran principal affiche le
+verdict, μ₀, les deux températures critiques et leur écart, les
+avertissements, les deux figures et la note de calcul téléchargeable. Chaque
+modification recalcule immédiatement.
+
+L'interface ne contient **aucun calcul** : elle appelle `verifier()` comme le
+fait la ligne de commande. Un test compare d'ailleurs ce qu'elle affiche à ce
+que la bibliothèque renvoie pour les mêmes paramètres — deux surfaces qui
+recalculeraient chacune de leur côté finiraient par diverger.
 
 ### Thermique seule
 
@@ -226,7 +249,7 @@ retenu (ETE, reconnaissance AEAI).
 python -m pytest
 ```
 
-269 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
+287 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
 pic de transformation de phase à 735 °C, les valeurs de référence des courbes
 de feu, les facteurs de massiveté comparés aux tables publiées, la convergence
 en pas de temps, les invariants physiques de l'échauffement, les huit valeurs
