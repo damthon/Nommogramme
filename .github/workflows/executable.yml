@@ -1,0 +1,134 @@
+# Compile l'interface de bureau en exécutable, et la publie.
+#
+# PyInstaller ne sait pas produire un .exe depuis Linux : il embarque
+# l'interpréteur de la machine qui compile, et il faut donc compiler sur la
+# plateforme visée. D'où la matrice — ces coureurs sont gratuits pour un dépôt
+# public, et c'est ce qui rend la distribution possible sans avoir soi-même une
+# machine de chaque système.
+#
+# Deux déclenchements :
+#   * une étiquette « v… » poussée sur le dépôt publie une Release, et c'est de
+#     là que les utilisateurs téléchargent ;
+#   * « Run workflow » depuis l'onglet Actions compile sans publier, pour
+#     vérifier que la recette tient encore.
+
+name: Exécutable de bureau
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  compiler:
+    name: ${{ matrix.nom }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            nom: Windows
+            binaire: Nommogramme.exe
+            archive: Nommogramme-windows.zip
+          - os: macos-latest
+            nom: macOS
+            binaire: Nommogramme
+            archive: Nommogramme-macos.zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # tkinter vient avec Python sur Windows et macOS ; aucune installation
+      # système n'est nécessaire ici, contrairement à Linux.
+      - name: Installer le projet et les outils
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[bureau,dev]" pyinstaller
+
+      # La suite tourne avant la compilation : un exécutable produit à partir
+      # d'un code défaillant serait publié sans que rien ne s'y oppose.
+      - name: Suite de tests
+        run: python -m pytest -q
+
+      - name: Compiler
+        working-directory: packaging
+        run: pyinstaller nommogramme.spec --noconfirm --clean
+
+      # Les deux contrôles portent sur l'exécutable produit, pas sur le code
+      # source : ils vérifient ce que PyInstaller a réellement embarqué. Un
+      # paquet à qui manque un fichier de données ou un import différé se
+      # compile sans erreur et échoue au lancement — c'est déjà arrivé avec
+      # PIL._tkinter_finder.
+      - name: Contrôler le paquet (sans écran)
+        working-directory: packaging
+        run: ./dist/${{ matrix.binaire }} --autotest
+        shell: bash
+
+      - name: Contrôler le chemin d'affichage
+        working-directory: packaging
+        run: ./dist/${{ matrix.binaire }} --autotest-fenetre
+        shell: bash
+
+      - name: Archiver
+        working-directory: packaging/dist
+        run: 7z a ../../${{ matrix.archive }} ${{ matrix.binaire }}
+        shell: bash
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive }}
+          path: ${{ matrix.archive }}
+          retention-days: 30
+
+  publier:
+    name: Publier la Release
+    needs: compiler
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: telechargements
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: telechargements/*.zip
+          draft: false
+          generate_release_notes: true
+          body: |
+            ## Télécharger
+
+            | Système | Fichier |
+            |---|---|
+            | Windows | `Nommogramme-windows.zip` |
+            | macOS | `Nommogramme-macos.zip` |
+
+            Décompressez, puis lancez `Nommogramme`. Aucune installation de
+            Python n'est nécessaire.
+
+            **Windows affichera « Windows a protégé votre ordinateur »** : le
+            programme n'est pas signé par un certificat commercial. Cliquez sur
+            « Informations complémentaires », puis « Exécuter quand même ». Si
+            votre service informatique bloque les exécutables téléchargés,
+            faites-le leur autoriser plutôt que de contourner la protection.
+
+            **macOS** : au premier lancement, faites un clic droit sur
+            l'application puis « Ouvrir », pour la même raison.
+
+            ## Avertissement
+
+            La compression, protégée et nue, et la flexion simple sont
+            recoupées avec la documentation SZS steeltec 02:2015 ; le catalogue
+            de profilés avec les Tables de construction SZS C5/05. **Le
+            déversement et l'interaction N + M n'ont été comparés à aucun
+            calcul de référence externe.** Cet outil ne constitue pas une
+            justification de projet — voir `docs/validation.md`.

@@ -12,7 +12,7 @@ plutôt la version mise en page :
 
 ## État d'avancement
 
-Les neuf lots sont implantés. **La méthode du nomogramme est complète** : la
+Les neuf lots sont implantés, plus la mise en application. **La méthode du nomogramme est complète** : la
 température critique se déduit du chargement, se lit sur une figure, et se
 calcule aussi bien en ligne de commande que dans un navigateur.
 
@@ -27,6 +27,7 @@ calcule aussi bien en ligne de commande que dans un navigateur.
 | 7 | Tracé du nomogramme | fait |
 | 8 | Validation | fait — voir [`docs/validation.md`](docs/validation.md) |
 | 9 | Interface graphique | fait |
+| 10 | Application de bureau distribuable | fait |
 
 ### Ce qui est validé, et contre quoi
 
@@ -85,7 +86,7 @@ accueille vos propres cas vérifiés.
 python -m venv .venv
 source .venv/bin/activate        # Windows : .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev,trace,ui]"
-python -m pytest                 # 369 tests attendus au vert
+python -m pytest                 # 396 tests attendus au vert
 ```
 
 Python 3.11 ou plus récent. Aucune dépendance obligatoire à l'exécution :
@@ -202,7 +203,70 @@ seuil de 8. Chaque courbe porte aussi son étiquette directe, l'identité ne
 reposant jamais sur la seule couleur. `matplotlib` est un extra :
 `pip install 'nommogramme[trace]'`.
 
-## Interface graphique
+## Application de bureau
+
+C'est la forme destinée à être **distribuée** : un fichier à télécharger, un
+double-clic, l'écran s'ouvre. Ni Python à installer, ni ligne de commande, ni
+navigateur.
+
+Téléchargez l'archive de votre système depuis la page
+[Releases](https://github.com/damthon/Nommogramme/releases), décompressez-la,
+lancez `Nommogramme`.
+
+> **Windows affichera « Windows a protégé votre ordinateur »** : le programme
+> n'est pas signé par un certificat commercial (~300 CHF/an). Cliquez sur
+> « Informations complémentaires », puis « Exécuter quand même ». Si votre
+> service informatique bloque les exécutables téléchargés, mieux vaut le leur
+> faire autoriser que contourner la protection. Sur macOS, clic droit puis
+> « Ouvrir » au premier lancement, pour la même raison.
+
+Depuis une installation Python, la même fenêtre s'obtient par :
+
+```bash
+pip install -e ".[bureau]"
+nommo bureau
+```
+
+L'exécutable pèse **47 Mo**. L'interface Streamlit ci-dessous en aurait demandé
+près de 250 : elle entraîne pandas et pyarrow, 230 Mo à eux deux, dont l'outil
+n'utilise rien. Elle est aussi un serveur web, ce qui veut dire un port local à
+ouvrir et un pare-feu à convaincre. La version de bureau repose sur Tkinter,
+livré avec Python : démarrage immédiat, aucun serveur.
+
+### Comment l'exécutable est produit
+
+Sur une machine Windows ou macOS :
+
+```bash
+pip install -e ".[bureau]" pyinstaller
+pyinstaller packaging/nommogramme.spec
+```
+
+PyInstaller embarque l'interpréteur de la machine qui compile : **on ne produit
+pas un `.exe` depuis Linux.** C'est le rôle de
+[`.github/workflows/executable.yml`](.github/workflows/executable.yml), qui
+compile sur des machines Windows et macOS fournies par GitHub, puis publie les
+archives dans les Releases. Pousser une étiquette suffit :
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+Le paquet produit est contrôlé avant publication, sur l'exécutable lui-même et
+non sur le code source :
+
+```bash
+./dist/Nommogramme --autotest           # catalogue, produits, calcul, tracé
+./dist/Nommogramme --autotest-fenetre   # ouvre la fenêtre et la peint
+```
+
+Un paquet peut se compiler sans erreur et être inutilisable — il suffit qu'un
+fichier de données manque, ou qu'un import différé ait échappé à l'analyse.
+C'est arrivé ici deux fois : le catalogue de profilés, puis
+`PIL._tkinter_finder`, sans lequel aucune figure ne s'affiche. Le second
+contrôle existe parce que le premier n'avait pas suffi à l'attraper.
+
+## Interface dans le navigateur
 
 ```bash
 pip install -e ".[ui]"
@@ -216,10 +280,12 @@ verdict, μ₀, les deux températures critiques et leur écart, les
 avertissements, les deux figures et la note de calcul téléchargeable. Chaque
 modification recalcule immédiatement.
 
-L'interface ne contient **aucun calcul** : elle appelle `verifier()` comme le
-fait la ligne de commande. Un test compare d'ailleurs ce qu'elle affiche à ce
-que la bibliothèque renvoie pour les mêmes paramètres — deux surfaces qui
-recalculeraient chacune de leur côté finiraient par diverger.
+Les trois surfaces — ligne de commande, navigateur, bureau — ne contiennent
+**aucun calcul**. Les deux interfaces graphiques partagent
+`interface/saisie.py`, qui porte le jeu de paramètres et l'unique traduction
+vers `verifier()` : deux conversions d'unités écrites séparément finiraient par
+diverger, et il faudrait alors se demander laquelle a raison. Un test compare
+ce que chaque écran affiche à ce que la bibliothèque renvoie.
 
 ### Thermique seule
 
@@ -305,7 +371,7 @@ retenu (ETE, reconnaissance AEAI).
 python -m pytest
 ```
 
-369 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
+396 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
 pic de transformation de phase à 735 °C, les valeurs de référence des courbes
 de feu, les facteurs de massiveté comparés aux tables publiées, la convergence
 en pas de temps, les invariants physiques de l'échauffement, les huit valeurs
@@ -319,6 +385,12 @@ accumulation numérique, éq. (4.22) contre interpolation du tableau 3.1.
 
 `tests/cas_reference.toml` accueille vos propres cas vérifiés : chacun devient
 un test de non-régression, sans écrire de code.
+
+Les tests de l'interface de bureau ouvrent une vraie fenêtre Tk et lisent ce
+qu'elle affiche. Sous Linux, tkinter est un paquet système séparé et il faut un
+écran : `sudo apt install python3-tk xvfb`, puis `xvfb-run -a python -m pytest`.
+Sans eux ces tests s'écartent d'eux-mêmes — l'intégration continue refuse ce
+cas, un contrôle qui ne contrôle rien étant pire que pas de contrôle.
 
 Les tests de tracé vérifient que les figures se produisent pour chaque cas de
 figure structurellement différent, que les annotations attendues y sont et que

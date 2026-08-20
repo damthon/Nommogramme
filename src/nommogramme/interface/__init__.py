@@ -1,16 +1,21 @@
-"""Interface graphique Streamlit.
+"""Les deux interfaces graphiques.
 
-Le module ``app`` importe ``streamlit`` au chargement ; il n'est donc pas
-importé ici, pour que ``import nommogramme`` reste possible sans l'extra
-``[ui]``. Utilisez ``chemin_application()`` pour localiser le fichier à passer
-à ``streamlit run``.
+* ``bureau`` — Tkinter, celle qui est distribuée sous forme d'exécutable ;
+* ``app`` — Streamlit, dans le navigateur.
+
+Elles partagent ``saisie.py``, qui porte le jeu de paramètres et sa traduction
+en appel de bibliothèque. Aucune des deux ne calcule quoi que ce soit.
+
+Ni ``app`` ni ``bureau`` ne sont importés ici : le premier demande
+``streamlit``, le second ``tkinter`` et ``matplotlib``. Les importer au
+chargement rendrait ``import nommogramme`` impossible sans les extras.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-__all__ = ["chemin_application", "lancer"]
+__all__ = ["chemin_application", "lancer", "lancer_bureau"]
 
 
 def chemin_application() -> Path:
@@ -36,3 +41,21 @@ def lancer(arguments: list[str] | None = None) -> int:
 
     sys.argv = ["streamlit", "run", str(chemin_application()), *(arguments or [])]
     return cli.main()  # type: ignore[no-any-return]
+
+
+def lancer_bureau() -> int:
+    """Ouvre l'interface de bureau, et rend la main à sa fermeture.
+
+    C'est le point d'entrée de l'exécutable distribué.
+    """
+    try:
+        from .bureau import lancer as ouvrir
+    except ImportError as erreur:  # pragma: no cover - dépend de l'installation
+        raise ImportError(
+            "L'interface de bureau demande tkinter et matplotlib : "
+            "pip install 'nommogramme[bureau]'. Sous Linux, tkinter est un "
+            "paquet système séparé (python3-tk)."
+        ) from erreur
+
+    ouvrir()
+    return 0

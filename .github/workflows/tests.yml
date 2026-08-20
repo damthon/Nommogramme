@@ -1,0 +1,67 @@
+# La suite de tests, à chaque poussée.
+#
+# Sous Linux, deux choses manquent par rapport à un poste de travail : tkinter,
+# que Debian et Ubuntu livrent dans un paquet système séparé plutôt que dans la
+# bibliothèque standard, et un écran. Xvfb fournit le second.
+#
+# Sans eux, les tests de l'interface de bureau s'écarteraient d'eux-mêmes — la
+# suite passerait au vert sans avoir rien vérifié de la fenêtre. C'est
+# précisément ce qu'il faut éviter d'un contrôle automatique.
+
+name: Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # « setup-python » installe son propre interpréteur, distinct de celui du
+      # système : le paquet python3-tk ne lui sert pas directement. Ce sont les
+      # bibliothèques Tcl/Tk qu'il faut, que son module _tkinter charge au
+      # démarrage.
+      - name: Installer Tcl/Tk et un serveur graphique
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tk8.6 tcl8.6 python3-tk xvfb
+
+      - name: Installer le projet
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,trace,ui,bureau]"
+
+      # Sans cette vérification, l'absence de tkinter passerait inaperçue : les
+      # tests de fenêtre s'écarteraient d'eux-mêmes et la suite finirait au
+      # vert sans avoir rien vérifié de l'interface. Un contrôle automatique
+      # qui ne contrôle rien est pire que pas de contrôle du tout.
+      - name: Exiger tkinter
+        run: python -c "import tkinter; print('tkinter', tkinter.TkVersion)"
+
+      # « xvfb-run » donne un écran virtuel : les tests de fenêtre s'exécutent
+      # réellement au lieu d'être écartés faute d'affichage.
+      - name: Suite complète
+        run: xvfb-run -a python -m pytest -q
+
+      - name: Exiger que les tests de fenêtre aient tourné
+        run: |
+          xvfb-run -a python -m pytest tests/test_bureau.py -q --no-header \
+            -m "" -rs | tee /tmp/bureau.txt
+          if grep -qiE "aucun serveur graphique|tkinter absent" /tmp/bureau.txt; then
+            echo "::error::les tests d'interface ont été écartés au lieu de tourner"
+            exit 1
+          fi

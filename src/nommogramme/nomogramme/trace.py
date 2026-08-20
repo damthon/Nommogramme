@@ -309,18 +309,29 @@ def tracer_nomogramme(
     gauche.spines["right"].set_linewidth(1.2)
     droite.spines["left"].set_visible(False)
 
+    # Titre, sous-titre et légende sont placés **dans** le canevas, et les
+    # marges réservées en conséquence.
+    #
+    # Les poser à l'extérieur — y = 1,06 pour le titre, y = −0,04 pour la
+    # légende — fonctionne à l'enregistrement, où « bbox_inches="tight" »
+    # agrandit le canevas pour les rattraper. Mais une figure affichée n'est
+    # jamais recadrée : dans un canevas Tk ou une page web, tout ce qui
+    # dépasse est simplement absent. Le titre et la légende disparaissaient
+    # sans que rien ne le signale.
+    figure.subplots_adjust(top=0.855, bottom=0.155, left=0.06, right=0.985)
+
     poignees, etiquettes = droite.get_legend_handles_labels()
     figure.legend(
         poignees, etiquettes, loc="lower center", ncol=len(etiquettes),
         frameon=False, fontsize=8.5, labelcolor=p.encre_secondaire,
-        bbox_to_anchor=(0.5, -0.04),
+        bbox_to_anchor=(0.5, 0.005),
     )
 
     figure.suptitle(
-        _titre(resultat), fontsize=11.5, color=p.encre, x=0.02, ha="left", y=1.06
+        _titre(resultat), fontsize=11.5, color=p.encre, x=0.02, ha="left", y=0.975
     )
     figure.text(
-        0.02, 1.005, _sous_titre(resultat),
+        0.02, 0.925, _sous_titre(resultat),
         fontsize=8.5, color=p.encre_attenuee, ha="left",
     )
     return _enregistrer(figure, chemin, p)
