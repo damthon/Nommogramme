@@ -2,9 +2,14 @@
 #
 # PyInstaller ne sait pas produire un .exe depuis Linux : il embarque
 # l'interpréteur de la machine qui compile, et il faut donc compiler sur la
-# plateforme visée. D'où la matrice — ces coureurs sont gratuits pour un dépôt
-# public, et c'est ce qui rend la distribution possible sans avoir soi-même une
-# machine de chaque système.
+# plateforme visée. GitHub fournit gratuitement un coureur Windows pour un
+# dépôt public, et c'est ce qui rend la distribution possible sans avoir
+# soi-même une machine Windows.
+#
+# Seul Windows est produit. Une cible macOS avait été prévue et retirée : elle
+# n'est pas demandée, et son job restait bloqué faute de session graphique
+# utilisable pour le contrôle d'affichage. La rétablir demande de traiter ce
+# point, pas seulement de rajouter une ligne à la matrice.
 #
 # Deux déclenchements :
 #   * une étiquette « v… » poussée sur le dépôt publie une Release, et c'est de
@@ -26,6 +31,7 @@ jobs:
   compiler:
     name: ${{ matrix.nom }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -34,10 +40,6 @@ jobs:
             nom: Windows
             binaire: Nommogramme.exe
             archive: Nommogramme-windows.zip
-          - os: macos-latest
-            nom: macOS
-            binaire: Nommogramme
-            archive: Nommogramme-macos.zip
 
     steps:
       - uses: actions/checkout@v4
@@ -46,8 +48,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      # tkinter vient avec Python sur Windows et macOS ; aucune installation
-      # système n'est nécessaire ici, contrairement à Linux.
+      # tkinter vient avec Python sur Windows ; aucune installation système
+      # n'est nécessaire ici, contrairement à Linux où c'est un paquet séparé.
       - name: Installer le projet et les outils
         run: |
           python -m pip install --upgrade pip
@@ -67,13 +69,19 @@ jobs:
       # paquet à qui manque un fichier de données ou un import différé se
       # compile sans erreur et échoue au lancement — c'est déjà arrivé avec
       # PIL._tkinter_finder.
+      # Délais de garde : un contrôle qui ouvre une fenêtre peut rester
+      # suspendu au lieu d'échouer, si la session graphique du coureur ne se
+      # comporte pas comme prévu. Sans borne, le job occupe le coureur jusqu'au
+      # délai global — vingt minutes d'attente pour rien.
       - name: Contrôler le paquet (sans écran)
         working-directory: packaging
+        timeout-minutes: 3
         run: ./dist/${{ matrix.binaire }} --autotest
         shell: bash
 
       - name: Contrôler le chemin d'affichage
         working-directory: packaging
+        timeout-minutes: 3
         run: ./dist/${{ matrix.binaire }} --autotest-fenetre
         shell: bash
 
@@ -107,13 +115,8 @@ jobs:
           body: |
             ## Télécharger
 
-            | Système | Fichier |
-            |---|---|
-            | Windows | `Nommogramme-windows.zip` |
-            | macOS | `Nommogramme-macos.zip` |
-
-            Décompressez, puis lancez `Nommogramme`. Aucune installation de
-            Python n'est nécessaire.
+            Téléchargez `Nommogramme-windows.zip`, décompressez-le, lancez
+            `Nommogramme.exe`. Aucune installation de Python n'est nécessaire.
 
             **Windows affichera « Windows a protégé votre ordinateur »** : le
             programme n'est pas signé par un certificat commercial. Cliquez sur
@@ -121,8 +124,8 @@ jobs:
             votre service informatique bloque les exécutables téléchargés,
             faites-le leur autoriser plutôt que de contourner la protection.
 
-            **macOS** : au premier lancement, faites un clic droit sur
-            l'application puis « Ouvrir », pour la même raison.
+            Sur un poste où Python est installé, `pip install -e ".[bureau]"`
+            puis `nommo bureau` donnent la même fenêtre, sur tout système.
 
             ## Avertissement
 
