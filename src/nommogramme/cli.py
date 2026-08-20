@@ -9,6 +9,7 @@ Sept commandes :
 * ``balayer`` — la durée atteinte par toute une famille de profilés ;
 * ``profils``, ``protections``, ``controler`` — consultation et audit ;
 * ``interface`` — l'interface graphique dans le navigateur.
+* ``bureau`` — l'interface de bureau, en fenêtre native.
 
 Aucune logique de calcul ne vit ici, pas plus que dans l'interface graphique :
 les deux se branchent sur les mêmes fonctions.
@@ -163,6 +164,10 @@ def _construire_analyseur() -> argparse.ArgumentParser:
         "interface", help="Lancer l'interface graphique dans le navigateur"
     )
 
+    sous.add_parser(
+        "bureau", help="Lancer l'interface de bureau (fenêtre native)"
+    )
+
     p_ctrl = sous.add_parser(
         "controler",
         help="Auditer la cohérence interne du catalogue de profilés",
@@ -202,6 +207,10 @@ def _executer(a: argparse.Namespace) -> int:
         from .interface import lancer
 
         return lancer() or 0
+    if a.commande == "bureau":
+        from .interface import lancer_bureau
+
+        return lancer_bureau()
     raise ValueError(f"Commande inconnue : {a.commande}")
 
 

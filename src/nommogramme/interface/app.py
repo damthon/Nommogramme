@@ -26,32 +26,29 @@ import streamlit as st
 # comme un script isolé, sans paquet parent, ce qui ferait échouer un
 # « from ..contexte import … ». Le paquet étant installé, la forme absolue
 # fonctionne quel que soit le mode de lancement.
-from nommogramme.contexte import EUROCODE_REC, SUISSE_SIA
+from nommogramme.interface.saisie import (
+    CONTEXTES as _CONTEXTES,
+)
+from nommogramme.interface.saisie import (
+    DUREES as _DUREES,
+)
+from nommogramme.interface.saisie import (
+    EXPOSITIONS as _EXPOSITIONS,
+)
+from nommogramme.interface.saisie import (
+    SANS_PROTECTION,
+    Saisie,
+    executer,
+    noms_par_famille,
+    produits,
+)
 from nommogramme.materiaux.acier import Nuance
-from nommogramme.materiaux.protection import Protection, charger_protections
-from nommogramme.mecanique.actions import CasDeCharge
 from nommogramme.nomogramme.trace import tracer_echauffement, tracer_nomogramme
-from nommogramme.nomogramme.verification import ResultatVerification, verifier
-from nommogramme.profils import Exposition, Famille, charger_csv
+from nommogramme.nomogramme.verification import ResultatVerification
 from nommogramme.thermique.courbes import COURBES
-from nommogramme.unites import en_minutes, kN, kNm
+from nommogramme.unites import en_minutes
 
 __all__ = ["principal"]
-
-
-_EXPOSITIONS = {
-    "Contour, 4 faces": Exposition.CONTOUR_4_FACES,
-    "Contour, 3 faces": Exposition.CONTOUR_3_FACES,
-    "Caisson, 4 faces": Exposition.CAISSON_4_FACES,
-    "Caisson, 3 faces": Exposition.CAISSON_3_FACES,
-}
-
-_CONTEXTES = {
-    "Suisse — SIA 263 / SIA 260": SUISSE_SIA,
-    "Eurocode — valeurs recommandées": EUROCODE_REC,
-}
-
-_DUREES = [15, 30, 60, 90, 120, 180]
 
 _LIEN_VALIDATION = (
     "https://github.com/damthon/Nommogramme/blob/main/docs/validation.md"
@@ -59,20 +56,6 @@ _LIEN_VALIDATION = (
 
 
 @st.cache_data(show_spinner=False)
-def _catalogue_noms() -> dict[str, list[str]]:
-    """Noms de profilés par famille, mis en cache entre les interactions."""
-    catalogue = charger_csv()
-    return {
-        famille.value: [p.nom for p in catalogue.famille(famille)]
-        for famille in Famille
-    }
-
-
-@st.cache_resource(show_spinner=False)
-def _catalogue():
-    return charger_csv()
-
-
 def _theme_figures() -> str:
     """Aligne les figures sur le thème de Streamlit."""
     return "sombre" if st.get_option("theme.base") == "dark" else "clair"
@@ -81,17 +64,17 @@ def _theme_figures() -> str:
 # --- saisie -------------------------------------------------------------------
 
 
-def _saisie() -> dict:
+def _saisie() -> Saisie:
     """Collecte les paramètres dans la barre latérale."""
     st.sidebar.header("Élément")
 
-    noms = _catalogue_noms()
-    familles = [f for f, liste in noms.items() if liste]
+    noms = noms_par_famille()
+    familles = list(noms)
     famille = st.sidebar.selectbox(
         "Famille", familles, key="famille",
         index=familles.index("HEB") if "HEB" in familles else 0,
     )
-    liste = noms[famille]
+    liste = list(noms[famille])
     profil = st.sidebar.selectbox(
         "Profilé", liste, key="profil",
         index=liste.index("HEB300") if "HEB300" in liste else len(liste) // 2,
@@ -140,20 +123,21 @@ def _saisie() -> dict:
         format_func=lambda cle: COURBES[cle].nom,
     )
     duree = st.sidebar.select_slider(
-        "Durée exigée  [min]", options=_DUREES, value=60, key="duree"
+        "Durée exigée  [min]", options=list(_DUREES), value=60, key="duree"
     )
 
     st.sidebar.header("Protection")
-    produits = charger_protections()
+    fiches = produits()
     choix = st.sidebar.selectbox(
-        "Produit", ["Aucune"] + sorted(produits), key="produit",
+        "Produit", [SANS_PROTECTION] + sorted(fiches), key="produit",
         format_func=lambda cle: (
-            "Aucune" if cle == "Aucune" else produits[cle].get("libelle", cle)
+            SANS_PROTECTION if cle == SANS_PROTECTION
+            else fiches[cle].get("libelle", cle)
         ),
     )
     epaisseur = None
-    if choix != "Aucune":
-        fiche = produits[choix]
+    if choix != SANS_PROTECTION:
+        fiche = fiches[choix]
         epaisseur = st.sidebar.number_input(
             "Épaisseur d_p  [mm]", key="dp",
             value=float(fiche["dp_min"] * 1e3),
@@ -183,7 +167,7 @@ def _saisie() -> dict:
                  "défavorable.",
         )
 
-    return dict(
+    return Saisie(
         profil=profil, nuance=nuance, N=N, My=My, Mz=Mz, L=L, l_fi=l_fi,
         maintien=maintien, beta_M=beta_M, exposition=exposition, feu=feu,
         duree=duree, protection=choix, epaisseur=epaisseur,
@@ -191,40 +175,13 @@ def _saisie() -> dict:
     )
 
 
-def _verifier(saisie: dict) -> ResultatVerification:
-    """Traduit la saisie en appel de bibliothèque. Aucun calcul ici."""
-    protection = None
-    if saisie["protection"] != "Aucune":
-        protection = Protection.depuis_catalogue(
-            saisie["protection"], d_p=saisie["epaisseur"] * 1e-3
-        )
+def _verifier(saisie: Saisie) -> ResultatVerification:
+    """Délègue à ``saisie.executer()`` — la traduction est partagée.
 
-    cas = CasDeCharge(
-        N_fi_Ed=kN(saisie["N"]),
-        My_fi_Ed=kNm(saisie["My"]),
-        Mz_fi_Ed=kNm(saisie["Mz"]),
-        L=saisie["L"],
-        l_fi_y=saisie["l_fi"] or None,
-        l_fi_z=saisie["l_fi"] or None,
-        beta_M_y=saisie["beta_M"],
-        beta_M_z=saisie["beta_M"],
-        beta_M_LT=saisie["beta_M"],
-        maintien_lateral=saisie["maintien"],
-    )
-
-    return verifier(
-        profil=_catalogue()[saisie["profil"]],
-        nuance=Nuance(saisie["nuance"]),
-        cas=cas,
-        exposition=_EXPOSITIONS[saisie["exposition"]],
-        duree_requise_min=float(saisie["duree"]),
-        protection=protection,
-        courbe=COURBES[saisie["feu"]],
-        contexte=_CONTEXTES[saisie["contexte"]],
-        kappa_1=saisie["kappa_1"],
-        kappa_2=saisie["kappa_2"],
-        C1=saisie["C1"],
-    )
+    Streamlit et l'interface de bureau passent par le même point : deux
+    conversions d'unités écrites séparément finiraient par diverger.
+    """
+    return executer(saisie)
 
 
 # --- affichage ----------------------------------------------------------------
