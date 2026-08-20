@@ -32,6 +32,67 @@
 # exactement : "satisfait" ou "non satisfait".
 
 # ---------------------------------------------------------------------------
+# RÉFÉRENCE EXTERNE
+# ---------------------------------------------------------------------------
+
+[[cas]]
+libelle = "Durchlaufende HEA Stütze — steelacademy 2019"
+source = "steelacademy 2019, Horw, 12.09.2019, Dr. P. R. Schulthess, planches 36-39"
+reference_externe = true
+profil = "HEA 300"
+nuance = "S235"
+N_fi_Ed_kN = 1205.0
+L = 3.0
+l_fi_y = 1.5
+l_fi_z = 1.5
+exposition = "caisson4"
+protection = "plaques_silicate"
+dp_mm = 20.0
+duree_min = 90.0
+tolerance = 0.02
+[cas.attendu]
+Am_sur_V = 104.0
+theta_cr = 580.0
+t_fi_d_min = 111.0
+verdict = "satisfait"
+
+[[cas]]
+libelle = "Poteau HEB 360 non revêtu — steelacademy 2019"
+source = "steelacademy 2019, Lausanne, 25.09.2019, Dr. R. Bärtschi, planches 22-23"
+reference_externe = true
+profil = "HEB 360"
+nuance = "S355"
+N_fi_Ed_kN = 537.0
+L = 4.0
+l_fi_y = 4.0
+l_fi_z = 4.0
+exposition = "contour4"
+duree_min = 30.0
+tolerance = 0.02
+[cas.attendu]
+Am_sur_V = 102.0
+k_sh = 0.642
+theta_a_a_echeance = 730.0
+
+# Deux mises en garde sur ce cas.
+#
+# 1. La planche lit θ = 770 °C à 30 min ; l'outil donne 730 °C. L'écart tient
+#    entièrement au facteur d'ombre : la planche entre dans le nomogramme avec
+#    A_m/V = 102 m⁻¹, l'outil avec k_sh·A_m/V = 65,6 m⁻¹ (§4.2.5.1(2)). Nourri
+#    de la même entrée, l'outil retrouve 770,5 °C — voir
+#    tests/test_reference_bartschi.py. Seule la valeur de l'outil est figée ici.
+#
+# 2. N est pris égal à la capacité résiduelle que la planche calcule (537 kN),
+#    non à une charge d'énoncé : la question posée est « que reste-t-il ? », pas
+#    « est-ce que ça tient ? ». Aucun verdict n'est donc attendu.
+
+# Le degré d'utilisation n'est PAS vérifié ici : la planche donne μ = 0,60,
+# calculé avec la longueur de flambement à température ambiante, alors que le
+# §4.2.4 le rapporte à la résistance avec l_fi. L'outil affiche donc 0,52.
+# Les deux conventions mènent à la même température critique — voir
+# tests/test_reference_szs.py.
+
+# ---------------------------------------------------------------------------
 # Les cas ci-dessous ne sont PAS des références externes : ce sont les valeurs
 # produites par l'outil lui-même, figées pour détecter toute régression. Ils
 # n'attestent en rien de la justesse du calcul — voir docs/validation.md.

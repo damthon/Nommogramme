@@ -5,6 +5,9 @@
 # faisabilité. Toute étude de projet doit utiliser les valeurs de l'agrément
 # technique du produit retenu (ETE, reconnaissance AEAI).
 #
+# Les fiches portant un champ « source » proviennent d'une publication
+# identifiée ; les autres restent des ordres de grandeur.
+#
 # lambda_p : conductivité thermique [W/m·K]
 # rho_p    : masse volumique [kg/m³]
 # c_p      : chaleur spécifique [J/kg·K]
@@ -40,9 +43,10 @@ dp_max = 0.050
 pose = "caisson"
 
 [plaques_silicate]
-libelle = "Plaques de silicate de calcium"
+libelle = "Plaques de fibres-silicate de calcium"
+source = "SZS steeldoc tec 02, Abb. 50"
 lambda_p = 0.15
-rho_p = 450.0
+rho_p = 600.0
 c_p = 1200.0
 dp_min = 0.015
 dp_max = 0.050
