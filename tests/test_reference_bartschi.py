@@ -35,11 +35,17 @@ entrée                       θ à 30 min  N_b,fi,t,Rd
 65,6 m⁻¹ (§4.2.5.1(2))         730 °C      676 kN
 ===========================  ==========  =============
 
-La planche est donc **conservative de 20 %** sur la capacité résiduelle. Cet
+La planche est donc **conservative de 26 %** sur la capacité résiduelle. Cet
 outil applique k_sh, conformément au texte de la norme. Les tests ci-dessous
 vérifient les deux voies : que le modèle thermique reproduit la lecture de la
 planche quand on lui donne la même entrée, et que l'outil tel qu'il est livré
 produit bien l'autre valeur.
+
+La question de savoir laquelle des deux entrées la SZS attend est **tranchée
+par la source primaire** : l'exemple G de steeltec 02:2015 calcule
+explicitement [A_m/V]_sh = 0,9·[A_m/V]_b avant de lire la durée. La SZS
+applique donc bien k_sh, comme cet outil ; cette planche-ci simplifiait, du
+côté sûr. Voir ``test_reference_steeltec.py``.
 """
 
 from __future__ import annotations
