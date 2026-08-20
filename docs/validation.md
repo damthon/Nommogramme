@@ -12,7 +12,8 @@ Deux supports du cycle **steelacademy 2019**, fournis par l'utilisateur :
 |---|---|---|
 | **A** | Horw, 12 septembre 2019, Dr. Patrick Roman Schulthess — « Beispiel: Durchlaufende HEA Stütze », planches 36 à 39, et la table de températures critiques à l_k,fi = 0,5·L_k0 qui l'accompagne | poteau comprimé **protégé** |
 | **B** | Lausanne, 25 septembre 2019, Dr. Roland Bärtschi — « Exemple d'application : poteau en acier non revêtu », planches 22 et 23 | poteau comprimé **nu**, et la table SZS des facteurs de massiveté |
-| **C** | **SZS steeltec 02:2015**, « Protection incendie des structures », chapitre 3 « Application du nomogramme », pages 31 à 33 — huit exemples A à H | la **source primaire** : compression, **flexion**, protections, facteur d'ombre |
+| **C** | **SZS steeltec 02:2015**, « Protection incendie des structures », chapitre 3 « Application du nomogramme », pages 31 à 33 — huit exemples A à H | la **source primaire** du calcul : compression, **flexion**, protections, facteur d'ombre |
+| **D** | **SZS « Tables de construction C5/05 »**, 9ᵉ éd., réimpression 2012 — tables des profilés, pages 26 à 41 et 60/61 | la **source primaire des données** : le catalogue dont le classeur de l'utilisateur est la transcription |
 
 La source C est le document dont les deux cours sont tirés ; son exemple A est
 mot pour mot celui des planches de Horw. C'est la référence de loin la plus
@@ -20,7 +21,8 @@ large, et la seule à sortir de la compression.
 
 Les contrôles correspondants sont dans `tests/test_reference_szs.py` (source A),
 `tests/test_reference_bartschi.py` et `tests/test_reference_massivete.py`
-(source B), `tests/test_reference_steeltec.py` (source C).
+(source B), `tests/test_reference_steeltec.py` (source C) et
+`tests/test_reference_c5.py` (source D).
 
 ## Source A — le poteau protégé
 
@@ -404,14 +406,37 @@ confronte, et la commande `nommo controler` restitue l'audit.
 
 C'est ce contrôle qui a révélé l'anomalie ci-dessous.
 
-## Anomalie trouvée dans le fichier source
+## Source D — le catalogue de profilés, confronté à son original
 
-### Le rayon de giration des tubes RRW est faux
+Le lot 1 reposait sur un recoupement interne : le périmètre recalculé
+géométriquement contre la colonne `Um` du classeur. Mais le classeur est
+lui-même une transcription. Le SZS C5/05 est son original, et permet enfin de
+vérifier la donnée plutôt que le calcul qui s'en sert.
+
+Trois colonnes sont confrontées, celles dont l'outil dépend : la section **A**,
+le rayon de giration faible **i_z** qui pilote le flambement, et le périmètre
+**U_m** qui pilote le facteur de massiveté.
+
+| Familles | Profilés | Valeurs | Écarts au-delà de 1 % |
+|---|---:|---:|---:|
+| IPE, PEA, INP, HEA, HEB, HEM | 126 | 378 | 0 |
+| HHD, HL | 39 | 117 | 0 |
+| RRW (échantillon sur 108) | 22 | 66 | 0 |
+| **Total** | **187** | **561** | **0** |
+
+**Le classeur est fidèle.** Aucune faute de saisie. Les deux anomalies
+détectées par l'audit de cohérence ne sont donc pas des erreurs de
+transcription — et la source explique enfin l'une et condamne l'autre.
+
+### Le rayon de giration des tubes RRW : l'origine du gel
 
 Dans `Profilé SZS.xlsx`, la colonne `iz3` est **figée à 15,0018 mm sur les 108
-lignes RRW**. C'est la valeur du premier tube de la série, RRW 40/40/3,
-inscrite en dur au lieu d'être calculée — une recopie vers le bas qui n'a pas
-été faite. Le contrôle i = √(I/A) la détecte sur 106 des 108 lignes.
+lignes RRW**. Le C5 dit pourquoi : il publie **deux tables distinctes** pour
+les profils creux — les tubes **carrés** page 60/61, avec une **seule colonne
+`i`** puisque I_y = I_z, et les tubes **rectangulaires** page 62/63, avec i_y
+et i_z séparés. Le classeur fusionne les deux, et dans le bloc carré l'unique
+valeur de la première ligne — RRW 40/40/3, `i` = 15,0 mm au catalogue — s'est
+propagée à toute la famille.
 
 L'enjeu n'est pas cosmétique. Pour un poteau RRW 400/400/10 de 6 m en S355 :
 
@@ -424,31 +449,53 @@ La résistance au flambement serait **sous-estimée d'un facteur 23**. L'erreur
 va dans le sens de la sécurité, mais rendrait tout tube élancé impossible à
 justifier.
 
-**Correction appliquée.** Tous les tubes du catalogue étant carrés, I_z = I_y
-et i_z = √(I_z/A) sans ambiguïté. Le chargeur recalcule i_z pour toute la
-famille RRW et conserve la valeur d'origine dans `Profil.iz_tabule`. La
-correction est uniforme, sans seuil : la cause est identifiée et vaut pour
-toutes les lignes, y compris les trois où la valeur figée se trouve tomber
-près de la bonne.
+**Correction appliquée**, et désormais vérifiée : le chargeur recalcule
+i_z = √(I_z/A) pour toute la famille, et les valeurs obtenues reproduisent la
+colonne `i` du C5 à moins de 1 % sur les 22 tubes de l'échantillon, de 40×40 à
+400×400. La valeur d'origine est conservée dans `Profil.iz_tabule`.
 
-**Le fichier source n'a pas été modifié** — la correction est faite à la
-lecture, et tracée.
+### Le HHD 320.74 : l'erreur est dans le C5 lui-même
 
-### Une anomalie non résolue : HHD 320.74
+L'anomalie de nature inverse — i_z concordant avec la géométrie, I_z bas de
+8 % — est maintenant tranchée. Le classeur ne se trompe pas : il recopie
+fidèlement les 45,59·10⁶ mm⁴ que **le catalogue SZS imprime**. Trois grandeurs
+indépendantes de la même page le contredisent, toutes d'accord à 0,1 % :
 
-| Grandeur | Valeur |
-|---|---:|
-| i_z tabulé | 72,40 mm |
-| √(I_z/A) avec l'I_z tabulé | 69,42 mm |
-| √(I_z/A) avec l'I_z estimé par la géométrie | 72,35 mm |
+| Voie | Calcul | I_z [10⁶ mm⁴] |
+|---|---|---:|
+| rayon de giration tabulé | i_z²·A = 72,4²·9460 | 49,59 |
+| module élastique tabulé | W_elz·b/2 = 331·150 | 49,65 |
+| géométrie de la section | 2·t_f·b³/12 + … | 49,57 |
+| **colonne I_z du catalogue** | | **45,59** |
 
-Ici l'écart est **de nature inverse** : c'est l'i_z tabulé qui concorde avec la
-géométrie, et l'I_z tabulé qui paraît bas d'environ 8 %. Corriger i_z par
-√(I_z/A), comme pour les RRW, propagerait l'erreur au lieu de la lever.
+Les deux autres profilés de la série, HHD 320.158 et HHD 320.198, sont
+cohérents sur les trois voies : l'erreur porte sur **une seule cellule**. La
+préface du C5 renvoie d'ailleurs à `www.szs.ch/corrections` pour ses errata.
 
-**Aucune correction n'est appliquée.** L'anomalie est signalée par
-`nommo controler` et demande une vérification sur les tables SZS d'origine.
-Un seul profilé sur 277 est concerné.
+**Correction désormais appliquée.** I_z est rétabli à 49,6·10⁶ mm⁴ — la moyenne
+des trois recoupements — et la valeur publiée conservée dans
+`Profil.Iz_tabule`. I_z n'intervient que dans le moment critique de
+déversement, où la valeur fautive sous-estimait M_cr de 8 %, donc dans le sens
+de la sécurité ; i_z, qui pilote le flambement, était déjà juste.
+
+`nommo controler` **ne signale plus aucune anomalie** sur les 277 profilés.
+
+### Une fausse piste, refermée
+
+La comparaison à la table SZS des facteurs de massiveté (source B) avait relevé
+sept écarts, dont les quatre colonnes du HEB 280, toutes fausses du même
+rapport de +4,9 %. Le raisonnement tenu était qu'un rapport constant sur quatre
+expositions désigne le dénominateur commun — la section — et non quatre
+chiffres mal lus. Le raisonnement était bon ; la conclusion, fausse.
+
+Le C5 donne pour le HEB 280 A = 13 100 mm² et U_m = 1,62 m²/m, soit
+A_m/V = **123,7 m⁻¹** — exactement ce que l'outil calcule. La planche imprime
+donc « 123 », lu « 118 » sur une capture d'écran de basse définition. Une seule
+ligne mal relevée explique les quatre colonnes aussi bien qu'une section
+fausse, et la table résumée seule ne permettait pas de départager. Les trois
+autres écarts se résolvent de la même façon.
+
+**Il ne reste aucune anomalie de catalogue.**
 
 ## Ce qui reste non validé
 
@@ -467,8 +514,9 @@ Un seul profilé sur 277 est concerné.
 | **Déversement — χ_LT,fi** | **non validé** — les exemples fléchis l'excluent |
 | **Interaction N + M — éq. (4.21a) et (4.21b)** | **non validé** — aucune référence externe |
 | Profilés creux, nuances hors S235 / S355 | **non validé** |
-| A du HEB 280 | anomalie signalée, non tranchée |
-| I_z du HHD 320.74 | anomalie signalée, non tranchée |
+| Catalogue de profilés — A, i_z, U_m | **validé** — source D, 561 valeurs sur 187 profilés, 0 écart |
+| i_z des tubes RRW | corrigé, et la correction **vérifiée** contre le C5 |
+| I_z du HHD 320.74 | erratum du C5 lui-même, **corrigé** et tracé |
 | Numérotation exacte des éq. des facteurs k_y, k_z, k_LT (§4.2.3.5) | à recouper |
 | Chiffre SIA 263 traitant la résistance au feu | à recouper |
 | Constante de gauchissement I_w ≈ I_z·(h−t_f)²/4 | approximation, absente du catalogue SZS |

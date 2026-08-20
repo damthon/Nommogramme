@@ -308,7 +308,7 @@ hr.end{border:none;border-top:2px solid var(--ink);margin:3.5rem 0 1.2rem}
     <div><dt>Branche</dt><dd>claude/fire-resistance-<wbr>metal-profiles-u2512i</dd></div>
     <div><dt>Base profilés</dt><dd>SZS C5 — 277 profilés</dd></div>
     <div><dt>Langage</dt><dd>Python ≥ 3.11</dd></div>
-    <div><dt>Avancement</dt><dd>les 9 lots · 357 tests</dd></div>
+    <div><dt>Avancement</dt><dd>les 9 lots · 369 tests</dd></div>
   </dl>
 
   <nav class="toc" aria-label="Sommaire">
@@ -1194,7 +1194,7 @@ nommo profils --famille HEA --colonnes A,Wply,AmV_contour4</pre>
   </ul>
 
   <h4>4 — Exemples normatifs complets</h4>
-  <p>Le juge de paix. Reprise d'exemples publiés et comparaison poste par poste&nbsp;: μ₀, θ<sub>cr</sub>, A<sub>m</sub>/V, θ<sub>a</sub>(t), verdict. Tolérance 2 % sur les températures, 5 % sur les épaisseurs de protection. Chaque exemple est un test versionné, avec sa source citée&nbsp;: <code>tests/test_reference_szs.py</code>, <code>tests/test_reference_bartschi.py</code>, <code>tests/test_reference_massivete.py</code> et <code>tests/test_reference_steeltec.py</code>.</p>
+  <p>Le juge de paix. Reprise d'exemples publiés et comparaison poste par poste&nbsp;: μ₀, θ<sub>cr</sub>, A<sub>m</sub>/V, θ<sub>a</sub>(t), verdict. Tolérance 2 % sur les températures, 5 % sur les épaisseurs de protection. Chaque exemple est un test versionné, avec sa source citée&nbsp;: <code>tests/test_reference_szs.py</code>, <code>tests/test_reference_bartschi.py</code>, <code>tests/test_reference_massivete.py</code>, <code>tests/test_reference_steeltec.py</code> et <code>tests/test_reference_c5.py</code>.</p>
 
   <div class="note">
     <span class="tag">État réel au lot 8</span>
@@ -1244,11 +1244,25 @@ nommo profils --famille HEA --colonnes A,Wply,AmV_contour4</pre>
     l'excluent par la dalle — et l'<strong>interaction N + M</strong>, qu'aucun exemple ne
     combine. Le détail et la liste complète de ce qui n'est pas validé figurent dans
     <code>docs/validation.md</code>.</p>
-    <p>Ces contrôles ont mis au jour une <strong>erreur dans le fichier SZS</strong> : la colonne
-    i<sub>z</sub> y est figée sur les 108 lignes RRW, ce qui sous-estimerait la résistance au
-    flambement d'un tube élancé d'un facteur 23. Elle est corrigée à la lecture. Deux autres
-    anomalies — l'I<sub>z</sub> du HHD 320.74 et la section du HEB 280 — sont signalées mais non
-    tranchées, faute des tables SZS d'origine.</p>
+    <p>Une quatrième source, les <strong>Tables de construction SZS C5/05</strong>, a permis de
+    vérifier non plus le calcul mais la <strong>donnée</strong>&nbsp;: le classeur de profilés
+    est une transcription de cet ouvrage. Confrontation page à page des trois colonnes dont
+    l'outil dépend — section A, rayon de giration faible i<sub>z</sub>, périmètre U<sub>m</sub>
+    —&nbsp;: <strong>561 valeurs sur 187 profilés, aucun écart</strong>. Le classeur est fidèle.</p>
+    <p>Les deux anomalies que l'audit de cohérence avait levées ne sont donc pas des fautes de
+    saisie, et la source les explique. La colonne i<sub>z</sub> figée sur les 108 lignes RRW —
+    qui sous-estimerait la résistance au flambement d'un tube élancé d'un facteur 23 — vient de
+    ce que le C5 publie <em>deux</em> tables pour les profils creux, les tubes carrés n'ayant
+    qu'une colonne « i » puisque I<sub>y</sub> = I<sub>z</sub>&nbsp;; la fusion des deux a propagé
+    la valeur du premier tube. Quant à l'I<sub>z</sub> du HHD 320.74, l'erreur est
+    <strong>dans le C5 lui-même</strong>&nbsp;: le rayon de giration tabulé, le module élastique
+    tabulé et la géométrie donnent tous trois 49,6·10⁶ mm⁴ contre les 45,59·10⁶ imprimés. Les
+    deux sont désormais corrigées à la lecture, valeurs d'origine conservées, et
+    <code>nommo controler</code> ne signale plus aucune anomalie sur les 277 profilés.</p>
+    <p>La troisième anomalie supposée, la section du HEB 280, était une fausse piste&nbsp;: le C5
+    confirme A = 13 100 mm² et U<sub>m</sub> = 1,62 m²/m, donc A<sub>m</sub>/V = 123,7 m⁻¹ — la
+    valeur de l'outil. C'est « 123 » qui est imprimé sur la planche, lu « 118 » sur une capture
+    de basse définition.</p>
   </div>
 
   <div class="note">
@@ -1268,7 +1282,7 @@ nommo profils --famille HEA --colonnes A,Wply,AmV_contour4</pre>
   <table>
     <thead><tr><th class="num">Lot</th><th>Contenu</th><th>Livrable vérifiable</th><th>État</th></tr></thead>
     <tbody>
-      <tr><td class="num">1</td><td>Catalogue de profilés&nbsp;: chargeur xlsx, modèle <code>Profil</code>, géométrie, A<sub>m</sub>/V, k<sub>sh</sub>, export CSV</td><td>277 profilés chargés, A<sub>m</sub>/V recoupés à U<sub>m</sub> et à la table SZS (264 valeurs)</td><td><strong>fait</strong></td></tr>
+      <tr><td class="num">1</td><td>Catalogue de profilés&nbsp;: chargeur xlsx, modèle <code>Profil</code>, géométrie, A<sub>m</sub>/V, k<sub>sh</sub>, export CSV</td><td>277 profilés chargés, catalogue confronté au SZS C5/05 : 561 valeurs, 0 écart</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">2</td><td>Matériaux&nbsp;: tableau 3.1, c<sub>a</sub>(θ), λ<sub>a</sub>(θ), nuances</td><td>tests unitaires sur les 13 lignes du tableau</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">3</td><td>Thermique&nbsp;: courbes de feu, flux net, intégration nu et protégé, solveur d<sub>p</sub></td><td>reproduction du tableau d'échauffement du §9 et de l'exemple nu steelacademy</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">4</td><td>Mécanique&nbsp;: actions, classification, résistances, χ<sub>fi</sub>, χ<sub>LT,fi</sub></td><td>résistances à 20 °C recoupées à l'EN 1993-1-1</td><td><strong>fait</strong></td></tr>
