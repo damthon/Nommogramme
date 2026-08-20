@@ -122,7 +122,7 @@ le bouton d'exécution.
 Toujours dans le terminal, avec `(.venv)` actif :
 
 ```powershell
-pip install -e ".[dev,trace]"
+pip install -e ".[dev,trace,ui]"
 ```
 
 Trois choses dans cette commande :
@@ -130,7 +130,8 @@ Trois choses dans cette commande :
 - `-e` installe en mode « éditable » : vos modifications du code prennent
   effet immédiatement, sans réinstaller ;
 - `[dev]` ajoute `pytest` (les tests) et `openpyxl` (lecture du classeur SZS) ;
-- `[trace]` ajoute `matplotlib`, nécessaire aux figures.
+- `[trace]` ajoute `matplotlib`, nécessaire aux figures ;
+- `[ui]` ajoute `streamlit`, pour l'interface graphique.
 
 Comptez une à deux minutes.
 
@@ -144,7 +145,7 @@ Comptez une à deux minutes.
 python -m pytest
 ```
 
-Attendu : **269 tests au vert**, en une dizaine de secondes. Si c'est le cas,
+Attendu : **287 tests au vert**, en une dizaine de secondes. Si c'est le cas,
 votre installation est bonne — inutile de chercher plus loin.
 
 ### Un calcul
@@ -154,6 +155,15 @@ nommo verifier "HEB 300" --nuance S355 --N 850 --My 120 --L 4 --lfi 2 --duree R6
 ```
 
 Vous devez voir apparaître μ₀, les deux températures critiques et le verdict.
+
+### L'interface graphique
+
+```powershell
+nommo interface
+```
+
+Un navigateur s'ouvre. C'est le moyen le plus simple d'explorer : tous les
+paramètres sont dans la barre latérale, et chaque modification recalcule.
 
 ### Une figure
 
@@ -271,7 +281,8 @@ Trois ou quatre cas suffiraient à changer le statut de l'outil.
 |---|---|---|
 | `python n'est pas reconnu` | Python absent du PATH | Réinstaller en cochant « Add to PATH » |
 | `nommo n'est pas reconnu` | environnement non activé | `.\.venv\Scripts\Activate.ps1` |
-| `ModuleNotFoundError: nommogramme` | projet non installé | `pip install -e ".[dev,trace]"` |
+| `ModuleNotFoundError: nommogramme` | projet non installé | `pip install -e ".[dev,trace,ui]"` |
 | `ModuleNotFoundError: matplotlib` | extra manquant | `pip install -e ".[trace]"` |
+| `ModuleNotFoundError: streamlit` | extra manquant | `pip install -e ".[ui]"` |
 | l'exécution de scripts est désactivée | politique PowerShell | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
 | VS Code ne complète pas le code | mauvais interpréteur | `Python: Select Interpreter` → celui du `.venv` |

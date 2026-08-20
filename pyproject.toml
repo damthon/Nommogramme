@@ -15,7 +15,8 @@ dependencies = []
 [project.optional-dependencies]
 xlsx = ["openpyxl>=3.1"]
 trace = ["matplotlib>=3.7"]
-dev = ["pytest>=7.4", "openpyxl>=3.1", "matplotlib>=3.7"]
+ui = ["streamlit>=1.30", "matplotlib>=3.7"]
+dev = ["pytest>=7.4", "openpyxl>=3.1", "matplotlib>=3.7", "streamlit>=1.30"]
 
 [project.scripts]
 nommo = "nommogramme.cli:main"
