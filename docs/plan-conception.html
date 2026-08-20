@@ -308,7 +308,7 @@ hr.end{border:none;border-top:2px solid var(--ink);margin:3.5rem 0 1.2rem}
     <div><dt>Branche</dt><dd>claude/fire-resistance-<wbr>metal-profiles-u2512i</dd></div>
     <div><dt>Base profilés</dt><dd>SZS C5 — 277 profilés</dd></div>
     <div><dt>Langage</dt><dd>Python ≥ 3.11</dd></div>
-    <div><dt>Avancement</dt><dd>les 9 lots · 287 tests</dd></div>
+    <div><dt>Avancement</dt><dd>les 9 lots · 333 tests</dd></div>
   </dl>
 
   <nav class="toc" aria-label="Sommaire">
@@ -1194,21 +1194,47 @@ nommo profils --famille HEA --colonnes A,Wply,AmV_contour4</pre>
   </ul>
 
   <h4>4 — Exemples normatifs complets</h4>
-  <p>Le juge de paix. Reprise d'exemples publiés — recueils d'exemples de calcul Eurocode (JRC, SCI P375, guides Infosteel), documentation SZS — et comparaison poste par poste&nbsp;: μ₀, θ<sub>cr</sub>, A<sub>m</sub>/V, θ<sub>a</sub>(t), verdict. Tolérance 2 % sur les températures, 5 % sur les épaisseurs de protection. Chaque exemple est un test versionné, avec sa source citée.</p>
+  <p>Le juge de paix. Reprise d'exemples publiés et comparaison poste par poste&nbsp;: μ₀, θ<sub>cr</sub>, A<sub>m</sub>/V, θ<sub>a</sub>(t), verdict. Tolérance 2 % sur les températures, 5 % sur les épaisseurs de protection. Chaque exemple est un test versionné, avec sa source citée&nbsp;: <code>tests/test_reference_szs.py</code>, <code>tests/test_reference_bartschi.py</code> et <code>tests/test_reference_massivete.py</code>.</p>
 
   <div class="note">
     <span class="tag">État réel au lot 8</span>
-    <p>Les recueils d'exemples normatifs se sont révélés <strong>inaccessibles</strong> depuis
-    l'environnement de développement — le proxy réseau bloque szs.ch, les serveurs Eurocodes,
-    steelconstruction.info et infosteel.be — et les normes sont sous droits.
-    <strong>Aucun résultat de l'outil n'a donc été comparé à un calcul de référence externe.</strong>
-    La validation menée à la place repose sur des recoupements analytiques indépendants :
-    quadrature en température contre pas-à-pas en temps, enthalpie en forme close contre
-    accumulation numérique, équation (4.22) contre interpolation du tableau 3.1. Le détail,
-    et la liste de ce qui reste non validé, figurent dans <code>docs/validation.md</code>.</p>
+    <p>Les recueils d'exemples normatifs en ligne se sont révélés <strong>inaccessibles</strong>
+    depuis l'environnement de développement — le proxy réseau bloque szs.ch, les serveurs
+    Eurocodes, steelconstruction.info et infosteel.be — et les normes sont sous droits. La
+    validation a donc démarré sur des recoupements analytiques indépendants : quadrature en
+    température contre pas-à-pas en temps, enthalpie en forme close contre accumulation
+    numérique, équation (4.22) contre interpolation du tableau 3.1.</p>
+    <p><strong>Deux supports du cycle steelacademy 2019, fournis par l'utilisateur, ont depuis
+    permis une vraie confrontation externe</strong> — l'un sur un poteau protégé (Horw,
+    Dr. P. R. Schulthess), l'autre sur un poteau nu (Lausanne, Dr. R. Bärtschi) :</p>
+    <div class="tw">
+    <table>
+      <thead><tr><th>Comparaison</th><th>Écart</th></tr></thead>
+      <tbody>
+        <tr><td>Table SZS des θ<sub>crit</sub>, 60 points (μ<sub>fi,0</sub> × λ̄₀)</td><td>moyen 0,7 °C, maximal 2 °C</td></tr>
+        <tr><td>HEA 300 protégé, silicate 20 mm</td><td>θ<sub>crit</sub> 579 contre 580 °C, durée 110 contre 111 min</td></tr>
+        <tr><td>HEB 360 nu S355, 30 min ISO</td><td>θ<sub>a</sub> 770,5 contre 770 °C, N<sub>b,fi,t,Rd</sub> 539 contre 537 kN</td></tr>
+        <tr><td>Table SZS des facteurs de massiveté, 264 valeurs</td><td>97,3 % à moins de 2 %, médiane +0,47</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>Le cas nu est celui qui engage le plus&nbsp;: 0,5 °C d'écart à 30 minutes met en cause
+    d'un coup l'équation (4.25), le flux net, c<sub>a</sub>(θ) et l'intégration en temps. Deux
+    points méritent d'être connus. D'abord, la table des θ<sub>crit</sub> n'est reproduite que
+    par la <strong>vérification croisée</strong> du §4.2.3 ; l'équation (4.22) seule s'en écarte
+    de 15,7 °C en moyenne et jusqu'à 49 °C, l'écart croissant avec l'élancement — c'est la
+    justification externe du choix de la rendre obligatoire. Ensuite, les planches lisent le
+    nomogramme <strong>sans appliquer k<sub>sh</sub></strong> ; l'outil l'applique (§4.2.5.1(2)),
+    d'où 730 °C au lieu de 770 °C sur le HEB 360. Nourri de la même entrée, il retrouve les
+    770 °C&nbsp;: divergence de convention, pas de calcul.</p>
+    <p>Restent sans référence externe la <strong>flexion</strong>, le <strong>déversement</strong>
+    et l'<strong>interaction N + M</strong>. Le détail et la liste complète de ce qui n'est pas
+    validé figurent dans <code>docs/validation.md</code>.</p>
     <p>Ces contrôles ont mis au jour une <strong>erreur dans le fichier SZS</strong> : la colonne
     i<sub>z</sub> y est figée sur les 108 lignes RRW, ce qui sous-estimerait la résistance au
-    flambement d'un tube élancé d'un facteur 23. Elle est corrigée à la lecture.</p>
+    flambement d'un tube élancé d'un facteur 23. Elle est corrigée à la lecture. Deux autres
+    anomalies — l'I<sub>z</sub> du HHD 320.74 et la section du HEB 280 — sont signalées mais non
+    tranchées, faute des tables SZS d'origine.</p>
   </div>
 
   <div class="note">
@@ -1228,14 +1254,14 @@ nommo profils --famille HEA --colonnes A,Wply,AmV_contour4</pre>
   <table>
     <thead><tr><th class="num">Lot</th><th>Contenu</th><th>Livrable vérifiable</th><th>État</th></tr></thead>
     <tbody>
-      <tr><td class="num">1</td><td>Catalogue de profilés&nbsp;: chargeur xlsx, modèle <code>Profil</code>, géométrie, A<sub>m</sub>/V, k<sub>sh</sub>, export CSV</td><td>277 profilés chargés, A<sub>m</sub>/V recoupés à U<sub>m</sub></td><td><strong>fait</strong></td></tr>
+      <tr><td class="num">1</td><td>Catalogue de profilés&nbsp;: chargeur xlsx, modèle <code>Profil</code>, géométrie, A<sub>m</sub>/V, k<sub>sh</sub>, export CSV</td><td>277 profilés chargés, A<sub>m</sub>/V recoupés à U<sub>m</sub> et à la table SZS (264 valeurs)</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">2</td><td>Matériaux&nbsp;: tableau 3.1, c<sub>a</sub>(θ), λ<sub>a</sub>(θ), nuances</td><td>tests unitaires sur les 13 lignes du tableau</td><td><strong>fait</strong></td></tr>
-      <tr><td class="num">3</td><td>Thermique&nbsp;: courbes de feu, flux net, intégration nu et protégé, solveur d<sub>p</sub></td><td>reproduction du tableau d'échauffement du §9</td><td><strong>fait</strong></td></tr>
+      <tr><td class="num">3</td><td>Thermique&nbsp;: courbes de feu, flux net, intégration nu et protégé, solveur d<sub>p</sub></td><td>reproduction du tableau d'échauffement du §9 et de l'exemple nu steelacademy</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">4</td><td>Mécanique&nbsp;: actions, classification, résistances, χ<sub>fi</sub>, χ<sub>LT,fi</sub></td><td>résistances à 20 °C recoupées à l'EN 1993-1-1</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">5</td><td>Interaction N + M, μ₀ combiné, éq. (4.22) et son inverse</td><td>nomogramme numérique complet</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">6</td><td>Orchestration&nbsp;: <code>verifier()</code>, vérification croisée, note de calcul</td><td>API stable, note traçable</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">7</td><td>CLI et tracé du nomogramme</td><td>outil utilisable en ligne de commande</td><td><strong>fait</strong></td></tr>
-      <tr><td class="num">8</td><td>Validation sur exemples normatifs et sur vos cas réels</td><td>suite de non-régression</td><td><strong>partiel</strong></td></tr>
+      <tr><td class="num">8</td><td>Validation sur exemples normatifs et sur vos cas réels</td><td>deux références steelacademy 2019 reproduites, suite de non-régression</td><td><strong>fait</strong> pour la compression</td></tr>
       <tr><td class="num">9</td><td>Interface graphique Streamlit</td><td>vérification dans le navigateur</td><td><strong>fait</strong></td></tr>
     </tbody>
   </table>

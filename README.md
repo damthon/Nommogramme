@@ -12,10 +12,9 @@ plutôt la version mise en page :
 
 ## État d'avancement
 
-Les neuf lots sont implantés, le huitième partiellement. **La méthode du
-nomogramme est complète** : la température critique se déduit du chargement,
-se lit sur une figure, et se calcule aussi bien en ligne de commande que dans
-un navigateur.
+Les neuf lots sont implantés. **La méthode du nomogramme est complète** : la
+température critique se déduit du chargement, se lit sur une figure, et se
+calcule aussi bien en ligne de commande que dans un navigateur.
 
 | Lot | Contenu | État |
 |:---:|---|:---|
@@ -26,15 +25,43 @@ un navigateur.
 | 5 | Interaction N + M, degré d'utilisation, éq. (4.22) | fait |
 | 6 | Orchestration, vérification croisée, note de calcul | fait |
 | 7 | Tracé du nomogramme | fait |
-| 8 | Validation | **partiel** — voir [`docs/validation.md`](docs/validation.md) |
+| 8 | Validation | fait pour la compression — voir [`docs/validation.md`](docs/validation.md) |
 | 9 | Interface graphique | fait |
 
-Le lot 8 n'a pu être mené qu'en partie : le proxy réseau de l'environnement de
-développement bloque l'accès aux recueils d'exemples normatifs, et les normes
-sont sous droits. **Aucun résultat n'a été comparé à un calcul de référence
-externe.** La validation menée à la place — recoupements analytiques
-indépendants — est décrite dans [`docs/validation.md`](docs/validation.md),
-avec un harnais prêt à recevoir vos propres cas vérifiés.
+### Ce qui est validé, et contre quoi
+
+La chaîne complète du **poteau comprimé**, protégé comme nu, est recoupée avec
+deux supports du cycle *steelacademy 2019*.
+
+| Comparaison | Source | Écart |
+|---|---|---|
+| Table SZS θ_crit, 60 points (μ_fi,0 × λ̄₀) | Horw, Schulthess | moyen 0,7 °C, maximal 2 °C |
+| Exemple protégé : HEA 300, silicate 20 mm | Horw, Schulthess | θ_crit 579/580 °C, durée 110/111 min |
+| Exemple nu : HEB 360 S355, 30 min ISO | Lausanne, Bärtschi | θ_a 770,5/770 °C, N_b,fi,t,Rd 539/537 kN |
+| Table SZS des facteurs de massiveté, 264 valeurs | Lausanne, Bärtschi | 97,3 % à moins de 2 % |
+
+L'exemple nu est le plus large : les 0,5 °C d'écart sur la température à
+30 minutes mettent en cause d'un coup l'équation (4.25), le flux net de
+l'EN 1991-1-2, la chaleur spécifique c_a(θ) et l'intégration en temps.
+
+Deux enseignements en sont tirés, tous deux documentés :
+
+- Le recoupement porte sur la **vérification croisée** du §4.2.3, pas sur
+  l'équation (4.22) seule : celle-ci s'écarte de la table de 15,7 °C en moyenne
+  et jusqu'à 49 °C, l'écart croissant régulièrement avec l'élancement. C'est la
+  justification externe du choix de la rendre obligatoire.
+- Les planches lisent le nomogramme **sans appliquer le facteur d'ombre** ; cet
+  outil l'applique, conformément au §4.2.5.1(2). Sur le HEB 360, cela fait
+  730 °C au lieu de 770 °C — la planche est du côté sûr. Nourri de la même
+  entrée, l'outil retrouve ses 770 °C : c'est une divergence de convention, pas
+  de calcul.
+
+Restent **sans référence externe** : la flexion, le déversement et
+l'interaction N + M, couverts seulement par des recoupements analytiques
+internes. Le détail — méthode, chiffres, limites, et les deux anomalies de
+catalogue signalées mais non tranchées — est dans
+[`docs/validation.md`](docs/validation.md), et `tests/cas_reference.toml`
+accueille vos propres cas vérifiés.
 
 ## Installation
 
@@ -42,7 +69,7 @@ avec un harnais prêt à recevoir vos propres cas vérifiés.
 python -m venv .venv
 source .venv/bin/activate        # Windows : .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev,trace,ui]"
-python -m pytest                 # 287 tests attendus au vert
+python -m pytest                 # 333 tests attendus au vert
 ```
 
 Python 3.11 ou plus récent. Aucune dépendance obligatoire à l'exécution :
@@ -234,8 +261,10 @@ dur. Pour un poteau RRW 400/400/10 de 6 m, cela sous-estimerait la résistance
 au flambement d'un facteur 23. Le chargeur recalcule `i_z = √(I_z/A)` pour
 toute la famille et conserve la valeur d'origine dans `Profil.iz_tabule` ; le
 fichier source n'est pas modifié. Une seconde anomalie, sur le HHD 320.74, est
-signalée mais non corrigée : elle demande vos tables SZS. Détails et impact
-dans [`docs/validation.md`](docs/validation.md).
+signalée mais non corrigée : elle demande vos tables SZS. Une troisième, sur
+la section du HEB 280, est ressortie de la comparaison avec la table SZS des
+facteurs de massiveté — même traitement, signalée et non tranchée. Détails et
+impact dans [`docs/validation.md`](docs/validation.md).
 
 Les propriétés des produits de protection
 (`src/nommogramme/data/protections.toml`) sont des **valeurs génériques de la
@@ -249,7 +278,7 @@ retenu (ETE, reconnaissance AEAI).
 python -m pytest
 ```
 
-287 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
+333 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
 pic de transformation de phase à 735 °C, les valeurs de référence des courbes
 de feu, les facteurs de massiveté comparés aux tables publiées, la convergence
 en pas de temps, les invariants physiques de l'échauffement, les huit valeurs
@@ -271,9 +300,10 @@ qu'une figure est lisible : cela a demandé de les regarder.
 
 ## Avertissement
 
-Cet outil est en développement. **Aucun de ses résultats n'a été comparé à un
-calcul de référence externe** — les sources d'exemples normatifs sont
-inaccessibles depuis l'environnement de développement. Il ne doit pas servir de
-justification de projet en l'état. Les clauses citées dans le code proviennent de la connaissance du
+Cet outil est en développement. Seule la chaîne du **poteau comprimé** —
+protégé et nu — a été comparée à des références externes (steelacademy 2019).
+**La flexion, le déversement et l'interaction N + M n'ont été comparés à aucun
+calcul de référence externe.** Il ne doit pas servir de justification de projet
+en l'état. Les clauses citées dans le code proviennent de la connaissance du
 corpus normatif et sont à recouper avec les exemplaires officiels des normes —
 la liste des points à vérifier figure au §18 du plan de conception.

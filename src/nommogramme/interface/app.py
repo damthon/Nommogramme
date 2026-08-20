@@ -339,8 +339,10 @@ def principal() -> None:
 
     st.divider()
     st.caption(
-        "**Outil en développement.** Aucun de ses résultats n'a été comparé à "
-        f"un calcul de référence externe — voir [validation.md]({_LIEN_VALIDATION}). "
+        "**Outil en développement.** Seule la chaîne de l'élément comprimé "
+        "protégé est recoupée avec une référence externe ; la flexion, le "
+        "déversement, l'interaction N + M et les éléments non protégés ne le "
+        f"sont pas — voir [validation.md]({_LIEN_VALIDATION}). "
         "Il ne constitue pas une justification de projet. Les propriétés des "
         "produits de protection sont des valeurs génériques, à remplacer par "
         "celles de l'agrément technique du produit retenu."

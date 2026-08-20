@@ -4,25 +4,207 @@
 quel moyen** — de façon qu'un lecteur puisse décider lui-même du crédit à
 accorder à un résultat de l'outil.
 
-## Ce qui n'a pas pu être fait
+## Références externes
 
-Le lot 8 prévoyait la confrontation à des **exemples de calcul normatifs
-publiés** : recueils JRC, SCI P375, guides Infosteel, documentation SZS. Cela
-n'a pas été possible.
+Deux supports du cycle **steelacademy 2019**, fournis par l'utilisateur :
 
-Le proxy réseau de l'environnement de développement bloque l'accès à
-`szs.ch`, `eurocodes.jrc.ec.europa.eu`, `steelconstruction.info`,
-`infosteel.be` et aux autres sources consultées. Les normes elles-mêmes sont
-sous droits et ne sont pas accessibles en ligne.
+| | Source | Ce qu'elle couvre |
+|---|---|---|
+| **A** | Horw, 12 septembre 2019, Dr. Patrick Roman Schulthess — « Beispiel: Durchlaufende HEA Stütze », planches 36 à 39, et la table de températures critiques à l_k,fi = 0,5·L_k0 qui l'accompagne | poteau comprimé **protégé** |
+| **B** | Lausanne, 25 septembre 2019, Dr. Roland Bärtschi — « Exemple d'application : poteau en acier non revêtu », planches 22 et 23 | poteau comprimé **nu**, et la table SZS des facteurs de massiveté |
 
-Une seule source restait joignable, `raw.githubusercontent.com`. Elle n'a pas
-été utilisée : reprendre l'implémentation non validée d'un tiers ne vaut pas
-validation, et cela sortirait du périmètre de dépôts autorisé pour la session.
+Les deux sont complémentaires : la première sollicite l'équation (4.27) et le
+facteur φ, la seconde l'équation (4.25) et le facteur d'ombre. Ensemble elles
+couvrent la chaîne complète d'un élément comprimé, thermique et mécanique.
 
-**Conséquence : aucun résultat de cet outil n'a été comparé à un calcul de
-référence externe.** L'avertissement du README reste entier.
+Les contrôles correspondants sont dans `tests/test_reference_szs.py` (source A),
+`tests/test_reference_bartschi.py` et `tests/test_reference_massivete.py`
+(source B).
 
-## Ce qui a été fait à la place
+## Source A — le poteau protégé
+
+### La table des températures critiques
+
+Soixante points de la table, couvrant μ_fi,0 de 0,20 à 0,70 et λ̄₀ de 0,2 à
+2,0, ont été confrontés aux deux voies de l'outil.
+
+| Voie | Écart moyen | Écart maximal |
+|---|---:|---:|
+| **Vérification croisée** (§4.2.3, χ_fi + interaction) | **0,7 °C** | **2 °C** |
+| Équation (4.22) seule | 15,7 °C | 49 °C |
+
+La vérification croisée reproduit la table publiée à 2 °C près sur toute son
+étendue. C'est la validation la plus forte dont dispose le projet : la table
+SZS est construite indépendamment, et l'accord porte sur toute la chaîne
+mécanique — χ_fi, la courbe de flambement unique α = 0,65·√(235/f_y),
+l'élancement corrigé λ̄_θ = λ̄·√(k_y,θ/k_E,θ), et les facteurs du tableau 3.1.
+
+L'écart de l'équation (4.22) n'est pas un bruit : il **croît de façon
+monotone** avec l'élancement, de −2 °C en moyenne à λ̄₀ = 0,2 jusqu'à +35 °C à
+λ̄₀ = 2,0. C'est exactement le défaut annoncé au §13 du plan de conception,
+mesuré ici contre une référence externe au lieu d'être estimé. La décision de
+rendre la vérification croisée obligatoire s'en trouve justifiée.
+
+### L'exemple chiffré
+
+HEA 300 en S235, encaissée de plaques fibres-silicate de calcium de 20 mm,
+N_Ed,fi = 1205 kN, L_k0 = 3,0 m, l_k,fi = 0,5·L_k0.
+
+| Grandeur | Planche | Outil |
+|---|---:|---:|
+| α | 0,65 | 0,650 |
+| λ̄₀ | 0,427 | 0,426 |
+| χ_fi à 20 °C | 0,756 | 0,757 |
+| N_b,fi,0,Rd | 2010 kN | 2010 kN |
+| A_p/V, encaissement 4 faces | 104 m⁻¹ | 104,4 m⁻¹ |
+| φ | 0,318 | 0,319 |
+| **θ_crit** | **580 °C** | **579 °C** |
+| **Durée de résistance** | **111 min** | **110 min** |
+
+La planche donne deux lectures de durée : 100 min en négligeant φ, 111 min en
+en tenant compte. L'intégration pas à pas de l'équation (4.27) retrouve la
+seconde.
+
+### Une différence de convention à connaître
+
+Le seul écart notable porte sur le **degré d'utilisation** : la planche donne
+μ = 0,60, l'outil affiche 0,52. Ce n'est pas une erreur, mais deux portes
+d'entrée différentes :
+
+* la **table SZS** se lit avec μ₀ et λ̄₀ calculés à **température ambiante**,
+  donc avec L_k0 ; le facteur 0,5 de la longueur d'incendie est incorporé dans
+  la table elle-même — d'où la mention « Wichtig, dass Knicklänge für System
+  bei Raumtemperatur eingesetzt wird » sur la planche ;
+* l'**EN 1993-1-2 §4.2.4** définit μ₀ = E_fi,d / R_fi,d,0 où R_fi,d,0 est la
+  résistance à t = 0 **avec les conditions d'appui de l'incendie**, donc avec
+  l_fi.
+
+Les deux mènent à la même température critique — la table est construite pour
+cela, et les 60 points ci-dessus le confirment. Mais si vous comparez un μ₀
+affiché par cet outil à celui d'une note de calcul suisse, attendez-vous à
+l'écart.
+
+## Source B — le poteau nu, et la table de massiveté
+
+### L'énoncé
+
+HEB 360 en S355, longueur 4,00 m, bi-articulé donc l_fi = 4,00 m. Quelle
+capacité portante subsiste après 30 minutes de feu ISO ? La planche lit
+θ = 770 °C sur le nomogramme SZS, puis en déduit N_b,fi,t,Rd = 537 kN.
+
+| Grandeur | Planche | Outil |
+|---|---:|---:|
+| A | 18 060 mm² | 18 100 mm² |
+| I_z | 1,01·10⁸ mm⁴ | 1,01·10⁸ mm⁴ |
+| i_z | 74,8 mm | 74,9 mm |
+| λ̄₀ | 0,70 | 0,699 |
+| α | 0,529 | 0,529 |
+| A_m/V, contour 4 faces | 102 m⁻¹ | 102,2 m⁻¹ |
+| **θ_a à 30 min** | **770 °C** | **770,5 °C** |
+| k_y,θ | 0,146 | 0,1460 |
+| k_E,θ | 0,102 | 0,1020 |
+| λ̄_θ | 0,838 | 0,836 |
+| φ_θ | 1,072 | 1,072 |
+| χ_fi | 0,574 | 0,575 |
+| **N_b,fi,t,Rd** | **537 kN** | **539 kN** |
+
+Les 2 kN d'écart final viennent de la section : 18 100 mm² au catalogue contre
+18 060 sur la planche, soit 0,2 %.
+
+C'est la première validation de l'**échauffement d'un profilé nu**. La
+température à 30 minutes se joue à 0,5 °C — ce qui met en cause d'un coup
+l'équation (4.25), le flux net de l'EN 1991-1-2 §3.1, la chaleur spécifique
+c_a(θ) de l'équation (3.2) et l'intégration en temps. Aucun de ces quatre
+éléments n'avait de référence externe auparavant.
+
+### Le facteur d'ombre : une divergence de convention, pas de calcul
+
+La lecture du nomogramme est faite à A_m/V = 102 m⁻¹, la valeur géométrique
+brute. Le facteur d'ombre du §4.2.5.1(2) n'est pas appliqué ; avec lui,
+l'entrée serait k_sh · A_m/V = 0,642 · 102 = 65,6 m⁻¹.
+
+| Entrée | θ à 30 min | N_b,fi,t,Rd |
+|---|---:|---:|
+| 102 m⁻¹ — planche | 770 °C | 537 kN |
+| 65,6 m⁻¹ — §4.2.5.1(2) | 730 °C | 676 kN |
+
+**L'outil applique k_sh** et affiche donc 730 °C. Ce n'est pas un désaccord sur
+le calcul : nourri de la même entrée, il retrouve les 770 °C de la planche à
+0,5 °C près. C'est un désaccord sur ce qu'il faut entrer, et il pèse 40 °C et
+26 % de capacité résiduelle. La planche est du côté sûr.
+
+L'axe du nomogramme SZS est pourtant étiqueté [A_m/V]_sh, ce qui appelle la
+valeur corrigée. Deux lectures restent possibles — la planche simplifie en
+faveur de la sécurité, ou les courbes SZS intègrent déjà l'effet d'ombre malgré
+l'étiquette — et les planches fournies ne permettent pas de trancher. Retenez
+surtout que **comparer un θ_a de cet outil à une lecture de nomogramme suppose
+de savoir laquelle des deux entrées a été utilisée.**
+
+### La table SZS des facteurs de massiveté
+
+La planche 23 reproduit la table SZS des « Profilfaktoren ». Les colonnes IPE,
+HEA et HEB en ont été relevées : **264 valeurs**, soit 66 profilés × 4
+expositions.
+
+| | |
+|---|---:|
+| Valeurs comparées | 264 |
+| Écart médian | +0,47 |
+| Dans une bande de 2 % | 257, soit 97,3 % |
+| Écart maximal | +5,7 (HEB 280) |
+
+L'écart médian de +0,5 n'est pas un biais : c'est la signature d'une table
+**tronquée** et non arrondie. Une table arrondie donnerait une médiane nulle
+et symétrique. Le module de géométrie tombe donc juste, et le résidu est une
+convention d'affichage.
+
+Le lot 1 ne disposait jusqu'ici que d'un recoupement interne — le périmètre
+calculé contre la colonne `Um` du classeur de l'utilisateur. Cette table est
+externe, et elle porte sur le rapport A_m/V complet, donc aussi sur la section.
+Elle confirme au passage l'interprétation des quatre expositions : le HEB 360
+publié à 102 / 73 / 85 / 56 est calculé à 102,2 / 72,9 / 85,7 / 56,4.
+
+### Une seconde anomalie de catalogue : le HEB 280
+
+Sept valeurs sur 264 s'écartent de plus de 2 %. Trois sont isolées dans leur
+ligne — un seul chiffre en cause, le profil typique d'une erreur de relevé sur
+une capture d'écran de basse définition. Les quatre autres sont les **quatre
+colonnes du HEB 280**, toutes fausses du même rapport :
+
+| Exposition | Table | Calculé | Rapport |
+|---|---:|---:|---:|
+| contour 4 faces | 118 | 123,7 | 1,048 |
+| caisson 4 faces | 82 | 85,5 | 1,043 |
+| contour 3 faces | 97 | 102,3 | 1,055 |
+| caisson 3 faces | 61 | 64,1 | 1,051 |
+
+Quatre chiffres ne se lisent pas mal du même pourcentage. Un rapport constant
+sur les quatre expositions désigne le **dénominateur commun**, c'est-à-dire la
+section A : le périmètre change d'une colonne à l'autre, pas elle. Le catalogue
+retient A = 131,0 cm², valeur courante du HEB 280 ; la table impliquerait
+137 cm². Les voisins immédiats, HEB 260 et HEB 300, concordent tous les huit.
+
+**Aucune correction n'est appliquée** — même traitement que le HHD 320.74.
+Trancher demande les tables SZS d'origine. Si vous les avez sous la main, c'est
+une vérification d'une minute qui lèverait le doute.
+
+### Ce qui reste hors d'atteinte
+
+Les recueils d'exemples publiés — JRC, SCI P375, guides Infosteel,
+documentation SZS en ligne — restent inaccessibles : le proxy réseau de
+l'environnement de développement bloque `szs.ch`,
+`eurocodes.jrc.ec.europa.eu`, `steelconstruction.info` et `infosteel.be`, et
+les normes elles-mêmes sont sous droits. Les deux références ci-dessus ont pu
+être exploitées parce que l'utilisateur en a fourni les planches. Les deux liens
+cités par la planche 22 — `Euronomogramme_2015_FR.pdf` et
+`heb-profilfaktoren.pdf`, tous deux sur `szs.ch` — sont dans le lot bloqué.
+
+D'autres cas restent donc les bienvenus. Les deux références couvrent le poteau
+comprimé, protégé et nu ; ni l'une ni l'autre ne touche à la **flexion**, au
+**déversement** ou à l'**interaction N + M**. C'est là que le besoin est le plus
+grand.
+
+## Recoupements internes
 
 Faute de source externe, la validation repose sur des **recoupements
 internes** : confronter chaque résultat à une solution du même problème
@@ -160,13 +342,18 @@ Un seul profilé sur 277 est concerné.
 
 | Point | État |
 |---|---|
-| Conformité à des exemples de calcul publiés | **non fait** — sources inaccessibles |
+| Élément comprimé protégé — θ_crit, φ, durée | **validé** contre steelacademy 2019 (source A) |
+| Élément comprimé nu — éq. (4.25), flux net, c_a(θ) | **validé** contre steelacademy 2019 (source B), à 0,5 °C |
+| Facteurs de massiveté, 4 expositions | **validé** contre la table SZS, 257 valeurs sur 264 |
+| χ_fi, λ̄_θ, α à chaud | **validé** sur deux profilés, deux nuances, deux élancements |
+| Convention d'entrée du facteur d'ombre | **divergence connue** — la planche ne l'applique pas, l'outil si |
+| Flexion, déversement, interaction N + M | **non validé** — aucune référence externe |
+| A du HEB 280 | anomalie signalée, non tranchée |
 | Numérotation exacte des éq. des facteurs k_y, k_z, k_LT (§4.2.3.5) | à recouper |
 | Chiffre SIA 263 traitant la résistance au feu | à recouper |
 | Valeurs conventionnelles suisses de θ_cr (500 / 540 / 570 °C) | à recouper |
 | Formule du délai d'évaporation t_v = p·ρ_p·d_p²/(5·λ_p) | à recouper, désactivée par défaut |
 | Constante de gauchissement I_w ≈ I_z·(h−t_f)²/4 | approximation, absente du catalogue SZS |
-| Facteurs d'imperfection et courbe unique à chaud | cohérents entre eux, non confrontés à un exemple |
 | I_z du HHD 320.74 | anomalie signalée, non tranchée |
 
 ## Comment ajouter vos propres cas de référence
