@@ -16,6 +16,29 @@ import multiprocessing
 import sys
 
 
+def _sortie_en_utf8() -> None:
+    """Rend la console capable d'afficher les symboles du domaine.
+
+    Sous Windows, la console hérite d'une page de code héritée — cp1252 en
+    Europe de l'Ouest — qui ne contient ni « θ », ni « μ », ni les exposants.
+    Le premier ``print`` contenant θ_cr lève alors ``UnicodeEncodeError`` et le
+    programme s'arrête, alors que le calcul lui-même s'est bien passé.
+
+    Le piège est qu'il ne se manifeste que sur la machine de l'utilisateur, ou
+    sur un coureur Windows : sous Linux et macOS la sortie est en UTF-8 par
+    défaut et tout passe.
+
+    ``errors="replace"`` garde le filet : si la reconfiguration échoue sur un
+    terminal exotique, un caractère de remplacement vaut mieux qu'une pile
+    d'appels.
+    """
+    for flux in (sys.stdout, sys.stderr):
+        try:
+            flux.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, OSError, ValueError):  # pragma: no cover
+            pass
+
+
 def autotest() -> int:
     """Vérifie que l'exécutable est complet, sans ouvrir de fenêtre.
 
@@ -121,6 +144,7 @@ def autotest_fenetre() -> int:
 
 def main() -> int:
     multiprocessing.freeze_support()
+    _sortie_en_utf8()
 
     if "--autotest" in sys.argv[1:]:
         return autotest()

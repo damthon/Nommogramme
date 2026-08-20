@@ -86,7 +86,7 @@ accueille vos propres cas vérifiés.
 python -m venv .venv
 source .venv/bin/activate        # Windows : .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev,trace,ui]"
-python -m pytest                 # 396 tests attendus au vert
+python -m pytest                 # 401 tests attendus au vert
 ```
 
 Python 3.11 ou plus récent. Aucune dépendance obligatoire à l'exécution :
@@ -209,18 +209,19 @@ C'est la forme destinée à être **distribuée** : un fichier à télécharger,
 double-clic, l'écran s'ouvre. Ni Python à installer, ni ligne de commande, ni
 navigateur.
 
-Téléchargez l'archive de votre système depuis la page
-[Releases](https://github.com/damthon/Nommogramme/releases), décompressez-la,
-lancez `Nommogramme`.
+Téléchargez `Nommogramme-windows.zip` depuis la page
+[Releases](https://github.com/damthon/Nommogramme/releases), décompressez-le,
+lancez `Nommogramme.exe`.
 
 > **Windows affichera « Windows a protégé votre ordinateur »** : le programme
 > n'est pas signé par un certificat commercial (~300 CHF/an). Cliquez sur
 > « Informations complémentaires », puis « Exécuter quand même ». Si votre
 > service informatique bloque les exécutables téléchargés, mieux vaut le leur
-> faire autoriser que contourner la protection. Sur macOS, clic droit puis
-> « Ouvrir » au premier lancement, pour la même raison.
+> faire autoriser que contourner la protection.
 
-Depuis une installation Python, la même fenêtre s'obtient par :
+Seul Windows est compilé — c'est la seule cible demandée. Sur tout autre
+système, et sur un poste où Python est installé, la même fenêtre s'obtient
+par :
 
 ```bash
 pip install -e ".[bureau]"
@@ -235,7 +236,7 @@ livré avec Python : démarrage immédiat, aucun serveur.
 
 ### Comment l'exécutable est produit
 
-Sur une machine Windows ou macOS :
+Sur une machine Windows :
 
 ```bash
 pip install -e ".[bureau]" pyinstaller
@@ -245,8 +246,8 @@ pyinstaller packaging/nommogramme.spec
 PyInstaller embarque l'interpréteur de la machine qui compile : **on ne produit
 pas un `.exe` depuis Linux.** C'est le rôle de
 [`.github/workflows/executable.yml`](.github/workflows/executable.yml), qui
-compile sur des machines Windows et macOS fournies par GitHub, puis publie les
-archives dans les Releases. Pousser une étiquette suffit :
+compile sur une machine Windows fournie par GitHub, puis publie l'archive dans
+les Releases. Pousser une étiquette suffit :
 
 ```bash
 git tag v0.2.0 && git push origin v0.2.0
@@ -256,8 +257,8 @@ Le paquet produit est contrôlé avant publication, sur l'exécutable lui-même 
 non sur le code source :
 
 ```bash
-./dist/Nommogramme --autotest           # catalogue, produits, calcul, tracé
-./dist/Nommogramme --autotest-fenetre   # ouvre la fenêtre et la peint
+./dist/Nommogramme.exe --autotest           # catalogue, produits, calcul, tracé
+./dist/Nommogramme.exe --autotest-fenetre   # ouvre la fenêtre et la peint
 ```
 
 Un paquet peut se compiler sans erreur et être inutilisable — il suffit qu'un
@@ -265,6 +266,14 @@ fichier de données manque, ou qu'un import différé ait échappé à l'analyse
 C'est arrivé ici deux fois : le catalogue de profilés, puis
 `PIL._tkinter_finder`, sans lequel aucune figure ne s'affiche. Le second
 contrôle existe parce que le premier n'avait pas suffi à l'attraper.
+
+Un troisième piège ne tient pas à l'empaquetage mais à Windows : sa console
+utilise cp1252, qui ne contient ni `θ`, ni `μ`, ni les exposants. Le premier
+message affichant `θ_cr` y levait `UnicodeEncodeError` et arrêtait le
+programme, alors que le calcul s'était bien passé. Le lanceur force désormais
+UTF-8 sur ses sorties, et `tests/test_lanceur.py` reconstitue une console
+cp1252 pour que le défaut ne puisse pas revenir — la CI tournant sous Linux,
+elle ne le reverrait jamais autrement.
 
 ## Interface dans le navigateur
 
@@ -371,7 +380,7 @@ retenu (ETE, reconnaissance AEAI).
 python -m pytest
 ```
 
-396 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
+401 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
 pic de transformation de phase à 735 °C, les valeurs de référence des courbes
 de feu, les facteurs de massiveté comparés aux tables publiées, la convergence
 en pas de temps, les invariants physiques de l'échauffement, les huit valeurs
