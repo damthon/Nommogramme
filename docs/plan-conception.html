@@ -308,7 +308,7 @@ hr.end{border:none;border-top:2px solid var(--ink);margin:3.5rem 0 1.2rem}
     <div><dt>Branche</dt><dd>claude/fire-resistance-<wbr>metal-profiles-u2512i</dd></div>
     <div><dt>Base profilés</dt><dd>SZS C5 — 277 profilés</dd></div>
     <div><dt>Langage</dt><dd>Python ≥ 3.11</dd></div>
-    <div><dt>Avancement</dt><dd>les 9 lots · 333 tests</dd></div>
+    <div><dt>Avancement</dt><dd>les 9 lots · 357 tests</dd></div>
   </dl>
 
   <nav class="toc" aria-label="Sommaire">
@@ -1194,7 +1194,7 @@ nommo profils --famille HEA --colonnes A,Wply,AmV_contour4</pre>
   </ul>
 
   <h4>4 — Exemples normatifs complets</h4>
-  <p>Le juge de paix. Reprise d'exemples publiés et comparaison poste par poste&nbsp;: μ₀, θ<sub>cr</sub>, A<sub>m</sub>/V, θ<sub>a</sub>(t), verdict. Tolérance 2 % sur les températures, 5 % sur les épaisseurs de protection. Chaque exemple est un test versionné, avec sa source citée&nbsp;: <code>tests/test_reference_szs.py</code>, <code>tests/test_reference_bartschi.py</code> et <code>tests/test_reference_massivete.py</code>.</p>
+  <p>Le juge de paix. Reprise d'exemples publiés et comparaison poste par poste&nbsp;: μ₀, θ<sub>cr</sub>, A<sub>m</sub>/V, θ<sub>a</sub>(t), verdict. Tolérance 2 % sur les températures, 5 % sur les épaisseurs de protection. Chaque exemple est un test versionné, avec sa source citée&nbsp;: <code>tests/test_reference_szs.py</code>, <code>tests/test_reference_bartschi.py</code>, <code>tests/test_reference_massivete.py</code> et <code>tests/test_reference_steeltec.py</code>.</p>
 
   <div class="note">
     <span class="tag">État réel au lot 8</span>
@@ -1204,32 +1204,46 @@ nommo profils --famille HEA --colonnes A,Wply,AmV_contour4</pre>
     validation a donc démarré sur des recoupements analytiques indépendants : quadrature en
     température contre pas-à-pas en temps, enthalpie en forme close contre accumulation
     numérique, équation (4.22) contre interpolation du tableau 3.1.</p>
-    <p><strong>Deux supports du cycle steelacademy 2019, fournis par l'utilisateur, ont depuis
-    permis une vraie confrontation externe</strong> — l'un sur un poteau protégé (Horw,
-    Dr. P. R. Schulthess), l'autre sur un poteau nu (Lausanne, Dr. R. Bärtschi) :</p>
+    <p><strong>Trois sources fournies par l'utilisateur ont depuis permis une vraie
+    confrontation externe</strong>&nbsp;: deux supports du cycle steelacademy 2019 (Horw,
+    Dr. P. R. Schulthess&nbsp;; Lausanne, Dr. R. Bärtschi) et surtout la documentation SZS
+    <strong>steeltec 02:2015</strong>, chapitre 3, dont ces cours sont tirés — huit exemples
+    chiffrés de bout en bout.</p>
     <div class="tw">
     <table>
-      <thead><tr><th>Comparaison</th><th>Écart</th></tr></thead>
+      <thead><tr><th>Comparaison</th><th>Document</th><th>Outil</th></tr></thead>
       <tbody>
-        <tr><td>Table SZS des θ<sub>crit</sub>, 60 points (μ<sub>fi,0</sub> × λ̄₀)</td><td>moyen 0,7 °C, maximal 2 °C</td></tr>
-        <tr><td>HEA 300 protégé, silicate 20 mm</td><td>θ<sub>crit</sub> 579 contre 580 °C, durée 110 contre 111 min</td></tr>
-        <tr><td>HEB 360 nu S355, 30 min ISO</td><td>θ<sub>a</sub> 770,5 contre 770 °C, N<sub>b,fi,t,Rd</sub> 539 contre 537 kN</td></tr>
-        <tr><td>Table SZS des facteurs de massiveté, 264 valeurs</td><td>97,3 % à moins de 2 %, médiane +0,47</td></tr>
+        <tr><td>Table SZS des θ<sub>crit</sub>, 60 points</td><td colspan="2">écart moyen 0,7 °C, maximal 2 °C</td></tr>
+        <tr><td>Table SZS des facteurs de massiveté, 264 valeurs</td><td colspan="2">97,3 % à moins de 2 %, médiane +0,47</td></tr>
+        <tr><td>Ex. A — HEA 300 protégé&nbsp;: φ, délai d'évaporation</td><td>0,318 · 1 min</td><td>0,318 · 0,96</td></tr>
+        <tr><td><strong>Ex. B — solive IPE 300 fléchie</strong>, μ<sub>fi,t</sub> = 0,456, κ = 0,7</td><td><strong>654 °C</strong></td><td><strong>654,4</strong></td></tr>
+        <tr><td>Ex. C — âme mince classe 4, d<sub>p</sub> requis</td><td>50 mm</td><td>48,9</td></tr>
+        <tr><td>Ex. D — rond ⌀280, l<sub>fi</sub> = 0,5·L</td><td>684 °C / 63 min</td><td>684 / 62,2</td></tr>
+        <tr><td>Ex. E — rond ⌀280, l<sub>fi</sub> = 1,0·L</td><td>667 °C / 61 min</td><td>667 / 60,1</td></tr>
+        <tr><td><strong>Ex. F — poutre mixte IPE 270</strong>, μ<sub>fi,t</sub> = 0,49, κ = 0,7</td><td><strong>643 °C</strong></td><td><strong>643,4</strong></td></tr>
+        <tr><td><strong>Ex. G — HEB 340 nu</strong>&nbsp;: [A<sub>m</sub>/V]<sub>sh</sub> / durée</td><td><strong>67 m⁻¹ / 25 min</strong></td><td><strong>67,4 / 25,0</strong></td></tr>
+        <tr><td>HEB 360 nu S355, 30 min ISO (steelacademy)</td><td>770 °C / 537 kN</td><td>770,5 / 539</td></tr>
       </tbody>
     </table>
     </div>
-    <p>Le cas nu est celui qui engage le plus&nbsp;: 0,5 °C d'écart à 30 minutes met en cause
-    d'un coup l'équation (4.25), le flux net, c<sub>a</sub>(θ) et l'intégration en temps. Deux
-    points méritent d'être connus. D'abord, la table des θ<sub>crit</sub> n'est reproduite que
-    par la <strong>vérification croisée</strong> du §4.2.3 ; l'équation (4.22) seule s'en écarte
-    de 15,7 °C en moyenne et jusqu'à 49 °C, l'écart croissant avec l'élancement — c'est la
-    justification externe du choix de la rendre obligatoire. Ensuite, les planches lisent le
-    nomogramme <strong>sans appliquer k<sub>sh</sub></strong> ; l'outil l'applique (§4.2.5.1(2)),
-    d'où 730 °C au lieu de 770 °C sur le HEB 360. Nourri de la même entrée, il retrouve les
-    770 °C&nbsp;: divergence de convention, pas de calcul.</p>
-    <p>Restent sans référence externe la <strong>flexion</strong>, le <strong>déversement</strong>
-    et l'<strong>interaction N + M</strong>. Le détail et la liste complète de ce qui n'est pas
-    validé figurent dans <code>docs/validation.md</code>.</p>
+    <p>Trois enseignements. D'abord, la table des θ<sub>crit</sub> n'est reproduite que par la
+    <strong>vérification croisée</strong> du §4.2.3&nbsp;; l'équation (4.22) seule s'en écarte de
+    15,7 °C en moyenne et jusqu'à 49 °C, l'écart croissant avec l'élancement — justification
+    externe du choix de la rendre obligatoire. Les exemples D et E le montrent en creux&nbsp;:
+    même effort relatif, 17 °C d'écart, seul l'élancement les sépare.</p>
+    <p>Ensuite, le <strong>facteur d'ombre</strong>. Une planche de cours lit le nomogramme sans
+    l'appliquer, ce qui laissait planer un doute sur la convention SZS&nbsp;; l'exemple G de la
+    source primaire calcule [A<sub>m</sub>/V]<sub>sh</sub> = 0,9·[A<sub>m</sub>/V]<sub>b</sub> =
+    67 m⁻¹ avant de lire la durée, exactement comme cet outil. Nuance de l'exemple H&nbsp;: les
+    tables d'épaisseur de peinture intumescente, elles, se lisent sur le facteur brut.</p>
+    <p>Enfin, la convention d'entrée du facteur d'adaptation est confirmée&nbsp;: le nomogramme
+    s'entre avec μ₀ = μ<sub>fi,t</sub> · κ. Deux points marqués « à recouper » le sont
+    désormais&nbsp;: la formule du délai d'évaporation (p en pourcent) et la température
+    critique conventionnelle de 350 °C des sections de classe 4, SIA 263 chiffre 4.8.5.9.</p>
+    <p>Restent sans référence externe le <strong>déversement</strong> — les deux exemples fléchis
+    l'excluent par la dalle — et l'<strong>interaction N + M</strong>, qu'aucun exemple ne
+    combine. Le détail et la liste complète de ce qui n'est pas validé figurent dans
+    <code>docs/validation.md</code>.</p>
     <p>Ces contrôles ont mis au jour une <strong>erreur dans le fichier SZS</strong> : la colonne
     i<sub>z</sub> y est figée sur les 108 lignes RRW, ce qui sous-estimerait la résistance au
     flambement d'un tube élancé d'un facteur 23. Elle est corrigée à la lecture. Deux autres
@@ -1261,7 +1275,7 @@ nommo profils --famille HEA --colonnes A,Wply,AmV_contour4</pre>
       <tr><td class="num">5</td><td>Interaction N + M, μ₀ combiné, éq. (4.22) et son inverse</td><td>nomogramme numérique complet</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">6</td><td>Orchestration&nbsp;: <code>verifier()</code>, vérification croisée, note de calcul</td><td>API stable, note traçable</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">7</td><td>CLI et tracé du nomogramme</td><td>outil utilisable en ligne de commande</td><td><strong>fait</strong></td></tr>
-      <tr><td class="num">8</td><td>Validation sur exemples normatifs et sur vos cas réels</td><td>deux références steelacademy 2019 reproduites, suite de non-régression</td><td><strong>fait</strong> pour la compression</td></tr>
+      <tr><td class="num">8</td><td>Validation sur exemples normatifs et sur vos cas réels</td><td>les 8 exemples de steeltec 02:2015 reproduits, suite de non-régression</td><td><strong>fait</strong></td></tr>
       <tr><td class="num">9</td><td>Interface graphique Streamlit</td><td>vérification dans le navigateur</td><td><strong>fait</strong></td></tr>
     </tbody>
   </table>

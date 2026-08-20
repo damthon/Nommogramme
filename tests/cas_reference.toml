@@ -92,6 +92,57 @@ theta_a_a_echeance = 730.0
 # Les deux conventions mènent à la même température critique — voir
 # tests/test_reference_szs.py.
 
+[[cas]]
+libelle = "Solive IPE 300 revêtue R90 — steeltec 02:2015, exemple B"
+source = "SZS steeltec 02:2015, ch. 3.2, p. 31"
+reference_externe = true
+profil = "IPE 300"
+nuance = "S235"
+My_fi_Ed_kNm = 67.5
+L = 9.0
+maintien_lateral = true
+kappa_1 = 0.7
+exposition = "caisson3"
+protection = "plaques_silicate"
+dp_mm = 18.0
+duree_min = 90.0
+tolerance = 0.02
+[cas.attendu]
+mu_0 = 0.319
+theta_cr_nomogramme = 654.0
+Am_sur_V = 139.0
+verdict = "satisfait"
+
+# Le premier cas de FLEXION validé contre une source externe. Il fixe aussi la
+# convention d'entrée du nomogramme : mu_0 = mu_fi,t * kappa = 0,456 * 0,7.
+
+[[cas]]
+libelle = "Poteau HEB 340 nu, l_fi = 0,7·L — steeltec 02:2015, exemple G"
+source = "SZS steeltec 02:2015, ch. 3.7, p. 33"
+reference_externe = true
+profil = "HEB 340"
+nuance = "S235"
+N_fi_Ed_kN = 760.0
+L = 4.0
+l_fi_y = 2.8
+l_fi_z = 2.8
+exposition = "contour4"
+duree_min = 25.0
+tolerance = 0.02
+[cas.attendu]
+theta_cr = 683.0
+Am_sur_V = 105.0
+t_fi_d_min = 25.0
+verdict = "satisfait"
+
+# C'est l'exemple qui tranche la question du facteur d'ombre : le document
+# calcule [A_m/V]_sh = 0,9 * [A_m/V]_b = 0,9 * 74 = 67 m-1 avant de lire la
+# durée, exactement comme cet outil.
+#
+# mu_0 n'est pas vérifié, pour la même raison que le cas HEA 300 ci-dessus :
+# le document donne 0,28 avec L_K,0 = 4,0 m, l'outil 0,245 avec l_fi = 2,8 m.
+# Les deux mènent à la même température critique.
+
 # ---------------------------------------------------------------------------
 # Les cas ci-dessous ne sont PAS des références externes : ce sont les valeurs
 # produites par l'outil lui-même, figées pour détecter toute régression. Ils

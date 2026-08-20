@@ -25,41 +25,56 @@ calcule aussi bien en ligne de commande que dans un navigateur.
 | 5 | Interaction N + M, degré d'utilisation, éq. (4.22) | fait |
 | 6 | Orchestration, vérification croisée, note de calcul | fait |
 | 7 | Tracé du nomogramme | fait |
-| 8 | Validation | fait pour la compression — voir [`docs/validation.md`](docs/validation.md) |
+| 8 | Validation | fait — voir [`docs/validation.md`](docs/validation.md) |
 | 9 | Interface graphique | fait |
 
 ### Ce qui est validé, et contre quoi
 
-La chaîne complète du **poteau comprimé**, protégé comme nu, est recoupée avec
-deux supports du cycle *steelacademy 2019*.
+L'outil est confronté à trois sources externes : deux supports du cycle
+*steelacademy 2019*, et surtout la documentation SZS **steeltec 02:2015**
+(chapitre 3, huit exemples chiffrés) dont ces cours sont tirés.
 
 | Comparaison | Source | Écart |
 |---|---|---|
-| Table SZS θ_crit, 60 points (μ_fi,0 × λ̄₀) | Horw, Schulthess | moyen 0,7 °C, maximal 2 °C |
-| Exemple protégé : HEA 300, silicate 20 mm | Horw, Schulthess | θ_crit 579/580 °C, durée 110/111 min |
-| Exemple nu : HEB 360 S355, 30 min ISO | Lausanne, Bärtschi | θ_a 770,5/770 °C, N_b,fi,t,Rd 539/537 kN |
-| Table SZS des facteurs de massiveté, 264 valeurs | Lausanne, Bärtschi | 97,3 % à moins de 2 % |
+| Table SZS θ_crit, 60 points (μ_fi,0 × λ̄₀) | steelacademy, Horw | moyen 0,7 °C, maximal 2 °C |
+| Table SZS des facteurs de massiveté, 264 valeurs | steelacademy, Lausanne | 97,3 % à moins de 2 % |
+| Poteau nu HEB 360 S355, 30 min ISO | steelacademy, Lausanne | θ_a 770,5/770 °C, N 539/537 kN |
+| **Huit exemples A à H** | **steeltec 02:2015 §3** | voir ci-dessous |
 
-L'exemple nu est le plus large : les 0,5 °C d'écart sur la température à
-30 minutes mettent en cause d'un coup l'équation (4.25), le flux net de
-l'EN 1991-1-2, la chaleur spécifique c_a(θ) et l'intégration en temps.
+Les huit exemples de la source primaire couvrent la compression protégée et
+nue, **la flexion**, le dimensionnement des protections et le facteur d'ombre :
 
-Deux enseignements en sont tirés, tous deux documentés :
+| Ex. | Grandeur | Document | Outil |
+|---|---|---:|---:|
+| A | φ, délai d'évaporation | 0,318 · 1 min | 0,318 · 0,96 |
+| **B** | **θ_crit fléchie** (μ_fi,t = 0,456, κ = 0,7) | **654 °C** | **654,4** |
+| | d_p requis pour R90 | 18 mm | 17,8 |
+| C | d_p, classe 4, θ_crit = 350 °C | 50 mm | 48,9 |
+| D | θ_crit / durée nue, l_fi = 0,5·L | 684 °C / 63 min | 684 / 62,2 |
+| E | θ_crit / durée nue, l_fi = 1,0·L | 667 °C / 61 min | 667 / 60,1 |
+| **F** | **θ_crit fléchie** (μ_fi,t = 0,49, κ = 0,7) | **643 °C** | **643,4** |
+| | durée nue, d_p spray avec φ | 15 min, 11 mm | 15,8 · 10,8 |
+| **G** | **[A_m/V]_sh / durée nue** | **67 m⁻¹ / 25 min** | **67,4 / 25,0** |
 
-- Le recoupement porte sur la **vérification croisée** du §4.2.3, pas sur
-  l'équation (4.22) seule : celle-ci s'écarte de la table de 15,7 °C en moyenne
-  et jusqu'à 49 °C, l'écart croissant régulièrement avec l'élancement. C'est la
-  justification externe du choix de la rendre obligatoire.
-- Les planches lisent le nomogramme **sans appliquer le facteur d'ombre** ; cet
-  outil l'applique, conformément au §4.2.5.1(2). Sur le HEB 360, cela fait
-  730 °C au lieu de 770 °C — la planche est du côté sûr. Nourri de la même
-  entrée, l'outil retrouve ses 770 °C : c'est une divergence de convention, pas
-  de calcul.
+Trois enseignements, tous documentés :
 
-Restent **sans référence externe** : la flexion, le déversement et
-l'interaction N + M, couverts seulement par des recoupements analytiques
-internes. Le détail — méthode, chiffres, limites, et les deux anomalies de
-catalogue signalées mais non tranchées — est dans
+- Le recoupement de la table θ_crit porte sur la **vérification croisée** du
+  §4.2.3, pas sur l'équation (4.22) seule : celle-ci s'écarte de la table de
+  15,7 °C en moyenne et jusqu'à 49 °C, l'écart croissant avec l'élancement.
+  C'est la justification externe du choix de la rendre obligatoire. Les
+  exemples D et E le montrent en creux : même effort relatif, 17 °C d'écart,
+  et seul l'élancement les sépare.
+- **Le facteur d'ombre est appliqué au bon endroit.** Une planche de cours lit
+  le nomogramme sans lui, ce qui laissait planer un doute ; l'exemple G de la
+  source primaire calcule [A_m/V]_sh = 0,9·[A_m/V]_b = 67 m⁻¹ avant de lire la
+  durée, exactement comme cet outil, qui retrouve les 25 minutes.
+- **La convention du facteur d'adaptation κ est confirmée** : le nomogramme
+  s'entre avec μ₀ = μ_fi,t · κ.
+
+Restent **sans référence externe** : le **déversement** (les deux exemples
+fléchis l'excluent par la dalle) et l'**interaction N + M** (aucun exemple ne
+combine les deux). Le détail — méthode, chiffres, limites, et les deux
+anomalies de catalogue signalées mais non tranchées — est dans
 [`docs/validation.md`](docs/validation.md), et `tests/cas_reference.toml`
 accueille vos propres cas vérifiés.
 
@@ -69,7 +84,7 @@ accueille vos propres cas vérifiés.
 python -m venv .venv
 source .venv/bin/activate        # Windows : .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev,trace,ui]"
-python -m pytest                 # 333 tests attendus au vert
+python -m pytest                 # 357 tests attendus au vert
 ```
 
 Python 3.11 ou plus récent. Aucune dépendance obligatoire à l'exécution :
@@ -278,7 +293,7 @@ retenu (ETE, reconnaissance AEAI).
 python -m pytest
 ```
 
-333 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
+357 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
 pic de transformation de phase à 735 °C, les valeurs de référence des courbes
 de feu, les facteurs de massiveté comparés aux tables publiées, la convergence
 en pas de temps, les invariants physiques de l'échauffement, les huit valeurs
@@ -300,10 +315,10 @@ qu'une figure est lisible : cela a demandé de les regarder.
 
 ## Avertissement
 
-Cet outil est en développement. Seule la chaîne du **poteau comprimé** —
-protégé et nu — a été comparée à des références externes (steelacademy 2019).
-**La flexion, le déversement et l'interaction N + M n'ont été comparés à aucun
-calcul de référence externe.** Il ne doit pas servir de justification de projet
-en l'état. Les clauses citées dans le code proviennent de la connaissance du
+Cet outil est en développement. La compression — protégée et nue — et la
+flexion simple sont recoupées avec la documentation SZS steeltec 02:2015.
+**Le déversement et l'interaction N + M n'ont été comparés à aucun calcul de
+référence externe.** Il ne doit pas servir de justification de projet en
+l'état. Les clauses citées dans le code proviennent de la connaissance du
 corpus normatif et sont à recouper avec les exemplaires officiels des normes —
 la liste des points à vérifier figure au §18 du plan de conception.

@@ -200,8 +200,14 @@ class TestRestitution:
         assert "note de calcul" in boutons[0].label.lower()
 
     def test_l_avertissement_de_validation_est_affiche(self, app: AppTest) -> None:
-        """L'outil n'est pas validé : l'écran ne doit pas le laisser oublier."""
+        """La validation est partielle : l'écran doit dire où elle s'arrête.
+
+        L'avertissement a changé de contenu à mesure que la validation
+        avançait ; ce qu'il doit toujours porter, c'est le statut de l'outil,
+        le nom de ce qui n'est pas validé, et le renvoi au rapport.
+        """
         legendes = " ".join(e.value for e in app.caption)
         assert "développement" in legendes
-        assert "référence externe" in legendes
+        assert "déversement" in legendes
+        assert "N + M" in legendes
         assert "validation.md" in legendes

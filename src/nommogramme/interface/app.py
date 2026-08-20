@@ -339,10 +339,10 @@ def principal() -> None:
 
     st.divider()
     st.caption(
-        "**Outil en développement.** Seule la chaîne de l'élément comprimé "
-        "protégé est recoupée avec une référence externe ; la flexion, le "
-        "déversement, l'interaction N + M et les éléments non protégés ne le "
-        f"sont pas — voir [validation.md]({_LIEN_VALIDATION}). "
+        "**Outil en développement.** La compression et la flexion simple sont "
+        "recoupées avec la documentation SZS steeltec 02:2015 ; le déversement "
+        "et l'interaction N + M ne le sont pas — voir "
+        f"[validation.md]({_LIEN_VALIDATION}). "
         "Il ne constitue pas une justification de projet. Les propriétés des "
         "produits de protection sont des valeurs génériques, à remplacer par "
         "celles de l'agrément technique du produit retenu."
