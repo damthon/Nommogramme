@@ -28,8 +28,10 @@ Transcription
 -------------
 
 La table a été relevée à la main sur une capture d'écran de basse définition.
-Sept valeurs sur 264 s'écartent de plus de 2 % ; elles sont listées et
-commentées dans ``_ECARTS_NON_RESOLUS`` plutôt que retirées en silence.
+Sept valeurs sur 264 s'écartent de plus de 2 % ; toutes se sont révélées être
+des erreurs de relevé, confirmées une à une contre le catalogue imprimé
+(``tests/test_reference_c5.py``). Elles restent listées dans
+``_ECARTS_DE_RELEVE``, mais comme ce qu'elles sont.
 """
 
 from __future__ import annotations
@@ -119,16 +121,22 @@ _TABLE_SZS: dict[str, tuple[int, int, int, int]] = {
 
 # Les sept valeurs qui s'écartent de plus de 2 %. Aucune n'est retirée du
 # calcul des statistiques ; elles sont seulement exclues de l'assertion
-# valeur par valeur, faute de pouvoir relire la capture d'écran.
+# valeur par valeur.
 #
-# Les trois premières sont isolées dans leur ligne : un seul chiffre en cause,
-# ce qui est le profil typique d'une erreur de relevé sur un scan.
+# TOUTES SONT DES ERREURS DE RELEVÉ, et c'est maintenant établi plutôt que
+# supposé : le SZS C5/05 donne, pour chacun des quatre profilés concernés,
+# une section A et un périmètre U_m dont le rapport est la valeur calculée
+# par l'outil (voir tests/test_reference_c5.py).
 #
-# Les quatre suivantes sont les quatre colonnes du HEB 280, toutes fausses du
-# même rapport (≈ +4,9 %). Quatre chiffres ne se lisent pas mal du même
-# pourcentage : c'est la section A qui diffère, pas la transcription. Voir
-# TestAnomalieHEB280 et docs/validation.md.
-_ECARTS_NON_RESOLUS: frozenset[tuple[str, Exposition]] = frozenset(
+# Le cas du HEB 280 méritait mieux qu'un haussement d'épaules : ses quatre
+# colonnes étaient fausses du même rapport (+4,9 %), ce qui désignait le
+# dénominateur commun — la section — et non quatre chiffres mal lus. Le
+# raisonnement était bon, la conclusion fausse. Le C5 confirme A = 13 100 mm²
+# et U_m = 1,62 m²/m, soit A_m/V = 123,7 : c'est bien « 123 » qui est imprimé
+# sur la planche, lu « 118 » sur une capture de basse définition. Une seule
+# ligne mal lue explique les quatre colonnes aussi bien qu'une section
+# fausse — ce que la seule table résumée ne permettait pas de départager.
+_ECARTS_DE_RELEVE: frozenset[tuple[str, Exposition]] = frozenset(
     {
         ("HEA 500", Exposition.CONTOUR_4_FACES),
         ("HEA 1000", Exposition.CAISSON_3_FACES),
@@ -167,7 +175,7 @@ class TestTableDesFacteursDeMassivete:
         fautives = [
             (nom, exposition.name, publiee, round(calculee, 1))
             for nom, exposition, publiee, calculee in _ecarts(catalogue)
-            if (nom, exposition) not in _ECARTS_NON_RESOLUS
+            if (nom, exposition) not in _ECARTS_DE_RELEVE
             and abs(calculee - publiee) > 0.02 * publiee
         ]
         assert not fautives, f"{len(fautives)} valeurs hors tolérance : {fautives}"
@@ -205,29 +213,32 @@ class TestTableDesFacteursDeMassivete:
             assert mediane == pytest.approx(0.5, abs=0.35), f"{exposition.name} : {mediane:+.2f}"
 
 
-class TestAnomalieHEB280:
-    """La ligne HEB 280 de la table est décalée d'un facteur constant.
+class TestEcartsResolus:
+    """Les sept écarts, tranchés par le catalogue imprimé.
 
-    Elle est signalée, pas corrigée : trancher demande les tables SZS
-    d'origine, que l'environnement de développement ne peut pas atteindre.
-    Même traitement que l'anomalie du HHD 320.74 (voir docs/validation.md).
+    Ils ne sont plus une zone d'ombre : ``tests/test_reference_c5.py``
+    confronte A et U_m aux pages du SZS C5/05 pour ces quatre profilés, et
+    l'outil tombe juste. Ce qui restait douteux, c'était la table résumée.
     """
 
-    def test_les_quatre_colonnes_sont_fausses_du_meme_rapport(self, catalogue) -> None:
-        profil = catalogue["HEB 280"]
-        rapports = [
-            facteur_massivete(profil, exposition) / publiee
-            for exposition, publiee in zip(_EXPOSITIONS, _TABLE_SZS["HEB 280"])
-        ]
-        moyen = statistics.mean(rapports)
-        assert moyen == pytest.approx(1.049, abs=0.01)
-        assert max(rapports) - min(rapports) < 0.02, (
-            "un rapport constant sur les quatre expositions désigne la section, "
-            f"pas le périmètre : {[round(r, 4) for r in rapports]}"
-        )
+    _RESOLUS = {
+        "HEA 300": 152.2,
+        "HEA 500": 106.6,
+        "HEB 280": 123.7,
+        "HEB 700": 82.4,
+    }
 
-    def test_les_voisins_immediats_concordent(self, catalogue) -> None:
-        """HEB 260 et HEB 300 tombent juste : l'anomalie est bien isolée."""
+    def test_les_valeurs_calculees_sont_confirmees_par_le_c5(self, catalogue) -> None:
+        """U_m/A du catalogue imprimé redonne ce que l'outil calcule."""
+        for nom, attendu in self._RESOLUS.items():
+            profil = catalogue[nom]
+            assert profil.Um / profil.A == pytest.approx(attendu, abs=0.5), nom
+            assert facteur_massivete(
+                profil, Exposition.CONTOUR_4_FACES
+            ) == pytest.approx(attendu, abs=0.5), nom
+
+    def test_les_voisins_immediats_du_heb_280_concordent(self, catalogue) -> None:
+        """HEB 260 et HEB 300 tombent juste sur les quatre expositions."""
         for nom in ("HEB 260", "HEB 300"):
             profil = catalogue[nom]
             for exposition, publiee in zip(_EXPOSITIONS, _TABLE_SZS[nom]):

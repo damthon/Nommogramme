@@ -84,7 +84,7 @@ _CONVERSIONS = {
 _CHAMPS_CSV = [
     "nom", "famille", "masse", "A", "h", "b", "tw", "tf", "r",
     "Iy", "Iz", "Wely", "Wply", "Welz", "Wplz", "iy", "iz",
-    "Um", "iz_tabule", "It", "Av", "Aw",
+    "Um", "iz_tabule", "Iz_tabule", "It", "Av", "Aw",
 ]
 
 _RATIO_RAYON_PROFIL_CREUX = 2.0
@@ -260,6 +260,7 @@ def _profil_depuis_ligne(
             brut["r"] = _RATIO_RAYON_PROFIL_CREUX * epaisseur
 
     iz_tabule = _corriger_rayon_giration_profils_creux(brut, famille, nom)
+    Iz_tabule = _corriger_inertie_faible(brut, nom)
 
     obligatoires = ["masse", "A", "h", "b", "tw", "tf", "r", "Iy", "Iz",
                     "Wely", "Wply", "Welz", "Wplz", "iy", "iz", "Um"]
@@ -289,6 +290,7 @@ def _profil_depuis_ligne(
         iz=brut["iz"],  # type: ignore[arg-type]
         Um=brut["Um"],  # type: ignore[arg-type]
         iz_tabule=iz_tabule,
+        Iz_tabule=Iz_tabule,
         It=brut.get("It"),
         Av=brut.get("Av"),
         Aw=brut.get("Aw"),
@@ -320,10 +322,8 @@ def _corriger_rayon_giration_profils_creux(
     au lieu de 159 mm donne λ̄ = 5,23 au lieu de 0,49, soit une résistance au
     flambement de 182 kN au lieu de 4165 kN — sous-estimée d'un facteur 23.
 
-    Aucune correction n'est appliquée aux autres familles : l'incohérence du
-    HHD 320.74 est de nature inverse — c'est son I_z tabulé qui paraît bas de
-    8 %, son i_z concordant avec la géométrie — et la trancher demanderait les
-    tables SZS d'origine. Elle est donc seulement signalée.
+    L'autre anomalie du catalogue, l'I_z du HHD 320.74, est de nature inverse
+    et relève de ``_corriger_inertie_faible``.
     """
     if famille is not Famille.RRW:
         return None
@@ -335,6 +335,49 @@ def _corriger_rayon_giration_profils_creux(
 
     brut["iz"] = math.sqrt(Iz / A)
     return iz_tabule
+
+
+_IZ_HHD_320_74 = 49.6e-6
+"""I_z rétabli du HHD 320.74 [m⁴] — voir ``_corriger_inertie_faible``."""
+
+
+def _corriger_inertie_faible(brut: dict[str, float | None], nom: str) -> float | None:
+    """Rétablit I_z pour le HHD 320.74, et renvoie la valeur d'origine.
+
+    Le SZS C5/05 tabule I_z = 45,59·10⁶ mm⁴ pour ce profilé. Cette valeur est
+    **fausse**, et l'erreur est dans le catalogue SZS lui-même, pas dans sa
+    transcription : trois grandeurs indépendantes de la même page la
+    contredisent, toutes d'accord entre elles à 0,1 % près.
+
+    ==============================  ====================  ==============
+    Voie                            Calcul                I_z [10⁶ mm⁴]
+    ==============================  ====================  ==============
+    rayon de giration tabulé        i_z²·A = 72,4²·9460            49,59
+    module élastique tabulé         W_elz·b/2 = 331·150            49,65
+    géométrie de la section         2·t_f·b³/12 + …                49,57
+    **colonne I_z du catalogue**                                 **45,59**
+    ==============================  ====================  ==============
+
+    Les deux autres profilés de la série, HHD 320.158 et HHD 320.198, sont
+    cohérents sur les trois voies : l'erreur porte sur une seule cellule.
+
+    La valeur retenue, 49,6·10⁶ mm⁴, est la moyenne des trois recoupements.
+    L'écart avec la colonne fautive est de 8,7 %.
+
+    I_z n'intervient ici que dans le moment critique de déversement, où il
+    pèse au numérateur du terme d'Euler et de la constante de gauchissement :
+    la valeur tabulée sous-estimait M_cr d'environ 8 %, donc dans le sens de
+    la sécurité. Elle n'en reste pas moins fausse, et ``i_z`` — qui pilote le
+    flambement — était déjà correct.
+
+    La valeur d'origine est conservée dans ``Profil.Iz_tabule``.
+    """
+    if nom != "HHD320.74":
+        return None
+
+    Iz_tabule = brut.get("Iz")
+    brut["Iz"] = _IZ_HHD_320_74
+    return Iz_tabule
 
 
 def ecrire_csv(cat: Catalogue, chemin: Path | str | None = None) -> Path:

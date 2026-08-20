@@ -445,12 +445,12 @@ class TestCoherenceDuCatalogue:
     """
 
     def test_rayons_de_giration(self, cat) -> None:
-        """i = √(I/A) après correction des tubes creux.
+        """i = √(I/A) sur les 277 profilés, après les deux corrections.
 
-        C'est ce contrôle qui a mis au jour l'anomalie du classeur SZS : la
-        colonne i_z y est figée à 15,0018 mm sur les 108 lignes RRW. Le
-        chargeur la recalcule ; il ne doit donc plus rester ici que le
-        HHD 320.74, dont l'écart est de nature inverse.
+        C'est ce contrôle qui a mis au jour les deux anomalies du catalogue :
+        la colonne i_z figée à 15,0018 mm sur les 108 lignes RRW, et l'I_z du
+        HHD 320.74, faux de 8,7 % dans le SZS C5/05 lui-même. Les deux sont
+        corrigées à la lecture, et plus rien ne doit dépasser.
         """
         ecarts = []
         for profil in cat:
@@ -459,7 +459,7 @@ class TestCoherenceDuCatalogue:
                 ecarts.append((abs(rayon - calcule) / rayon, profil.nom))
 
         au_dela = [nom for ecart, nom in ecarts if ecart > 0.01]
-        assert au_dela == ["HHD320.74"], f"écarts inattendus : {sorted(set(au_dela))}"
+        assert not au_dela, f"écarts inattendus : {sorted(set(au_dela))}"
         assert sum(e for e, _ in ecarts) / len(ecarts) < 0.002
 
     def test_correction_des_tubes_creux(self, cat) -> None:
@@ -477,12 +477,29 @@ class TestCoherenceDuCatalogue:
             assert profil.h == pytest.approx(profil.b)
             assert profil.iz == pytest.approx(profil.iy, rel=1e-9)
 
-    def test_audit_ne_laisse_qu_une_anomalie_connue(self, cat) -> None:
-        from nommogramme.profils import Gravite, auditer_catalogue
+    def test_audit_ne_laisse_plus_d_anomalie(self, cat) -> None:
+        """Les deux anomalies connues étant corrigées, l'audit doit être vide.
+
+        Il l'est resté après confrontation au SZS C5/05 page à page : ce test
+        est le garde-fou contre une régression du chargeur.
+        """
+        from nommogramme.profils import auditer_catalogue
 
         anomalies = auditer_catalogue(cat)
-        assert [a.profil for a in anomalies] == ["HHD320.74"]
-        assert anomalies[0].gravite is Gravite.AVERTISSEMENT
+        assert not anomalies, [(a.profil, a.grandeur) for a in anomalies]
+
+    def test_correction_de_l_inertie_du_hhd_320_74(self, cat) -> None:
+        """Le seul profilé dont I_z a dû être rétabli, et la trace conservée."""
+        corriges = [p for p in cat if p.Iz_tabule is not None]
+        assert [p.nom for p in corriges] == ["HHD320.74"]
+
+        profil = corriges[0]
+        assert profil.Iz_tabule * 1e12 == pytest.approx(45.59e6, rel=0.001)
+        assert profil.Iz * 1e12 == pytest.approx(49.6e6, rel=0.001)
+
+        # Les trois recoupements qui condamnent la valeur tabulée.
+        assert math.sqrt(profil.Iz / profil.A) == pytest.approx(profil.iz, rel=0.001)
+        assert profil.Welz == pytest.approx(profil.Iz / (profil.b / 2), rel=0.005)
 
     def test_module_plastique_superieur_a_l_elastique(self, cat) -> None:
         """W_pl/W_el est le facteur de forme : entre 1,0 et 1,7 pour ces sections."""

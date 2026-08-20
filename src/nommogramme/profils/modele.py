@@ -103,6 +103,13 @@ class Profil:
     recalculée : voir ``chargeur._corriger_rayon_giration_profils_creux``.
     """
 
+    Iz_tabule: float | None = None
+    """Moment d'inertie faible tel que tabulé par le SZS [m⁴].
+
+    Renseigné uniquement lorsque la valeur retenue dans ``Iz`` a dû être
+    corrigée : voir ``chargeur._corriger_inertie_faible``.
+    """
+
     It: float | None = None
     """Moment d'inertie de torsion uniforme [m⁴]."""
     Av: float | None = None

@@ -40,6 +40,7 @@ L'outil est confronté à trois sources externes : deux supports du cycle
 | Table SZS des facteurs de massiveté, 264 valeurs | steelacademy, Lausanne | 97,3 % à moins de 2 % |
 | Poteau nu HEB 360 S355, 30 min ISO | steelacademy, Lausanne | θ_a 770,5/770 °C, N 539/537 kN |
 | **Huit exemples A à H** | **steeltec 02:2015 §3** | voir ci-dessous |
+| **Catalogue de profilés**, 561 valeurs sur 187 profilés | **Tables C5/05** | **aucun écart** |
 
 Les huit exemples de la source primaire couvrent la compression protégée et
 nue, **la flexion**, le dimensionnement des protections et le facteur d'ombre :
@@ -84,7 +85,7 @@ accueille vos propres cas vérifiés.
 python -m venv .venv
 source .venv/bin/activate        # Windows : .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev,trace,ui]"
-python -m pytest                 # 357 tests attendus au vert
+python -m pytest                 # 369 tests attendus au vert
 ```
 
 Python 3.11 ou plus récent. Aucune dépendance obligatoire à l'exécution :
@@ -270,16 +271,27 @@ python -m nommogramme.profils.chargeur
 La conversion recoupe systématiquement le périmètre calculé géométriquement
 avec la colonne `Um` du SZS : **écart moyen 0,61 %** sur les 277 profilés.
 
-⚠️ **Une erreur a été trouvée dans le classeur.** La colonne `iz3` y est figée
-à 15,0018 mm sur les 108 lignes RRW — la valeur du premier tube, recopiée en
-dur. Pour un poteau RRW 400/400/10 de 6 m, cela sous-estimerait la résistance
-au flambement d'un facteur 23. Le chargeur recalcule `i_z = √(I_z/A)` pour
-toute la famille et conserve la valeur d'origine dans `Profil.iz_tabule` ; le
-fichier source n'est pas modifié. Une seconde anomalie, sur le HHD 320.74, est
-signalée mais non corrigée : elle demande vos tables SZS. Une troisième, sur
-la section du HEB 280, est ressortie de la comparaison avec la table SZS des
-facteurs de massiveté — même traitement, signalée et non tranchée. Détails et
-impact dans [`docs/validation.md`](docs/validation.md).
+Le classeur a été **confronté page à page au SZS C5/05**, l'ouvrage dont il
+est la transcription : 561 valeurs sur 187 profilés — section, rayon de
+giration faible, périmètre — **aucun écart**. Deux corrections restent
+appliquées à la lecture, toutes deux vérifiées contre le catalogue imprimé et
+sans modification du fichier source :
+
+- ⚠️ **La colonne `iz3` est figée à 15,0018 mm sur les 108 lignes RRW.** Le C5
+  publie deux tables pour les profils creux — les tubes carrés avec une seule
+  colonne `i` (I_y = I_z), les rectangulaires avec i_y et i_z séparés ; la
+  fusion des deux dans le classeur a propagé la valeur du premier tube. Pour
+  un poteau RRW 400/400/10 de 6 m, cela sous-estimerait la résistance au
+  flambement d'un facteur 23. Le chargeur recalcule `i_z = √(I_z/A)`, ce qui
+  reproduit la colonne officielle à moins de 1 %.
+- ⚠️ **L'`I_z` du HHD 320.74 est faux dans le SZS C5/05 lui-même**, et le
+  classeur ne fait que le recopier. Le rayon de giration tabulé, le module
+  élastique tabulé et la géométrie donnent tous les trois 49,6·10⁶ mm⁴ contre
+  les 45,59·10⁶ imprimés. Le chargeur rétablit la valeur ; l'originale est
+  conservée dans `Profil.Iz_tabule`.
+
+`nommo controler` ne signale **plus aucune anomalie** sur les 277 profilés.
+Détails et impact dans [`docs/validation.md`](docs/validation.md).
 
 Les propriétés des produits de protection
 (`src/nommogramme/data/protections.toml`) sont des **valeurs génériques de la
@@ -293,7 +305,7 @@ retenu (ETE, reconnaissance AEAI).
 python -m pytest
 ```
 
-357 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
+369 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
 pic de transformation de phase à 735 °C, les valeurs de référence des courbes
 de feu, les facteurs de massiveté comparés aux tables publiées, la convergence
 en pas de temps, les invariants physiques de l'échauffement, les huit valeurs
