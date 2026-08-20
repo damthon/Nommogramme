@@ -291,25 +291,23 @@ class TestApplicationBureau:
         racine.update()
         assert app.cadre_figure["nomogramme"].winfo_children()
 
-    def test_la_figure_garde_son_rapport_de_forme(self, app, racine) -> None:
+    def test_l_image_garde_le_rapport_de_forme_de_la_figure(self, app, racine) -> None:
         """L'écraser ferait chevaucher la légende et le nom de l'axe.
 
-        ``FigureCanvasTkAgg`` étire la figure aux dimensions de son widget,
-        quoi qu'on lui demande. C'est donc le conteneur qui doit porter le bon
-        rapport de forme — ce test vérifie qu'il le porte, et qu'il tient dans
-        le cadre.
+        L'espacement des annotations, des noms d'axes et de la légende est
+        calculé pour le rapport de forme de composition. Ce qui est affiché
+        est une image rendue hors écran : c'est donc sur **ses pixels** que
+        porte le contrôle, et ils doivent tenir dans le cadre.
         """
         app.dessiner_figures()
         racine.update()
 
         cle = "nomogramme"
         cadre = app.cadre_figure[cle]
-        figure = app._figures[cle]
-        compose_l, compose_h = figure.get_size_inches()
+        compose_l, compose_h = app._figures[cle].get_size_inches()
 
-        support = cadre.winfo_children()[0]
-        racine.update()
-        largeur, hauteur = support.winfo_width(), support.winfo_height()
+        image = app._images[cle]
+        largeur, hauteur = image.width(), image.height()
 
         assert largeur / hauteur == pytest.approx(compose_l / compose_h, rel=0.02)
         assert largeur <= cadre.winfo_width()
