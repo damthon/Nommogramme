@@ -330,6 +330,70 @@ class TestApplicationBureau:
         assert figure.get_dpi() < 100.0, "la figure devrait avoir été réduite"
         assert figure.get_dpi() * figure.get_size_inches()[0] <= cadre.winfo_width()
 
+    @staticmethod
+    def _image_affichee(cadre) -> str:
+        """Ce que le cadre montre vraiment, sans rien supposer du code.
+
+        Volontairement observationnel : on interroge le widget posé dans le
+        cadre, pas les attributs internes de l'application. Un test qui passe
+        par ``app._etiquettes`` échouerait sur une version antérieure faute de
+        trouver l'attribut — donc pour la mauvaise raison, et il ne
+        démontrerait pas qu'il sait voir le défaut.
+        """
+        enfants = cadre.winfo_children()
+        assert enfants, "aucun widget dans le cadre de la figure"
+        return str(enfants[0].cget("image"))
+
+    def test_la_figure_reste_affichee_apres_un_recalcul(self, app, racine) -> None:
+        """Le défaut le plus visible qu'ait eu cette interface : le cadre blanc.
+
+        Chaque redessin détruisait l'étiquette et en créait une neuve, mais le
+        contrôle de redondance de ``_peindre`` ne portait que sur la densité.
+        À taille de fenêtre constante il concluait « rien à refaire », et
+        l'étiquette neuve restait vide. Le graphique disparaissait donc dès la
+        première frappe et ne revenait qu'en redimensionnant la fenêtre — ce
+        qui changeait la densité et débloquait le rendu.
+
+        Le scénario est celui de l'utilisateur : on affiche, on saisit une
+        valeur, on réaffiche sans toucher à la fenêtre.
+        """
+        for index, cle in enumerate(("nomogramme", "echauffement")):
+            app.onglets.select(index)
+            racine.update()
+            cadre = app.cadre_figure[cle]
+
+            app.dessiner_figures()
+            racine.update()
+            assert self._image_affichee(cadre), f"{cle} : rien affiché au premier dessin"
+
+            app.var["N"].set(700.0)
+            racine.update()
+            app.dessiner_figures()
+            racine.update()
+
+            assert self._image_affichee(cadre), (
+                f"{cle} : le cadre est vide après un recalcul à taille constante"
+            )
+
+    def test_un_redessin_identique_ne_refait_pas_l_image(self, app, racine) -> None:
+        """Le contrôle de redondance doit rester efficace là où il sert.
+
+        Il évite de repeindre à chaque événement ``<Configure>`` pendant qu'on
+        déplace le bord de la fenêtre. Le corriger ne devait pas revenir à le
+        supprimer.
+        """
+        app.dessiner_figures()
+        racine.update()
+        cadre = app.cadre_figure["nomogramme"]
+        figure = app._figures["nomogramme"]
+        image = app._images["nomogramme"]
+
+        app._peindre(
+            "nomogramme", figure, tuple(figure.get_size_inches()),
+            cadre, cadre.winfo_children()[0],
+        )
+        assert app._images["nomogramme"] is image, "l'image a été refaite pour rien"
+
     def test_les_figures_precedentes_sont_refermees(self, app, racine) -> None:
         """pyplot garde ses figures : les oublier, c'est les accumuler.
 
