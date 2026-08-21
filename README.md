@@ -86,7 +86,7 @@ accueille vos propres cas vérifiés.
 python -m venv .venv
 source .venv/bin/activate        # Windows : .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev,trace,ui]"
-python -m pytest                 # 401 tests attendus au vert
+python -m pytest                 # 403 tests attendus au vert
 ```
 
 Python 3.11 ou plus récent. Aucune dépendance obligatoire à l'exécution :
@@ -380,7 +380,7 @@ retenu (ETE, reconnaissance AEAI).
 python -m pytest
 ```
 
-401 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
+403 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
 pic de transformation de phase à 735 °C, les valeurs de référence des courbes
 de feu, les facteurs de massiveté comparés aux tables publiées, la convergence
 en pas de temps, les invariants physiques de l'échauffement, les huit valeurs

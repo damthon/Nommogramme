@@ -121,7 +121,9 @@ class Application(ttk.Frame):
         self._silence = False
         self._figures: dict[str, object] = {}
         self._images: dict[str, object] = {}
-        self._dpi_rendu: dict[str, float] = {}
+        self._etiquettes: dict[str, ttk.Label] = {}
+        self._rendu: dict[str, tuple[object, float]] = {}
+        """Ce qui est réellement affiché par onglet : (figure, densité)."""
 
         self._construire_variables()
         self._construire_disposition()
@@ -591,16 +593,22 @@ class Application(ttk.Frame):
         ancienne = self._figures.pop(cle, None)
         if ancienne is not None:
             plt.close(ancienne)
-        for enfant in cadre.winfo_children():
-            enfant.destroy()
 
         tracer = tracer_nomogramme if cle == "nomogramme" else tracer_echauffement
         figure = tracer(self.resultat)
         self._figures[cle] = figure
         compose = tuple(figure.get_size_inches())
 
-        etiquette = ttk.Label(cadre, anchor="center")
-        etiquette.pack(fill="both", expand=True)
+        # L'étiquette est créée une fois par onglet, puis réutilisée. La
+        # détruire et la recréer à chaque redessin n'apportait rien, et créait
+        # un piège : une étiquette neuve est vide, et si le contrôle de
+        # redondance de « _peindre » concluait « rien à refaire », elle le
+        # restait — cadre blanc jusqu'au prochain redimensionnement.
+        etiquette = self._etiquettes.get(cle)
+        if etiquette is None or not etiquette.winfo_exists():
+            etiquette = ttk.Label(cadre, anchor="center")
+            etiquette.pack(fill="both", expand=True)
+            self._etiquettes[cle] = etiquette
 
         self._peindre(cle, figure, compose, cadre, etiquette)
         cadre.bind(
@@ -643,7 +651,15 @@ class Application(ttk.Frame):
         dispo_h = max(cadre.winfo_height() - 10, 1)
         dpi = max(min(dispo_l / compose[0], dispo_h / compose[1]), _DPI_MINIMAL)
 
-        if abs(self._dpi_rendu.get(cle, 0.0) - dpi) < 1.0:
+        # Ne rien refaire uniquement si c'est **cette figure-là** qui est déjà
+        # affichée à cette densité. Le contrôle ne portait que sur la densité,
+        # et laissait donc passer le cas courant : un nouveau calcul — donc une
+        # nouvelle figure — dans une fenêtre qu'on n'a pas redimensionnée. Le
+        # rendu était sauté et le cadre restait vide. Redimensionner changeait
+        # la densité, ce qui débloquait tout : d'où un défaut qui semblait tenir
+        # à la taille de la fenêtre alors qu'il tenait à la saisie.
+        precedent = self._rendu.get(cle)
+        if precedent is not None and precedent[0] is figure and abs(precedent[1] - dpi) < 1.0:
             return
 
         figure.set_size_inches(*compose, forward=False)
@@ -657,7 +673,7 @@ class Application(ttk.Frame):
         # Tk ne retient pas les images : sans cette référence, le ramasse-miettes
         # de Python la libère et le cadre reste vide.
         self._images[cle] = image
-        self._dpi_rendu[cle] = dpi
+        self._rendu[cle] = (figure, dpi)
         etiquette.configure(image=image)
 
     # -- enregistrement --------------------------------------------------
