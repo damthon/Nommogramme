@@ -4,6 +4,16 @@ Calcul de la résistance au feu de profilés métalliques, protégés et non
 protégés, par la méthode du nomogramme. Normes de référence : **SIA 263** et
 **EN 1993-1-2**, actions de feu selon **EN 1991-1-2**.
 
+Deux familles de sections : les **277 profilés laminés** du catalogue SZS C5,
+et les **sections reconstituées soudées** — caisson rectangulaire ou profilé en
+H à semelles éventuellement inégales — dont vous donnez les cotes et que l'outil
+dessine à l'échelle.
+
+Toutes les clauses citées portent leur norme et leur paragraphe —
+« EN 1993-1-2 §4.2.4, éq. (4.22) » — et sont rassemblées dans
+[`docs/references.md`](docs/references.md), qui dit aussi lesquelles restent à
+recouper avec un exemplaire officiel.
+
 La conception d'ensemble — architecture, équations et clauses normatives — est
 décrite dans [`docs/plan-conception.html`](docs/plan-conception.html).
 GitHub affichant le code source d'un fichier HTML plutôt que son rendu, ouvrez
@@ -28,6 +38,8 @@ calcule aussi bien en ligne de commande que dans un navigateur.
 | 8 | Validation | fait — voir [`docs/validation.md`](docs/validation.md) |
 | 9 | Interface graphique | fait |
 | 10 | Application de bureau distribuable | fait |
+| 11 | Sections reconstituées soudées, coupe cotée à l'échelle | fait |
+| 12 | Registre des références normatives, infobulles | fait |
 
 ### Ce qui est validé, et contre quoi
 
@@ -86,7 +98,7 @@ accueille vos propres cas vérifiés.
 python -m venv .venv
 source .venv/bin/activate        # Windows : .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev,trace,ui]"
-python -m pytest                 # 403 tests attendus au vert
+python -m pytest                 # 602 tests attendus au vert
 ```
 
 Python 3.11 ou plus récent. Aucune dépendance obligatoire à l'exécution :
@@ -107,6 +119,14 @@ nommo verifier "HEB 300" --nuance S355 --N 850 --My 120 \
 # La même, avec note de calcul et figures
 nommo verifier "HEB 300" --N 850 --My 120 --L 4 --lfi 2 --duree R60 \
       --rapport note.md --tracer nomogramme.png --tracer-echauffement courbe.png
+
+# Sur une section soudée : caisson 400 × 300, tôles de 20 et 12 mm
+nommo verifier --section caisson --h 400 --b 300 --tf 20 --tw 12 \
+      --N 800 --My 120 --L 4 --lfi 2 --duree R30
+
+# Un PRS à semelles inégales, dalle sur la semelle supérieure
+nommo section --section h --h 600 --b 300 --tf 20 --tw 10 \
+      --b-inf 200 --tf-inf 15 --exposition contour3 --tracer coupe.png
 
 # Catalogue et facteurs de massiveté
 nommo profils --famille HEB
@@ -139,9 +159,15 @@ Options communes : `--exposition {contour4,contour3,caisson4,caisson3}`,
 
 Propres à `verifier` : `--contexte {sia,eurocode}` pour changer de référentiel,
 `--maintien-lateral` quand la semelle comprimée est bloquée par une dalle,
-`--kappa1` et `--kappa2` pour les facteurs d'adaptation du §4.2.3.3, `--C1` pour
-le diagramme de moment, `--theme clair|sombre` pour les figures. Le code de
+`--kappa1` et `--kappa2` pour les facteurs d'adaptation du §4.2.3.3(7), `--C1`
+pour le diagramme de moment, `--theme clair|sombre` pour les figures. Le code de
 sortie vaut 0 si l'exigence est satisfaite, 2 sinon — utilisable en script.
+
+Section soudée, communes à `verifier` et `section` : `--section {caisson,h}`,
+puis `--h --b --tf --tw` en millimètres, et pour un H à semelles inégales
+`--b-inf --tf-inf` ainsi que `--face-couverte {superieure,inferieure}`. Les
+cotes de la semelle inférieure reprennent celles de la supérieure quand on ne
+les donne pas.
 
 ## Utilisation comme bibliothèque
 
@@ -155,7 +181,7 @@ from nommogramme import (
 cas = CasDeCharge(
     N_fi_Ed=850e3,      # N, positif en compression
     My_fi_Ed=120e3,     # N·m
-    L=4.0,              # m, longueur d'épure
+    L=4.0,              # m, vide d'étage (longueur d'épure)
     l_fi_y=2.0,         # m, poteau continu d'étage courant : 0,5·L
     l_fi_z=2.0,
     beta_M_y=1.4,
@@ -181,14 +207,64 @@ r.avertissements
 print(r.note_de_calcul())   # note Markdown, avec les clauses citées
 ```
 
+### Sections reconstituées soudées
+
+Deux formes, dont vous donnez les cotes. Elles produisent un `Profil` ordinaire
+et traversent ensuite la même chaîne de calcul que les profilés du catalogue.
+
+```python
+from nommogramme import FaceCouverte, SectionCaisson, SectionH, verifier
+
+# Caisson rectangulaire : quatre tôles, unités SI
+caisson = SectionCaisson(h=0.400, b=0.300, tf=0.020, tw=0.012)
+
+# Profilé en H soudé, semelles inégales, dalle sur la semelle supérieure
+prs = SectionH(
+    h=0.600, tw=0.010,
+    b_sup=0.300, tf_sup=0.020,
+    b_inf=0.200, tf_inf=0.015,
+    face_couverte=FaceCouverte.SUPERIEURE,
+)
+
+profil = prs.profil()       # un Profil, comme s'il sortait du catalogue
+prs.controles()             # les réserves propres à cette géométrie
+r = verifier(profil=profil, ...)
+```
+
+Les caractéristiques sont **exactes** — les deux formes se décomposent en
+rectangles, dont aire, inerties et modules plastiques s'écrivent en forme
+close. Sont négligées les gorges de soudure, ce qui minore l'aire comme le
+périmètre exposé.
+
+Trois points valent d'être connus, et l'outil les signale :
+
+- une section **monosymétrique** est calculée avec la constante de
+  gauchissement de ses semelles réelles, mais sans terme de monosymétrie ;
+- le **voilement de l'âme** relève de l'EN 1993-1-5 et n'est pas traité ;
+- en exposition sur trois faces, **quelle semelle la dalle recouvre** change le
+  périmètre exposé. Sur une section 300/200, se tromper de face déplace le
+  facteur de massiveté de 5 %. Le choix est explicite, il est dessiné sur la
+  coupe, et la note de calcul donne la largeur retirée.
+
+Aucun exemple de référence externe ne couvre les sections soudées — voir
+[`docs/validation.md`](docs/validation.md).
+
 ### Figures
 
 ```python
-from nommogramme.nomogramme.trace import tracer_nomogramme, tracer_echauffement
+from nommogramme.nomogramme.trace import (
+    tracer_nomogramme, tracer_echauffement, tracer_section,
+)
 
 tracer_nomogramme(r, "nomogramme.png")        # les deux quadrants + le chemin de lecture
 tracer_echauffement(r, "courbe.png", theme="sombre")
+tracer_section(prs, "coupe.png", exposition=Exposition.CONTOUR_3_FACES)
 ```
+
+La coupe de section est dessinée **à l'échelle**, cotée en millimètres, avec
+son centre de gravité, ses axes principaux et — en exposition sur trois faces —
+la dalle figurée sur la semelle qu'elle recouvre. C'est le seul moyen de voir
+d'un coup d'œil qu'une cote a été saisie d'un facteur dix.
 
 Le nomogramme montre les deux quadrants partageant l'axe des températures :
 à gauche μ₀ → θ_cr par l'équation (4.22), à droite l'échauffement sous la
@@ -202,6 +278,16 @@ vision des couleurs : séparation ΔE 24,7 en clair et 26,8 en sombre, pour un
 seuil de 8. Chaque courbe porte aussi son étiquette directe, l'identité ne
 reposant jamais sur la seule couleur. `matplotlib` est un extra :
 `pip install 'nommogramme[trace]'`.
+
+**Les annotations se placent d'elles-mêmes.** Une dizaine de textes sont ancrés
+à des points de données — θ_cr, t_fi,d, μ₀, les étiquettes de courbe — et leur
+position dépend des chiffres du cas, pas du code : aucun décalage fixe ne
+convient à tous. Sur un élément protégé de longue durée, « 674 °C à R180 »
+tombait sur la ligne de θ_cr ; sur un caisson tenant 169 minutes, « t_fi,d »
+sortait du cadre. Le placeur mesure ce qu'il vient de poser et le repousse tant
+qu'il croise une courbe, un texte voisin ou le bord, et chaque texte porte un
+liseré de la couleur du fond. `tests/test_trace.py` balaie onze cas choisis
+pour la difficulté de leur mise en page et refuse tout recouvrement.
 
 ## Application de bureau
 
@@ -283,11 +369,15 @@ nommo interface
 ```
 
 Un navigateur s'ouvre sur `localhost:8501`. La barre latérale porte tous les
-paramètres — profilé, nuance, charges, longueurs, exposition, courbe de feu,
-protection, durée exigée, référentiel — et l'écran principal affiche le
-verdict, μ₀, les deux températures critiques et leur écart, les
-avertissements, les deux figures et la note de calcul téléchargeable. Chaque
-modification recalcule immédiatement.
+paramètres — type de section, profilé ou cotes soudées, nuance, charges,
+longueurs, exposition, courbe de feu, protection, durée exigée, référentiel —
+et l'écran principal affiche le verdict, μ₀, les deux températures critiques et
+leur écart, les avertissements, les figures et la note de calcul
+téléchargeable. Chaque modification recalcule immédiatement.
+
+Les paramètres qui ne se comprennent pas sans leur clause normative — κ₁, κ₂,
+C₁, β_M, l_fi — portent une **aide au survol** qui donne l'explication, la
+référence complète, et la réserve quand la clause reste à recouper.
 
 Les trois surfaces — ligne de commande, navigateur, bureau — ne contiennent
 **aucun calcul**. Les deux interfaces graphiques partagent
@@ -380,12 +470,18 @@ retenu (ETE, reconnaissance AEAI).
 python -m pytest
 ```
 
-403 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
+602 tests couvrent le tableau 3.1 ligne à ligne, la continuité de c_a(θ) et le
 pic de transformation de phase à 735 °C, les valeurs de référence des courbes
 de feu, les facteurs de massiveté comparés aux tables publiées, la convergence
 en pas de temps, les invariants physiques de l'échauffement, les huit valeurs
 de référence de l'équation (4.22) et son inversion, et le comportement attendu
 de la vérification croisée sur éléments trapus et élancés.
+
+`tests/test_composes.py` confronte chaque caractéristique de section soudée à sa
+formule en forme close — jamais à une valeur figée recopiée d'une exécution
+précédente, qui n'aurait rien vérifié. L'axe neutre plastique y est contrôlé par
+sa propriété caractéristique : déplacer l'axe augmente la somme des moments
+statiques, dans les deux sens.
 
 `tests/test_validation.py` va plus loin : il confronte chaque résultat à une
 solution du même problème obtenue par une voie différente — quadrature en
@@ -403,15 +499,22 @@ cas, un contrôle qui ne contrôle rien étant pire que pas de contrôle.
 
 Les tests de tracé vérifient que les figures se produisent pour chaque cas de
 figure structurellement différent, que les annotations attendues y sont et que
-les couleurs sont bien celles de la palette validée. Ils ne peuvent pas juger
-qu'une figure est lisible : cela a demandé de les regarder.
+les couleurs sont bien celles de la palette validée. Ils vérifient aussi ce qui
+se mesure de la lisibilité : sur onze cas choisis pour la difficulté de leur
+mise en page, **aucune annotation n'en recouvre une autre ni ne sort du cadre**.
+Un test ne peut toujours pas juger qu'une figure est *belle* — cela a demandé de
+les regarder — mais il peut désormais attraper le défaut qui revenait.
 
 ## Avertissement
 
 Cet outil est en développement. La compression — protégée et nue — et la
 flexion simple sont recoupées avec la documentation SZS steeltec 02:2015.
-**Le déversement et l'interaction N + M n'ont été comparés à aucun calcul de
-référence externe.** Il ne doit pas servir de justification de projet en
-l'état. Les clauses citées dans le code proviennent de la connaissance du
-corpus normatif et sont à recouper avec les exemplaires officiels des normes —
-la liste des points à vérifier figure au §18 du plan de conception.
+**Le déversement, l'interaction N + M et les sections reconstituées soudées
+n'ont été comparés à aucun calcul de référence externe.** Il ne doit pas servir
+de justification de projet en l'état.
+
+Les clauses citées proviennent de la connaissance du corpus normatif. Cinq
+d'entre elles — dont les valeurs de κ₁ et le facteur C₁ — sont explicitement
+marquées **à recouper** dans l'outil comme en fin de note de calcul ; le détail
+est dans [`docs/references.md`](docs/references.md), et la liste des autres
+points à vérifier au §18 du plan de conception.

@@ -80,8 +80,14 @@ def autotest() -> int:
             print(f"Module manquant dans le paquet : {module} ({souci})", file=sys.stderr)
             return 1
 
-    from nommogramme.interface.saisie import Saisie, executer, noms_par_famille, produits
-    from nommogramme.nomogramme.trace import tracer_nomogramme
+    from nommogramme.interface.saisie import (
+        H_SOUDE,
+        Saisie,
+        executer,
+        noms_par_famille,
+        produits,
+    )
+    from nommogramme.nomogramme.trace import tracer_nomogramme, tracer_section
 
     profils = sum(len(noms) for noms in noms_par_famille().values())
     if profils < 200:
@@ -98,10 +104,22 @@ def autotest() -> int:
 
     tracer_nomogramme(resultat)
 
+    # Les sections soudées passent par leur propre module de géométrie et par
+    # un tracé distinct. Un paquet à qui l'un des deux manquerait se
+    # compilerait sans erreur et échouerait au premier dessin de coupe.
+    saisie_soudee = Saisie(type_section=H_SOUDE)
+    section = saisie_soudee.section()
+    soudee = executer(saisie_soudee)
+    if section is None or not soudee.profil.soudee:
+        print("Les sections soudées ne sont pas fonctionnelles.", file=sys.stderr)
+        return 1
+    tracer_section(section, exposition=soudee.exposition)
+
     print(
         f"Autotest réussi — {len(differes)} modules différés présents, "
         f"{profils} profilés, {len(produits())} produits, "
-        f"θ_cr = {resultat.theta_cr:.0f} °C, figure tracée."
+        f"θ_cr = {resultat.theta_cr:.0f} °C, figures tracées, "
+        f"section soudée {soudee.profil.nom} calculée et dessinée."
     )
     return 0
 
@@ -121,10 +139,20 @@ def autotest_fenetre() -> int:
     matplotlib.use("Agg")
 
     from nommogramme.interface.bureau import Application
+    from nommogramme.interface.saisie import H_SOUDE
 
     racine = tk.Tk()
     racine.geometry("1200x800")
     application = Application(racine)
+    racine.update()
+    application.dessiner_figures()
+    racine.update()
+
+    # La coupe de section emprunte le même chemin d'affichage, mais depuis un
+    # onglet masqué par défaut : elle ne serait pas peinte sans l'y amener.
+    application.var["type_section"].set(H_SOUDE)
+    racine.update()
+    application.onglets.select(application.cadre_figure["section"])
     racine.update()
     application.dessiner_figures()
     racine.update()

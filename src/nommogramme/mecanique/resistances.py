@@ -107,9 +107,14 @@ def moment_critique_elastique(
 
         M_cr = C1 · (π²·E·I_z / L²) · √( I_w/I_z + L²·G·I_t / (π²·E·I_z) )
 
+    Ni l'EN 1993-1-1:2005 ni l'EN 1993-1-2 ne donnent M_cr : la formule vient
+    de l'ENV 1993-1-1 annexe F, reprise par le NCCI SN003a-FR.
+
     Le catalogue SZS ne tabule pas la constante de gauchissement I_w ; elle est
     approchée par la relation classique des sections en I doublement
-    symétriques, I_w ≈ I_z·(h − t_f)²/4.
+    symétriques, I_w ≈ I_z·(h − t_f)²/4. Une section reconstituée soudée porte
+    la sienne, calculée sur ses semelles réelles — la relation ci-dessus ne
+    vaut pas quand elles sont inégales.
 
     ``C1`` dépend du diagramme de moment ; sa valeur par défaut de 1,0
     correspond au moment constant, le cas le plus défavorable.
@@ -122,7 +127,11 @@ def moment_critique_elastique(
         return float("inf")
 
     I_t = profil.It if profil.It is not None else 0.0
-    I_w = profil.Iz * (profil.h - profil.tf) ** 2 / 4.0
+    I_w = (
+        profil.Iw
+        if profil.Iw is not None
+        else profil.Iz * (profil.h - profil.tf) ** 2 / 4.0
+    )
 
     terme_euler = math.pi**2 * E_A * profil.Iz / longueur**2
     sous_racine = I_w / profil.Iz + (
@@ -201,13 +210,19 @@ def M_fi_Rd(
 
         M_fi,t,Rd = (W_pl · k_y,θ · f_y / γ_M,fi) · 1/(κ₁·κ₂)
 
-    Les facteurs d'adaptation traduisent le fait qu'une section partiellement
-    protégée par une dalle est plus froide que ne le suppose l'hypothèse de
-    température uniforme :
+    Les facteurs d'adaptation du §4.2.3.3(7) traduisent le fait qu'une section
+    partiellement protégée par une dalle est plus froide que ne le suppose
+    l'hypothèse de température uniforme :
 
-    * κ₁ = 1,00 exposée sur quatre faces ; 0,70 sur trois faces avec dalle
-      béton ; 0,85 sur trois faces avec dalle mixte ;
-    * κ₂ = 0,85 aux appuis d'une poutre hyperstatique ; 1,00 sinon.
+    * κ₁, sur la section : 1,00 poutre exposée sur quatre faces ; 0,70 poutre
+      **non protégée** exposée sur trois faces, dalle béton ou mixte en
+      quatrième face ; 0,85 poutre **protégée** dans la même configuration ;
+    * κ₂, sur la longueur : 0,85 aux appuis d'une poutre hyperstatique ;
+      1,00 dans tous les autres cas.
+
+    La documentation SZS steeltec 02:2015 retient 0,70 dans ses exemples B et
+    F, tous deux protégés. L'écart est signalé dans ``docs/validation.md`` ; il
+    ne touche pas le calcul, κ₁ restant une donnée d'entrée.
     """
     if kappa_1 <= 0.0 or kappa_2 <= 0.0:
         raise ValueError("Les facteurs d'adaptation doivent être positifs.")

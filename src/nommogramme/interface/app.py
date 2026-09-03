@@ -36,15 +36,25 @@ from nommogramme.interface.saisie import (
     EXPOSITIONS as _EXPOSITIONS,
 )
 from nommogramme.interface.saisie import (
+    AIDES,
+    CATALOGUE,
+    FACES_COUVERTES,
+    H_SOUDE,
     SANS_PROTECTION,
+    TYPES_SECTION,
     Saisie,
     executer,
     noms_par_famille,
     produits,
 )
 from nommogramme.materiaux.acier import Nuance
-from nommogramme.nomogramme.trace import tracer_echauffement, tracer_nomogramme
+from nommogramme.nomogramme.trace import (
+    tracer_echauffement,
+    tracer_nomogramme,
+    tracer_section,
+)
 from nommogramme.nomogramme.verification import ResultatVerification
+from nommogramme.references import EC3_MU_0, EC3_RESISTANCES, EC3_THETA_CR
 from nommogramme.thermique.courbes import COURBES
 from nommogramme.unites import en_minutes
 
@@ -64,24 +74,83 @@ def _theme_figures() -> str:
 # --- saisie -------------------------------------------------------------------
 
 
+def _section_soudee(defaut: Saisie, type_section: str) -> dict[str, float | str]:
+    """Les dimensions d'une section reconstituée, en millimètres.
+
+    Les mêmes champs servent aux deux formes sans désigner la même chose :
+    ``b`` est la largeur du caisson ou celle de la semelle supérieure du H.
+    Les libellés changent donc avec le type retenu.
+    """
+    en_h = type_section == H_SOUDE
+    st.sidebar.caption(
+        "Cotes en millimètres. Les gorges de soudure et les congés sont "
+        "négligés, ce qui minore l'aire comme le périmètre exposé."
+    )
+    dimensions: dict[str, float | str] = {
+        "h_soudee": st.sidebar.number_input(
+            "h — hauteur totale  [mm]", value=defaut.h_soudee,
+            min_value=20.0, step=10.0, key="h_soudee",
+        ),
+        "b_soudee": st.sidebar.number_input(
+            "b_sup — semelle supérieure  [mm]" if en_h else "b — largeur  [mm]",
+            value=defaut.b_soudee, min_value=10.0, step=10.0, key="b_soudee",
+        ),
+        "tf_soudee": st.sidebar.number_input(
+            "t_f,sup  [mm]" if en_h else "t_f — semelles  [mm]",
+            value=defaut.tf_soudee, min_value=1.0, step=1.0, key="tf_soudee",
+        ),
+        "tw_soudee": st.sidebar.number_input(
+            "t_w — âme  [mm]" if en_h else "t_w — âmes  [mm]",
+            value=defaut.tw_soudee, min_value=1.0, step=1.0, key="tw_soudee",
+        ),
+    }
+    if en_h:
+        dimensions["b_inf_soudee"] = st.sidebar.number_input(
+            "b_inf — semelle inférieure  [mm]", value=defaut.b_inf_soudee,
+            min_value=10.0, step=10.0, key="b_inf_soudee",
+        )
+        dimensions["tf_inf_soudee"] = st.sidebar.number_input(
+            "t_f,inf  [mm]", value=defaut.tf_inf_soudee,
+            min_value=1.0, step=1.0, key="tf_inf_soudee",
+        )
+        dimensions["face_couverte"] = st.sidebar.selectbox(
+            "Dalle sur", list(FACES_COUVERTES), key="face_couverte",
+            help=AIDES["face_couverte"],
+        )
+    return dimensions
+
+
 def _saisie() -> Saisie:
     """Collecte les paramètres dans la barre latérale."""
+    defaut = Saisie()
     st.sidebar.header("Élément")
+
+    type_section = st.sidebar.selectbox(
+        "Type de section", list(TYPES_SECTION), key="type_section",
+        help=AIDES["type_section"],
+    )
 
     noms = noms_par_famille()
     familles = list(noms)
-    famille = st.sidebar.selectbox(
-        "Famille", familles, key="famille",
-        index=familles.index("HEB") if "HEB" in familles else 0,
-    )
-    liste = list(noms[famille])
-    profil = st.sidebar.selectbox(
-        "Profilé", liste, key="profil",
-        index=liste.index("HEB300") if "HEB300" in liste else len(liste) // 2,
-    )
+    profil = defaut.profil
+    dimensions: dict[str, float | str] = {}
+    if type_section == CATALOGUE:
+        famille = st.sidebar.selectbox(
+            "Famille", familles, key="famille",
+            index=familles.index("HEB") if "HEB" in familles else 0,
+        )
+        liste = list(noms[famille])
+        profil = st.sidebar.selectbox(
+            "Profilé", liste, key="profil",
+            index=liste.index("HEB300") if "HEB300" in liste else len(liste) // 2,
+        )
+    else:
+        dimensions = _section_soudee(defaut, type_section)
+
     nuance = st.sidebar.selectbox(
         "Nuance", [n.value for n in Nuance], key="nuance",
         index=[n.value for n in Nuance].index("S355"),
+        help=AIDES["nuance"],
     )
 
     st.sidebar.header("Sollicitations en incendie")
@@ -94,33 +163,36 @@ def _saisie() -> Saisie:
     Mz = st.sidebar.number_input("M_z,fi,Ed  [kN·m]", value=0.0, min_value=0.0, step=10.0, key="Mz")
 
     st.sidebar.header("Géométrie")
-    L = st.sidebar.number_input("Longueur d'épure L  [m]", value=4.0, min_value=0.0, step=0.5, key="L")
+    L = st.sidebar.number_input(
+        "Vide d'étage L  [m]", value=4.0, min_value=0.0, step=0.5, key="L",
+        help=AIDES["L"],
+    )
     st.sidebar.caption(
         "Poteau continu d'un contreventement : l_fi = 0,5·L en étage courant, "
-        "0,7·L au dernier étage (§4.2.3.2(4))."
+        "0,7·L au dernier étage."
     )
     l_fi = st.sidebar.number_input(
         "Longueur de flambement l_fi  [m]", value=2.0, min_value=0.0, step=0.5,
-        key="l_fi",
+        key="l_fi", help=AIDES["l_fi"],
     )
     maintien = st.sidebar.checkbox(
         "Semelle comprimée maintenue latéralement", key="maintien",
-        help="Écarte le critère de déversement de l'éq. (4.21b), que le "
-             "§4.2.3.5 n'impose qu'aux éléments pour lesquels le déversement "
-             "est un mode de ruine potentiel.",
+        help=AIDES["maintien"],
     )
     beta_M = st.sidebar.number_input(
         "β_M  [-]", value=1.4, key="beta_M", min_value=1.0, max_value=2.5, step=0.1,
-        help="Facteur de moment uniforme équivalent, figure 4.2. "
-             "1,3 charge répartie · 1,4 charge concentrée · "
-             "1,8 − 0,7·ψ diagramme linéaire.",
+        help=AIDES["beta_M"],
     )
 
     st.sidebar.header("Exposition au feu")
-    exposition = st.sidebar.selectbox("Configuration", list(_EXPOSITIONS), key="exposition")
+    exposition = st.sidebar.selectbox(
+        "Configuration", list(_EXPOSITIONS), key="exposition",
+        help=AIDES["exposition"],
+    )
     feu = st.sidebar.selectbox(
         "Courbe de feu", list(COURBES), key="feu",
         format_func=lambda cle: COURBES[cle].nom,
+        help=AIDES["feu"],
     )
     duree = st.sidebar.select_slider(
         "Durée exigée  [min]", options=list(_DUREES), value=60, key="duree"
@@ -150,28 +222,29 @@ def _saisie() -> Saisie:
         )
 
     with st.sidebar.expander("Paramètres avancés"):
-        contexte = st.selectbox("Référentiel", list(_CONTEXTES), key="contexte")
+        contexte = st.selectbox(
+            "Référentiel", list(_CONTEXTES), key="contexte", help=AIDES["contexte"]
+        )
         kappa_1 = st.number_input(
             "κ₁  [-]", value=1.00, key="kappa_1", min_value=0.5, max_value=1.0, step=0.05,
-            help="1,00 exposée 4 faces · 0,70 sur 3 faces avec dalle béton · "
-                 "0,85 sur 3 faces avec dalle mixte (§4.2.3.3).",
+            help=AIDES["kappa_1"],
         )
         kappa_2 = st.number_input(
             "κ₂  [-]", value=1.00, key="kappa_2", min_value=0.5, max_value=1.0, step=0.05,
-            help="0,85 aux appuis d'une poutre hyperstatique, 1,00 sinon.",
+            help=AIDES["kappa_2"],
         )
         C1 = st.number_input(
             "C₁  [-]", value=1.00, key="C1", min_value=1.0, max_value=2.8, step=0.05,
-            help="Facteur de forme du diagramme de moment, pour le moment "
-                 "critique de déversement. 1,0 = moment constant, le plus "
-                 "défavorable.",
+            help=AIDES["C1"],
         )
 
     return Saisie(
-        profil=profil, nuance=nuance, N=N, My=My, Mz=Mz, L=L, l_fi=l_fi,
+        profil=profil, nuance=nuance, type_section=type_section,
+        N=N, My=My, Mz=Mz, L=L, l_fi=l_fi,
         maintien=maintien, beta_M=beta_M, exposition=exposition, feu=feu,
         duree=duree, protection=choix, epaisseur=epaisseur,
         contexte=contexte, kappa_1=kappa_1, kappa_2=kappa_2, C1=C1,
+        **dimensions,
     )
 
 
@@ -201,7 +274,10 @@ def _verdict(r: ResultatVerification) -> None:
 def _indicateurs(r: ResultatVerification) -> None:
     duree = en_minutes(r.duree_requise)
     colonnes = st.columns(4)
-    colonnes[0].metric("μ₀", f"{r.mu_0:.3f}", help="Degré d'utilisation à 20 °C, éq. (4.23)")
+    colonnes[0].metric(
+        "μ₀", f"{r.mu_0:.3f}",
+        help=f"Degré d'utilisation à 20 °C — {EC3_MU_0.courte}",
+    )
     colonnes[1].metric("θ_cr retenue", f"{r.theta_cr:.0f} °C", help=r.source_theta_cr)
     colonnes[2].metric(f"θ_a à R{duree:.0f}", f"{r.theta_a_a_echeance:.0f} °C")
     colonnes[3].metric(
@@ -215,40 +291,58 @@ def _temperatures_critiques(r: ResultatVerification) -> None:
     st.subheader("Les deux voies")
     gauche, droite = st.columns(2)
     gauche.metric(
-        "Nomogramme — éq. (4.22)",
+        f"Nomogramme — {EC3_THETA_CR.courte}",
         f"{r.theta_cr_nomogramme:.0f} °C" if r.theta_cr_nomogramme else "—",
+        help=EC3_THETA_CR.complete,
     )
     # Le delta n'est montré que lorsque les deux voies divergent vraiment :
     # un écart de 1 °C est le cas normal, l'afficher en rouge serait alarmiste.
     ecart_notable = r.ecart_nomogramme is not None and r.ecart_nomogramme > 5.0
     droite.metric(
-        "Vérification croisée — §4.2.3",
+        f"Vérification croisée — {EC3_RESISTANCES.courte}",
         f"{r.theta_cr_exact:.0f} °C" if r.theta_cr_exact else "—",
         delta=f"-{r.ecart_nomogramme:.0f} °C" if ecart_notable else None,
-        help="Température à laquelle le taux d'utilisation complet atteint 1, "
-             "χ_fi et interaction N + M compris.",
+        help=EC3_RESISTANCES.infobulle(
+            "Température à laquelle le taux d'utilisation complet atteint 1, "
+            "χ_fi et interaction N + M compris."
+        ),
     )
     if r.ecart_nomogramme is not None and r.ecart_nomogramme > 10.0:
         st.warning(
-            f"L'équation (4.22) donne {r.ecart_nomogramme:.0f} °C de plus que la "
-            "vérification complète : l'instabilité gouverne, et le nomogramme seul "
-            "serait non conservatif. C'est la valeur basse qui est retenue."
+            f"L'{EC3_THETA_CR.courte} donne {r.ecart_nomogramme:.0f} °C de plus "
+            "que la vérification complète : l'instabilité gouverne, et le "
+            "nomogramme seul serait non conservatif. C'est la valeur basse qui "
+            "est retenue."
         )
     st.caption(f"Critère gouvernant : {r.gouverne_par} · {r.classification}")
 
 
-def _figures(r: ResultatVerification) -> None:
+def _figures(r: ResultatVerification, saisie: Saisie) -> None:
     theme = _theme_figures()
-    nomogramme, echauffement = st.tabs(["Nomogramme", "Échauffement"])
-    with nomogramme:
+    section = saisie.section()
+    titres = ["Nomogramme", "Échauffement"]
+    if section is not None:
+        titres.append("Coupe de la section")
+    onglets = st.tabs(titres)
+
+    with onglets[0]:
         st.pyplot(tracer_nomogramme(r, theme=theme))
         st.caption(
             "Les deux quadrants partagent l'axe des températures. Le chemin de "
-            "lecture part de μ₀, remonte à la courbe (4.22), traverse et "
-            "redescend sur l'axe des temps."
+            f"lecture part de μ₀, remonte à la courbe de l'{EC3_THETA_CR.courte}, "
+            "traverse et redescend sur l'axe des temps."
         )
-    with echauffement:
+    with onglets[1]:
         st.pyplot(tracer_echauffement(r, theme=theme))
+    if section is not None:
+        with onglets[2]:
+            st.pyplot(
+                tracer_section(section, theme=theme, exposition=r.exposition)
+            )
+            st.caption(
+                "Coupe à l'échelle. Une saisie fautive d'un facteur dix se voit "
+                "ici, et pas dans un tableau de nombres."
+            )
 
 
 def _note(r: ResultatVerification) -> None:
@@ -290,8 +384,10 @@ def principal() -> None:
 
     for avertissement in resultat.avertissements:
         st.warning(avertissement)
+    for reserve in saisie.controles_section():
+        st.warning(reserve)
 
-    _figures(resultat)
+    _figures(resultat, saisie)
     _note(resultat)
 
     st.divider()

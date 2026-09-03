@@ -11,11 +11,17 @@ from enum import Enum
 
 
 class Famille(str, Enum):
-    """Familles de profilés du catalogue SZS C5.
+    """Familles de profilés — catalogue SZS C5, et sections reconstituées.
 
     La valeur `forme` associée détermine la stratégie de calcul du périmètre
     exposé au feu, qui diffère selon que les ailes sont parallèles, inclinées,
     ou qu'il s'agit d'un profil creux.
+
+    Les deux dernières familles ne sont pas tabulées : elles désignent les
+    sections soudées que l'utilisateur décrit lui-même, et dont
+    ``profils.composes`` calcule les caractéristiques. Elles restent absentes
+    du catalogue, ce qui les fait disparaître d'elles-mêmes des listes de
+    profilés.
     """
 
     IPE = "IPE"
@@ -27,12 +33,16 @@ class Famille(str, Enum):
     HHD = "HHD"
     HL = "HL"
     RRW = "RRW"
+    PRS = "PRS"
+    """Profilé reconstitué soudé, en H, semelles éventuellement inégales."""
+    CRS = "CRS"
+    """Caisson rectangulaire soudé, quatre tôles."""
 
     @property
     def forme(self) -> "Forme":
         if self is Famille.INP:
             return Forme.I_AILES_INCLINEES
-        if self is Famille.RRW:
+        if self in (Famille.RRW, Famille.CRS):
             return Forme.PROFIL_CREUX
         return Forme.I_AILES_PARALLELES
 
@@ -117,6 +127,37 @@ class Profil:
     Aw: float | None = None
     """Aire d'âme [m²]."""
 
+    # --- ce qui ne se déduit pas des dimensions d'un profilé laminé -----------
+    #
+    # Les six champs qui suivent restent à ``None`` pour tout profilé du
+    # catalogue : leurs valeurs se calculent alors depuis h, b, t_w, t_f et r.
+    # Une section reconstituée soudée les renseigne, parce qu'aucune de ces
+    # formules ne tient pour elle : ses semelles peuvent être inégales, elle
+    # n'a pas de congé, et sa constante de gauchissement n'est pas celle d'une
+    # section doublement symétrique.
+
+    Iw: float | None = None
+    """Constante de gauchissement [m⁶].
+
+    Absente du catalogue SZS ; ``moment_critique_elastique`` l'approche alors
+    par la relation des sections en I doublement symétriques.
+    """
+    b_couverte: float | None = None
+    """Largeur masquée par la dalle en exposition sur trois faces [m].
+
+    Vaut ``b`` pour une section symétrique. Une section en H à semelles
+    inégales ne présente pas la même largeur selon la semelle que la dalle
+    recouvre — c'est ce que ce champ retient.
+    """
+    c_sur_t_semelle: float | None = None
+    """Élancement de paroi de la semelle comprimée [-], pour la classification."""
+    c_sur_t_ame: float | None = None
+    """Élancement de paroi de l'âme [-], pour la classification."""
+    hw_impose: float | None = None
+    """Hauteur d'âme entre semelles [m], quand ``h − 2·t_f`` ne la donne pas."""
+    soudee: bool = False
+    """Section reconstituée soudée, décrite par l'utilisateur."""
+
     @property
     def forme(self) -> Forme:
         return self.famille.forme
@@ -124,7 +165,14 @@ class Profil:
     @property
     def hw(self) -> float:
         """Hauteur d'âme entre semelles [m]."""
+        if self.hw_impose is not None:
+            return self.hw_impose
         return self.h - 2.0 * self.tf
+
+    @property
+    def largeur_couverte(self) -> float:
+        """Largeur masquée par la dalle en exposition sur trois faces [m]."""
+        return self.b_couverte if self.b_couverte is not None else self.b
 
     def __str__(self) -> str:
         return self.nom

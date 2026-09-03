@@ -69,7 +69,13 @@ class CasDeCharge:
     """Effort tranchant [N], en valeur absolue."""
 
     L: float = 0.0
-    """Longueur d'épure de l'élément [m]."""
+    """Longueur d'épure de l'élément [m].
+
+    Pour un poteau, c'est le **vide d'étage** — la dénomination qu'emploient
+    les interfaces. Pour une poutre, la portée entre appuis. Sert de longueur
+    de flambement par défaut, quand ``l_fi_y`` et ``l_fi_z`` ne sont pas
+    donnés.
+    """
     l_fi_y: float | None = None
     """Longueur de flambement en situation d'incendie, plan fort [m]."""
     l_fi_z: float | None = None

@@ -248,7 +248,30 @@ class TestNoteDeCalcul:
         note = resultat.note_de_calcul()
         for attendu in (
             "HEB300", "μ₀", "éq. (4.22)", "éq. (4.23)", "A_m/V", "k_sh",
-            "Verdict", "SIA", "éq. (4.26a/b)",
+            "Verdict", "SIA", "éq. (4.26a) et (4.26b)",
+        ):
+            assert attendu in note, f"« {attendu} » absent de la note"
+
+    def test_les_equations_sont_citees_avec_leur_norme(self, cat) -> None:
+        """Un numéro d'équation seul ne se retrouve pas dans une norme.
+
+        C'est la raison d'être de ``references.py`` : la note doit dire de
+        quelle norme et de quel paragraphe vient chaque équation, pas
+        seulement son numéro.
+        """
+        resultat = verifier(
+            profil=cat["HEB 300"], nuance=Nuance.S355,
+            cas=CasDeCharge(N_fi_Ed=850e3, My_fi_Ed=120e3, L=4.0, l_fi_y=2.0, l_fi_z=2.0),
+            exposition=Exposition.CONTOUR_4_FACES, duree_requise_min=60,
+        )
+        note = resultat.note_de_calcul()
+        for attendu in (
+            "EN 1993-1-2 §4.2.4, éq. (4.22)",
+            "EN 1993-1-2 §4.2.4, éq. (4.23)",
+            "EN 1993-1-2 §4.2.5.1, éq. (4.25)",
+            "EN 1993-1-2 §4.2.3",
+            "EN 1991-1-2 §3.2",
+            "EN 1993-1-1 §5.5.2, tab. 5.2",
         ):
             assert attendu in note, f"« {attendu} » absent de la note"
 

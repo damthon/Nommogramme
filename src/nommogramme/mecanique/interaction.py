@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..references import EC3_INTERACTION_DEVERSEMENT, EC3_INTERACTION_FLAMBEMENT
 from .resistances import Resistances
 
 __all__ = ["FacteursInteraction", "TauxUtilisation", "facteurs_interaction", "taux"]
@@ -53,9 +54,9 @@ def facteurs_interaction(
 
     L'élancement λ̄_z,θ est plafonné à 1,1 dans l'expression de μ_z.
 
-    La numérotation exacte de ces six équations dans le texte normatif reste à
-    confirmer sur un exemplaire de la norme ; leur contenu, lui, est celui du
-    §4.2.3.5.
+    La numérotation exacte de ces six expressions dans le texte normatif reste
+    à confirmer sur un exemplaire de la norme ; leur contenu, lui, est celui de
+    l'EN 1993-1-2 §4.2.3.5. Voir ``references.EC3_FACTEURS_INTERACTION``.
     """
     resistance_plastique = (
         aire * resistances.k_y_theta * resistances.fy / resistances.gamma_M_fi
@@ -163,9 +164,11 @@ def taux(
         deversement = 0.0
 
     if flambement >= deversement:
-        valeur, critere = flambement, "éq. (4.21a) — flambement par flexion"
+        valeur = flambement
+        critere = f"{EC3_INTERACTION_FLAMBEMENT.courte} — flambement par flexion"
     else:
-        valeur, critere = deversement, "éq. (4.21b) — déversement"
+        valeur = deversement
+        critere = f"{EC3_INTERACTION_DEVERSEMENT.courte} — déversement"
 
     return TauxUtilisation(
         valeur=valeur,
