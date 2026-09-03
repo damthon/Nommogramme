@@ -159,12 +159,26 @@ def classifier(
 
     # Semelle en console : c mesuré depuis le congé jusqu'au bord libre.
     c_semelle = (profil.b - profil.tw - 2.0 * profil.r) / 2.0
-    elancement_semelle = c_semelle / profil.tf
+    elancement_semelle = (
+        profil.c_sur_t_semelle
+        if profil.c_sur_t_semelle is not None
+        else c_semelle / profil.tf
+    )
     classe_semelle = _classe_semelle_comprimee(elancement_semelle, eps)
 
-    # Âme : hauteur droite entre congés.
-    c_ame = profil.h - 2.0 * profil.tf - 2.0 * profil.r
-    elancement_ame = c_ame / profil.tw
+    # Âme : hauteur droite entre congés. Une section soudée n'a pas de congé,
+    # et ses deux semelles peuvent différer : elle porte alors sa propre
+    # hauteur d'âme.
+    c_ame = (
+        profil.hw_impose
+        if profil.hw_impose is not None
+        else profil.h - 2.0 * profil.tf - 2.0 * profil.r
+    )
+    elancement_ame = (
+        profil.c_sur_t_ame
+        if profil.c_sur_t_ame is not None
+        else c_ame / profil.tw
+    )
     alpha, psi = _alpha_et_psi(profil, fy, N_Ed, My_Ed, c_ame)
     classe_ame = _classe_ame(elancement_ame, eps, alpha, psi)
 
@@ -185,12 +199,20 @@ def _classifier_profil_creux(
     """Section creuse : les deux parois sont des parois internes.
 
     La largeur droite conventionnelle d'une paroi de profil creux formé à
-    chaud vaut c = largeur − 3t, le rayon extérieur étant pris à 2t.
+    chaud vaut c = largeur − 3t, le rayon extérieur étant pris à 2t. Un
+    caisson soudé n'a pas d'angle arrondi : il fournit ses propres
+    élancements, mesurés entre soudures.
     """
-    c_ame = profil.h - 3.0 * profil.tw
+    c_ame = profil.hw_impose if profil.hw_impose is not None else profil.h - 3.0 * profil.tw
     c_semelle = profil.b - 3.0 * profil.tf
-    elancement_ame = c_ame / profil.tw
-    elancement_semelle = c_semelle / profil.tf
+    elancement_ame = (
+        profil.c_sur_t_ame if profil.c_sur_t_ame is not None else c_ame / profil.tw
+    )
+    elancement_semelle = (
+        profil.c_sur_t_semelle
+        if profil.c_sur_t_semelle is not None
+        else c_semelle / profil.tf
+    )
 
     alpha, psi = _alpha_et_psi(profil, fy, N_Ed, My_Ed, c_ame)
     classe_ame = _classe_ame(elancement_ame, eps, alpha, psi)

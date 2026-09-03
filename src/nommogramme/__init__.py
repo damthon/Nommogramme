@@ -4,17 +4,21 @@ Normes de référence : SIA 263 et EN 1993-1-2, actions de feu selon
 EN 1991-1-2. La conception d'ensemble est décrite dans
 ``docs/plan-conception.html``.
 
-État d'avancement — lots 1 à 6 des neuf prévus :
+Ce que couvre la bibliothèque :
 
-* catalogue SZS, géométrie d'exposition, facteurs de massiveté ;
+* catalogue SZS, sections reconstituées soudées, géométrie d'exposition et
+  facteurs de massiveté ;
 * propriétés de l'acier à chaud et matériaux de protection ;
 * courbes de feu, flux thermique net, diffusion de chaleur ;
 * résistances mécaniques à chaud, χ_fi et χ_LT,fi ;
 * interaction N + M, degré d'utilisation, équation (4.22) ;
-* orchestration, vérification croisée, note de calcul.
+* orchestration, vérification croisée, note de calcul ;
+* tracés — nomogramme, échauffement, coupe de section cotée ;
+* trois surfaces : ligne de commande, navigateur, fenêtre de bureau.
 
-Restent à faire : le tracé du nomogramme, la validation sur exemples
-normatifs et l'interface graphique.
+Toutes les clauses citées sont rassemblées dans ``nommogramme.references``,
+avec la mention de celles qui restent à recouper avec un exemplaire officiel
+des normes.
 
 Exemple :
 
@@ -64,13 +68,17 @@ from .nomogramme import (
 from .profils import (
     Catalogue,
     Exposition,
+    FaceCouverte,
     Famille,
     Profil,
+    SectionCaisson,
+    SectionH,
     charger_csv,
     facteur_massivete,
     facteur_ombre,
     perimetre_expose,
 )
+from .references import REFERENCES, Reference, a_recouper
 from .thermique import (
     FEU_EXTERIEUR,
     HYDROCARBURE,
@@ -86,7 +94,7 @@ from .thermique import (
 )
 from .unites import en_minutes, kN, kNm, minutes, mm
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "Catalogue",
@@ -98,21 +106,27 @@ __all__ = [
     "EpaisseurRequise",
     "Exposition",
     "FEU_EXTERIEUR",
+    "FaceCouverte",
     "Famille",
     "HYDROCARBURE",
     "ISO834",
     "Nuance",
     "Profil",
     "Protection",
+    "REFERENCES",
     "RHO_A",
+    "Reference",
     "Resistances",
     "ResultatThermique",
     "ResultatVerification",
     "SUISSE_SIA",
+    "SectionCaisson",
+    "SectionH",
     "TABLEAU_3_1",
     "TauxUtilisation",
     "Verdict",
     "__version__",
+    "a_recouper",
     "beta_M_lineaire",
     "catalogue",
     "catalogue_protections",

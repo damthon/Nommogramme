@@ -517,9 +517,103 @@ autres écarts se résolvent de la même façon.
 | Catalogue de profilés — A, i_z, U_m | **validé** — source D, 561 valeurs sur 187 profilés, 0 écart |
 | i_z des tubes RRW | corrigé, et la correction **vérifiée** contre le C5 |
 | I_z du HHD 320.74 | erratum du C5 lui-même, **corrigé** et tracé |
+| **Sections soudées — caractéristiques géométriques** | **cohérence interne établie**, voir ci-dessous |
+| **Sections soudées — vérification au feu** | **non validé** — aucune référence externe |
 | Numérotation exacte des éq. des facteurs k_y, k_z, k_LT (§4.2.3.5) | à recouper |
+| Valeurs de κ₁ selon protection ou type de dalle (§4.2.3.3(7)) | à recouper — divergence signalée ci-dessous |
 | Chiffre SIA 263 traitant la résistance au feu | à recouper |
 | Constante de gauchissement I_w ≈ I_z·(h−t_f)²/4 | approximation, absente du catalogue SZS |
+
+Le détail des clauses citées et de leur état de vérification est dans
+[`references.md`](references.md).
+
+## Les facteurs d'adaptation κ₁ : une divergence signalée, non tranchée
+
+L'EN 1993-1-2 §4.2.3.3(7) distingue, pour une poutre exposée sur trois faces
+avec dalle en quatrième face, la poutre **non protégée** (κ₁ = 0,70) de la
+poutre **protégée** (κ₁ = 0,85).
+
+Les deux exemples fléchis de la documentation SZS *steeltec 02:2015* retiennent
+pourtant κ = 0,70 alors que leurs deux poutres sont protégées :
+
+| Ex. | Élément | Protection | κ retenu par la source |
+|---|---|---|---:|
+| B | solive IPE 300 sous dalle | revêtement, d_p dimensionné | 0,70 |
+| F | poutre mixte IPE 270 | peinture intumescente | 0,70 |
+
+Le sens de l'écart compte : μ₀ = μ_fi,t · κ, donc **0,70 est le choix le moins
+conservatif des deux**. Retenir 0,85 sur ces deux exemples relèverait μ₀ de
+0,319 à 0,388 pour l'exemple B, et abaisserait θ_crit de 654 °C à environ
+620 °C.
+
+L'outil ne tranche pas, et n'a pas à le faire : **κ₁ est une donnée d'entrée**,
+saisie par l'ingénieur. Les deux exemples sont reproduits à 0,4 °C près avec la
+valeur de la source, ce qui valide la chaîne de calcul indépendamment du choix
+de κ. L'infobulle de κ₁ dans les deux interfaces donne le critère de la norme
+**et** signale cet écart, de façon que le choix soit fait en connaissance de
+cause.
+
+## Sections reconstituées soudées
+
+Deux formes ont été ajoutées : le caisson rectangulaire à quatre tôles et le
+profilé en H, dont les deux semelles peuvent différer. Elles produisent un
+`Profil` ordinaire et traversent ensuite exactement la même chaîne de calcul
+que les profilés du catalogue.
+
+### Ce qui est établi
+
+Les caractéristiques géométriques sont **exactes** et non approchées : les deux
+formes se décomposent en rectangles à angles droits, dont l'aire, les inerties
+et les modules plastiques s'écrivent en forme close. `tests/test_composes.py`
+confronte chaque grandeur à sa formule — pas à une valeur figée recopiée d'une
+exécution précédente, qui n'aurait rien vérifié.
+
+Trois recoupements internes valent d'être signalés :
+
+- **Le module plastique** est contrôlé par sa propriété caractéristique : l'axe
+  neutre plastique partage l'aire en deux moitiés égales, et la somme des
+  moments statiques y est minimale. Déplacer l'axe de quelques millimètres
+  augmente le résultat, ce que le test vérifie dans les deux sens.
+- **La constante de gauchissement** d'une section à semelles inégales,
+  I_w = I_fs·I_fi/(I_fs + I_fi)·h_s², redonne exactement I_z·h_s²/4 quand les
+  semelles sont égales — c'est-à-dire l'approximation employée pour les
+  profilés du catalogue. Les deux voies coïncident là où elles sont toutes deux
+  valables.
+- **La comparaison au catalogue** : un H soudé aux cotes nominales d'un HEB 300,
+  d'un IPE 400 ou d'un HEA 200 retrouve l'aire à moins de 10 %, l'inertie forte
+  à moins de 7 % et le rayon de giration à moins de 3 %, **toujours par
+  défaut**. L'écart est celui des congés de raccordement, qu'une section soudée
+  n'a pas ; son signe constant est le contrôle, pas sa valeur.
+
+### Ce qui ne l'est pas
+
+Aucun exemple de référence externe ne couvre une section soudée. En
+particulier :
+
+- **le déversement d'une section monosymétrique** est calculé avec la constante
+  de gauchissement de ses semelles réelles, mais **sans terme de
+  monosymétrie** (coefficient de Wagner β_z). L'outil le signale par un
+  avertissement dès que les deux semelles diffèrent ;
+- **le voilement de l'âme** relève de l'EN 1993-1-5, hors du domaine de l'outil.
+  Un avertissement se déclenche au-delà de h_w/t_w = 124 pour un H et 120 pour
+  un caisson, mais aucune vérification n'est faite ;
+- **les gorges de soudure sont négligées**, ce qui minore l'aire, les inerties
+  et le périmètre exposé. Le sens de l'écart est favorable pour les
+  résistances, défavorable pour l'échauffement — donc conservatif des deux
+  côtés.
+
+### La face couverte, sur une section à semelles inégales
+
+C'est le point sur lequel il est le plus facile de se tromper, et le seul que
+le catalogue ne posait pas. En exposition sur trois faces, le périmètre exposé
+diminue de la largeur de **la semelle que la dalle recouvre**. Sur une section
+dont les semelles font 300 et 200 mm, se tromper de face change le périmètre
+exposé de 100 mm, soit environ 5 % du facteur de massiveté.
+
+L'utilisateur choisit explicitement la face, la coupe de section la **dessine**
+— la dalle est figurée du bon côté, hachurée et nommée — et la note de calcul
+donne la largeur retirée. Trois moyens de vérifier la même chose, parce
+qu'aucun avertissement ne remplace de voir le dessin.
 
 ## Comment ajouter vos propres cas de référence
 

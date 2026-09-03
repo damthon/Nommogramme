@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nommogramme"
-version = "0.1.0"
+version = "0.2.0"
 description = "Résistance au feu de profilés métalliques par la méthode du nomogramme (SIA 263 / EN 1993-1-2)"
 readme = "README.md"
 requires-python = ">=3.11"

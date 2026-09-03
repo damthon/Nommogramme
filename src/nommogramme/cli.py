@@ -1,12 +1,13 @@
 """Interface en ligne de commande.
 
-Sept commandes :
+Huit commandes :
 
 * ``verifier`` — la vérification complète N + M par la méthode du nomogramme,
   avec note de calcul et tracés ;
 * ``echauffement`` — la seule voie thermique, à température critique imposée ;
 * ``dimensionner`` — l'épaisseur de protection requise ;
 * ``balayer`` — la durée atteinte par toute une famille de profilés ;
+* ``section`` — les caractéristiques d'une section reconstituée soudée ;
 * ``profils``, ``protections``, ``controler`` — consultation et audit ;
 * ``interface`` — l'interface graphique dans le navigateur.
 * ``bureau`` — l'interface de bureau, en fenêtre native.
@@ -27,17 +28,31 @@ from .materiaux.acier import Nuance
 from .materiaux.protection import Protection
 from .mecanique.actions import CasDeCharge
 from .nomogramme.verification import verifier
-from .profils import Exposition, charger_csv, facteur_massivete, facteur_ombre
+from .profils import (
+    Exposition,
+    Profil,
+    charger_csv,
+    facteur_massivete,
+    facteur_ombre,
+    perimetre_expose,
+)
+from .profils.composes import FaceCouverte, SectionCaisson, SectionH, SectionSoudee
+from .references import EC3_RESISTANCES, EC3_THETA_CR
 from .thermique import echauffement
 from .thermique.courbes import COURBES, courbe as courbe_par_nom
 from .thermique.solveur import epaisseur_requise_minutes
-from .unites import kN, kNm, minutes
+from .unites import kN, kNm, minutes, mm
 
 _EXPOSITIONS = {
     "contour4": Exposition.CONTOUR_4_FACES,
     "contour3": Exposition.CONTOUR_3_FACES,
     "caisson4": Exposition.CAISSON_4_FACES,
     "caisson3": Exposition.CAISSON_3_FACES,
+}
+
+_FACES = {
+    "superieure": FaceCouverte.SUPERIEURE,
+    "inferieure": FaceCouverte.INFERIEURE,
 }
 
 _DUREES_USUELLES = (15, 30, 60, 90, 120, 180)
@@ -55,6 +70,89 @@ def _duree_minutes(valeur: str) -> float:
     if duree <= 0:
         raise argparse.ArgumentTypeError(f"Durée non positive : {valeur!r}")
     return duree
+
+
+def _ajouter_arguments_section(analyseur: argparse.ArgumentParser) -> None:
+    """Les dimensions d'une section soudée, en millimètres.
+
+    Le même jeu d'options sert à ``verifier`` et à ``section`` : leur écrire
+    deux définitions serait le meilleur moyen de les voir diverger sur une
+    unité ou un nom.
+    """
+    groupe = analyseur.add_argument_group(
+        "section reconstituée soudée",
+        "Alternative au profilé du catalogue. Cotes en millimètres.",
+    )
+    groupe.add_argument(
+        "--section", choices=("caisson", "h"),
+        help="Forme : « caisson » rectangulaire, ou « h » (PRS)",
+    )
+    groupe.add_argument("--h", type=float, help="Hauteur totale [mm]")
+    groupe.add_argument(
+        "--b", type=float,
+        help="Largeur du caisson, ou de la semelle supérieure du H [mm]",
+    )
+    groupe.add_argument(
+        "--tf", type=float,
+        help="Épaisseur des semelles du caisson, ou de la semelle supérieure [mm]",
+    )
+    groupe.add_argument("--tw", type=float, help="Épaisseur d'âme [mm]")
+    groupe.add_argument(
+        "--b-inf", type=float, help="Largeur de la semelle inférieure du H [mm]"
+    )
+    groupe.add_argument(
+        "--tf-inf", type=float, help="Épaisseur de la semelle inférieure du H [mm]"
+    )
+    groupe.add_argument(
+        "--face-couverte", choices=sorted(_FACES), default="superieure",
+        help="Semelle masquée par la dalle en exposition sur trois faces",
+    )
+
+
+def _section_depuis_arguments(a: argparse.Namespace) -> SectionSoudee | None:
+    """La section soudée décrite en ligne de commande, ou ``None``.
+
+    Les millimètres deviennent des mètres ici, et nulle part ailleurs dans ce
+    module : c'est la frontière de saisie.
+    """
+    if not getattr(a, "section", None):
+        return None
+
+    def exiger(nom: str) -> float:
+        valeur = getattr(a, nom.replace("-", "_"))
+        if valeur is None:
+            raise ValueError(f"--{nom} est requis avec --section {a.section}.")
+        return float(valeur)
+
+    if a.section == "caisson":
+        return SectionCaisson(
+            h=mm(exiger("h")), b=mm(exiger("b")),
+            tf=mm(exiger("tf")), tw=mm(exiger("tw")),
+        )
+
+    # Un H à semelles égales est le cas courant : les cotes de la semelle
+    # inférieure reprennent celles de la supérieure quand on ne les donne pas.
+    b_sup, tf_sup = exiger("b"), exiger("tf")
+    return SectionH(
+        h=mm(exiger("h")), tw=mm(exiger("tw")),
+        b_sup=mm(b_sup), tf_sup=mm(tf_sup),
+        b_inf=mm(a.b_inf if a.b_inf is not None else b_sup),
+        tf_inf=mm(a.tf_inf if a.tf_inf is not None else tf_sup),
+        face_couverte=_FACES[a.face_couverte],
+    )
+
+
+def _profil_depuis_arguments(a: argparse.Namespace) -> Profil:
+    """Le profilé sur lequel porter la vérification : catalogue ou soudé."""
+    section = _section_depuis_arguments(a)
+    if section is not None:
+        return section.profil()
+    if not a.profil:
+        raise ValueError(
+            "Donnez un profilé du catalogue, ou décrivez une section soudée "
+            "avec --section."
+        )
+    return charger_csv()[a.profil]
 
 
 def _construire_analyseur() -> argparse.ArgumentParser:
@@ -124,7 +222,11 @@ def _construire_analyseur() -> argparse.ArgumentParser:
         "verifier",
         help="Vérification complète N + M par la méthode du nomogramme",
     )
-    p_ver.add_argument("profil")
+    p_ver.add_argument(
+        "profil", nargs="?",
+        help="Nom du profilé du catalogue. Omis si --section est donné.",
+    )
+    _ajouter_arguments_section(p_ver)
     p_ver.add_argument("--nuance", choices=[n.value for n in Nuance], default="S355")
     p_ver.add_argument("--duree", type=_duree_minutes, required=True, help="En minutes")
     p_ver.add_argument("--N", type=float, default=0.0,
@@ -158,7 +260,23 @@ def _construire_analyseur() -> argparse.ArgumentParser:
     p_ver.add_argument(
         "--tracer-echauffement", help="Écrire la courbe θ_a(t) dans ce fichier image"
     )
+    p_ver.add_argument(
+        "--tracer-section",
+        help="Écrire la coupe cotée de la section soudée dans ce fichier image",
+    )
     p_ver.add_argument("--theme", choices=("clair", "sombre"), default="clair")
+
+    # --- section -------------------------------------------------------------
+    p_sec = sous.add_parser(
+        "section",
+        help="Caractéristiques d'une section reconstituée soudée",
+    )
+    _ajouter_arguments_section(p_sec)
+    p_sec.add_argument(
+        "--exposition", choices=sorted(_EXPOSITIONS), default="contour4"
+    )
+    p_sec.add_argument("--tracer", help="Écrire la coupe cotée dans ce fichier image")
+    p_sec.add_argument("--theme", choices=("clair", "sombre"), default="clair")
 
     sous.add_parser(
         "interface", help="Lancer l'interface graphique dans le navigateur"
@@ -201,6 +319,8 @@ def _executer(a: argparse.Namespace) -> int:
         return _cmd_balayer(a)
     if a.commande == "verifier":
         return _cmd_verifier(a)
+    if a.commande == "section":
+        return _cmd_section(a)
     if a.commande == "controler":
         return _cmd_controler(a)
     if a.commande == "interface":
@@ -252,9 +372,50 @@ def _cmd_controler(a: argparse.Namespace) -> int:
     return 1 if erreurs else 0
 
 
+def _cmd_section(a: argparse.Namespace) -> int:
+    """Décrit une section soudée, sans aucune vérification au feu."""
+    section = _section_depuis_arguments(a)
+    if section is None:
+        raise ValueError(
+            "Précisez la forme : --section caisson ou --section h, "
+            "avec ses cotes."
+        )
+    profil = section.profil()
+    exposition = _EXPOSITIONS[a.exposition]
+
+    print(f"Section          : {profil.nom}")
+    print(f"                   {section.resume()}")
+    print(f"Aire A           : {profil.A * 1e4:.1f} cm²")
+    print(f"Masse            : {profil.masse:.1f} kg/m")
+    print(f"Hauteur d'âme    : {profil.hw * 1e3:.0f} mm")
+    print(f"I_y / I_z        : {profil.Iy * 1e8:.0f} / {profil.Iz * 1e8:.0f} cm⁴")
+    print(f"W_el,y / W_pl,y  : {profil.Wely * 1e6:.0f} / {profil.Wply * 1e6:.0f} cm³")
+    print(f"W_el,z / W_pl,z  : {profil.Welz * 1e6:.0f} / {profil.Wplz * 1e6:.0f} cm³")
+    print(f"i_y / i_z        : {profil.iy * 1e3:.1f} / {profil.iz * 1e3:.1f} mm")
+    print(f"I_t              : {profil.It * 1e8:.1f} cm⁴")
+    print(f"I_w              : {profil.Iw * 1e12:.0f} cm⁶")
+    print(f"A_v              : {profil.Av * 1e4:.1f} cm²")
+    print()
+    print(f"Exposition       : {exposition.value}")
+    print(f"Périmètre exposé : {perimetre_expose(profil, exposition) * 1e3:.0f} mm")
+    print(f"A_m/V            : {facteur_massivete(profil, exposition):.1f} m⁻¹")
+    print(f"k_sh             : {facteur_ombre(profil, exposition):.3f}")
+
+    if a.tracer:
+        from .nomogramme.trace import tracer_section
+
+        chemin = tracer_section(
+            section, a.tracer, a.theme, exposition=exposition
+        )
+        print(f"\nCoupe écrite dans {chemin}")
+
+    for reserve in section.controles():
+        print(f"\nAvertissement : {reserve}")
+    return 0
+
+
 def _cmd_verifier(a: argparse.Namespace) -> int:
-    cat = charger_csv()
-    profil = cat[a.profil]
+    profil = _profil_depuis_arguments(a)
     contexte = SUISSE_SIA if a.contexte == "sia" else EUROCODE_REC
 
     cas = CasDeCharge(
@@ -290,8 +451,12 @@ def _cmd_verifier(a: argparse.Namespace) -> int:
             fichier.write(resultat.note_de_calcul())
         print(f"Note de calcul écrite dans {a.rapport}")
 
-    if a.tracer or a.tracer_echauffement:
-        from .nomogramme.trace import tracer_echauffement, tracer_nomogramme
+    if a.tracer or a.tracer_echauffement or a.tracer_section:
+        from .nomogramme.trace import (
+            tracer_echauffement,
+            tracer_nomogramme,
+            tracer_section,
+        )
 
         if a.tracer:
             print(f"Nomogramme écrit dans {tracer_nomogramme(resultat, a.tracer, a.theme)}")
@@ -300,8 +465,20 @@ def _cmd_verifier(a: argparse.Namespace) -> int:
                 "Courbe d'échauffement écrite dans "
                 f"{tracer_echauffement(resultat, a.tracer_echauffement, a.theme)}"
             )
+        if a.tracer_section:
+            section = _section_depuis_arguments(a)
+            if section is None:
+                raise ValueError(
+                    "--tracer-section ne s'applique qu'à une section soudée, "
+                    "décrite par --section."
+                )
+            print(
+                "Coupe de la section écrite dans "
+                f"{tracer_section(section, a.tracer_section, a.theme, exposition=_EXPOSITIONS[a.exposition])}"
+            )
 
-    print(f"Profilé          : {profil.nom} — {a.nuance}")
+    origine = "soudé" if profil.soudee else "catalogue SZS"
+    print(f"Profilé          : {profil.nom} — {a.nuance} ({origine})")
     print(f"Référentiel      : {contexte.nom}")
     print(f"Classification   : {resultat.classification}")
     print()
@@ -309,9 +486,11 @@ def _cmd_verifier(a: argparse.Namespace) -> int:
     print(f"  critère gouvernant : {resultat.gouverne_par}")
     print(f"  μ₀                 : {resultat.mu_0:.3f}")
     if resultat.theta_cr_nomogramme is not None:
-        print(f"  θ_cr éq. (4.22)    : {resultat.theta_cr_nomogramme:.0f} °C")
+        print(f"  θ_cr éq. (4.22)    : {resultat.theta_cr_nomogramme:.0f} °C"
+              f"   [{EC3_THETA_CR.courte}]")
     if resultat.theta_cr_exact is not None:
-        print(f"  θ_cr vérif. croisée: {resultat.theta_cr_exact:.0f} °C")
+        print(f"  θ_cr vérif. croisée: {resultat.theta_cr_exact:.0f} °C"
+              f"   [{EC3_RESISTANCES.courte}]")
     if resultat.ecart_nomogramme is not None:
         print(f"  écart              : {resultat.ecart_nomogramme:+.0f} °C")
     print(f"  θ_cr retenue       : {resultat.theta_cr:.0f} °C  ({resultat.source_theta_cr})")

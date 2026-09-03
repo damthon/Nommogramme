@@ -34,6 +34,7 @@ from ..mecanique.resistances import (
 )
 from ..profils.geometrie import Exposition, facteur_massivete
 from ..profils.modele import Profil
+from ..references import EC3_CLASSE_4, EC3_RESISTANCES, EC3_THETA_CR
 from ..thermique.courbes import ISO834, CourbeFeu
 from ..thermique.evolution import ResultatThermique, echauffement
 from ..unites import en_minutes, minutes
@@ -72,13 +73,16 @@ class ResultatVerification:
 
     classification: ClassificationSection
     mu_0: float
-    """Degré d'utilisation à 20 °C [-]. EN 1993-1-2 éq. (4.23)."""
+    """Degré d'utilisation à 20 °C [-]. EN 1993-1-2 §4.2.4, éq. (4.23)."""
     utilisation_initiale: TauxUtilisation
 
     theta_cr: float
     """Température critique retenue [°C], la plus défavorable des deux."""
     theta_cr_nomogramme: float | None
-    """Température critique de l'éq. (4.22) [°C]. ``None`` en classe 4."""
+    """Température critique de l'EN 1993-1-2 §4.2.4, éq. (4.22) [°C].
+
+    ``None`` en classe 4, où l'équation ne s'applique pas.
+    """
     theta_cr_exact: float | None
     """Température annulant la marge du taux complet [°C]."""
     source_theta_cr: str
@@ -281,28 +285,36 @@ def verifier(
     if classe.elancee:
         theta_cr_nomogramme = None
         avertissements.append(
-            f"Section de {classe} à chaud : l'éq. (4.22) ne s'applique pas. "
-            f"Température conventionnelle de {contexte.theta_cr_classe_4:.0f} °C "
-            "retenue (EN 1993-1-2 annexe E)."
+            f"Section de {classe} à chaud : l'{EC3_THETA_CR.courte} ne "
+            "s'applique pas. Température conventionnelle de "
+            f"{contexte.theta_cr_classe_4:.0f} °C retenue "
+            f"({EC3_CLASSE_4.courte})."
         )
     elif MU_0_MINIMAL <= mu_0 < 1.0:
         theta_cr_nomogramme = temperature_critique(mu_0)
     elif mu_0 < MU_0_MINIMAL:
         avertissements.append(
-            f"μ₀ = {mu_0:.4f} sous la borne de validité de l'éq. (4.22) : "
-            "élément très peu sollicité, la vérification croisée fait foi."
+            f"μ₀ = {mu_0:.4f} sous la borne de validité de "
+            f"l'{EC3_THETA_CR.courte} : élément très peu sollicité, la "
+            "vérification croisée fait foi."
         )
 
     theta_cr_exact = _temperature_critique_exacte(evaluer, mu_0)
 
     candidats: list[tuple[float, str]] = []
     if classe.elancee:
-        candidats.append((contexte.theta_cr_classe_4, "classe 4 — annexe E"))
+        candidats.append(
+            (contexte.theta_cr_classe_4, f"classe 4 — {EC3_CLASSE_4.courte}")
+        )
     else:
         if theta_cr_nomogramme is not None:
-            candidats.append((theta_cr_nomogramme, "éq. (4.22) — nomogramme"))
+            candidats.append(
+                (theta_cr_nomogramme, f"nomogramme — {EC3_THETA_CR.courte}")
+            )
         if theta_cr_exact is not None:
-            candidats.append((theta_cr_exact, "vérification croisée §4.2.3"))
+            candidats.append(
+                (theta_cr_exact, f"vérification croisée — {EC3_RESISTANCES.courte}")
+            )
 
     if not candidats:
         theta_cr, source = _THETA_AMBIANTE, "élément déjà en ruine à 20 °C"
@@ -313,10 +325,11 @@ def verifier(
         ecart = theta_cr_nomogramme - theta_cr_exact
         if ecart > 10.0:
             avertissements.append(
-                f"L'éq. (4.22) donne {theta_cr_nomogramme:.0f} °C contre "
-                f"{theta_cr_exact:.0f} °C par la vérification croisée, soit "
-                f"{ecart:.0f} °C d'écart : l'instabilité gouverne et le "
-                "nomogramme seul serait non conservatif."
+                f"L'{EC3_THETA_CR.courte} donne {theta_cr_nomogramme:.0f} °C "
+                f"contre {theta_cr_exact:.0f} °C par la vérification croisée "
+                f"({EC3_RESISTANCES.courte}), soit {ecart:.0f} °C d'écart : "
+                "l'instabilité gouverne et le nomogramme seul serait non "
+                "conservatif."
             )
 
     # --- voie thermique -------------------------------------------------------

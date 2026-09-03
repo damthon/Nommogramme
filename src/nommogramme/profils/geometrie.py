@@ -140,7 +140,7 @@ def perimetre_caisson(profil: Profil, trois_faces: bool = False) -> float:
     """
     if profil.forme is Forme.PROFIL_CREUX:
         p = _perimetre_contour(profil)
-        return p - profil.b if trois_faces else p
+        return p - profil.largeur_couverte if trois_faces else p
 
     if trois_faces:
         return 2.0 * profil.h + profil.b
@@ -151,13 +151,16 @@ def perimetre_expose(profil: Profil, exposition: Exposition) -> float:
     """Périmètre exposé au feu [m] pour la configuration donnée.
 
     En exposition sur trois faces, la face supérieure de la semelle haute est
-    couverte par la dalle : le périmètre du contour est diminué de ``b``.
+    couverte par la dalle : le périmètre du contour est diminué de la largeur
+    de cette semelle. Pour un profilé du catalogue c'est ``b`` ; pour une
+    section reconstituée à semelles inégales, c'est la largeur de **celle des
+    deux** que la dalle recouvre, que ``Profil.largeur_couverte`` porte.
     """
     if exposition.est_caisson:
         return perimetre_caisson(profil, trois_faces=exposition.trois_faces)
 
     contour = _perimetre_contour(profil)
-    return contour - profil.b if exposition.trois_faces else contour
+    return contour - profil.largeur_couverte if exposition.trois_faces else contour
 
 
 def facteur_massivete(profil: Profil, exposition: Exposition) -> float:

@@ -26,6 +26,7 @@ from nommogramme.materiaux.protection import Protection
 from nommogramme.mecanique.actions import CasDeCharge
 from nommogramme.nomogramme.verification import verifier
 from nommogramme.profils import Exposition, charger_csv
+from nommogramme.references import EC3_RESISTANCES, EC3_THETA_CR
 
 _DELAI = 300
 
@@ -191,8 +192,17 @@ class TestRestitution:
         assert len(app.tabs) == 2
 
     def test_les_deux_temperatures_critiques_sont_affichees(self, app: AppTest) -> None:
-        assert _metrique(app, "Nomogramme — éq. (4.22)").endswith("°C")
-        assert _metrique(app, "Vérification croisée — §4.2.3").endswith("°C")
+        """Les deux voies, chacune sous sa référence normative complète.
+
+        Le libellé porte la norme et le paragraphe, et pas seulement le numéro
+        d'équation : « éq. (4.22) » seul ne se retrouve pas dans un exemplaire
+        de norme sans savoir déjà de laquelle il s'agit.
+        """
+        assert _metrique(app, f"Nomogramme — {EC3_THETA_CR.courte}").endswith("°C")
+        assert _metrique(
+            app, f"Vérification croisée — {EC3_RESISTANCES.courte}"
+        ).endswith("°C")
+        assert EC3_THETA_CR.courte == "EN 1993-1-2 §4.2.4, éq. (4.22)"
 
     def test_la_note_de_calcul_est_telechargeable(self, app: AppTest) -> None:
         boutons = app.get("download_button")

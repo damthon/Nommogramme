@@ -36,6 +36,11 @@ class TestCatalogue:
             Famille.HHD: 31,
             Famille.HL: 8,
             Famille.RRW: 108,
+            # Les sections soudées sont décrites par l'utilisateur : leurs
+            # familles existent, mais rien ne les tabule. Ce zéro est ce qui
+            # les fait disparaître des listes de profilés de l'interface.
+            Famille.PRS: 0,
+            Famille.CRS: 0,
         }
 
     def test_recherche_insensible_a_la_forme_du_nom(self, cat) -> None:

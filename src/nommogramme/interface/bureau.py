@@ -43,17 +43,24 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from nommogramme.interface.infobulle import Infobulle, infobuller, marquer_aide
 from nommogramme.interface.saisie import (
+    AIDES,
+    CATALOGUE,
     CONTEXTES,
     DUREES,
     EXPOSITIONS,
+    FACES_COUVERTES,
+    H_SOUDE,
     SANS_PROTECTION,
+    TYPES_SECTION,
     Saisie,
     executer,
     noms_par_famille,
     produits,
 )
 from nommogramme.nomogramme.verification import ResultatVerification
+from nommogramme.references import EC3_RESISTANCES, EC3_THETA_CR
 from nommogramme.thermique.courbes import COURBES
 from nommogramme.unites import en_minutes
 
@@ -124,9 +131,15 @@ class Application(ttk.Frame):
         self._etiquettes: dict[str, ttk.Label] = {}
         self._rendu: dict[str, tuple[object, float]] = {}
         """Ce qui est réellement affiché par onglet : (figure, densité)."""
+        self.infobulles: dict[str, Infobulle] = {}
+        """Les aides au survol, par nom de paramètre — lisibles en test."""
 
         self._construire_variables()
         self._construire_disposition()
+        # Après la disposition seulement : masquer l'onglet de coupe suppose
+        # que le carnet d'onglets existe, et il est construit dans la colonne
+        # de droite, après les paramètres.
+        self._mettre_a_jour_section()
         self.rafraichir()
 
     # -- état ------------------------------------------------------------
@@ -134,9 +147,17 @@ class Application(ttk.Frame):
     def _construire_variables(self) -> None:
         defaut = Saisie()
         self.var: dict[str, tk.Variable] = {
+            "type_section": tk.StringVar(value=defaut.type_section),
             "famille": tk.StringVar(value=_famille_de(defaut.profil)),
             "profil": tk.StringVar(value=defaut.profil),
             "nuance": tk.StringVar(value=defaut.nuance),
+            "h_soudee": tk.DoubleVar(value=defaut.h_soudee),
+            "b_soudee": tk.DoubleVar(value=defaut.b_soudee),
+            "tf_soudee": tk.DoubleVar(value=defaut.tf_soudee),
+            "tw_soudee": tk.DoubleVar(value=defaut.tw_soudee),
+            "b_inf_soudee": tk.DoubleVar(value=defaut.b_inf_soudee),
+            "tf_inf_soudee": tk.DoubleVar(value=defaut.tf_inf_soudee),
+            "face_couverte": tk.StringVar(value=defaut.face_couverte),
             "N": tk.DoubleVar(value=defaut.N),
             "My": tk.DoubleVar(value=defaut.My),
             "Mz": tk.DoubleVar(value=defaut.Mz),
@@ -182,6 +203,14 @@ class Application(ttk.Frame):
         return Saisie(
             profil=self.var["profil"].get(),
             nuance=self.var["nuance"].get(),
+            type_section=self.var["type_section"].get(),
+            h_soudee=lire("h_soudee"),
+            b_soudee=lire("b_soudee"),
+            tf_soudee=lire("tf_soudee"),
+            tw_soudee=lire("tw_soudee"),
+            b_inf_soudee=lire("b_inf_soudee"),
+            tf_inf_soudee=lire("tf_inf_soudee"),
+            face_couverte=self.var["face_couverte"].get(),
             N=lire("N"),
             My=lire("My"),
             Mz=lire("Mz"),
@@ -307,9 +336,31 @@ class Application(ttk.Frame):
         cadre.columnconfigure(1, weight=1)
         return cadre
 
-    def _champ(self, parent: ttk.Frame, ligne: int, etiquette: str, widget: tk.Widget) -> None:
-        ttk.Label(parent, text=etiquette).grid(row=ligne, column=0, sticky="w", pady=1)
+    def _champ(
+        self,
+        parent: ttk.Frame,
+        ligne: int,
+        etiquette: str,
+        widget: tk.Widget,
+        aide: str | None = None,
+        cle: str | None = None,
+    ) -> ttk.Label:
+        """Une ligne étiquette + widget, avec son aide au survol.
+
+        L'infobulle porte sur les deux : celui qui hésite sur un paramètre
+        survole aussi bien son nom que son champ. Elle est conservée dans
+        ``self.infobulles`` — sans référence, rien ne la retiendrait, et un
+        test ne pourrait pas lire ce que l'écran dirait.
+        """
+        libelle = ttk.Label(parent, text=etiquette)
+        libelle.grid(row=ligne, column=0, sticky="w", pady=1)
         widget.grid(row=ligne, column=1, sticky="ew", padx=(6, 0), pady=1)
+        if aide:
+            marquer_aide(libelle)
+            self.infobulles[cle or etiquette] = infobuller(
+                libelle, widget, texte=aide
+            )
+        return libelle
 
     def _nombre(self, parent: ttk.Frame, cle: str, largeur: int = 10) -> ttk.Entry:
         return ttk.Entry(parent, textvariable=self.var[cle], width=largeur)
@@ -324,16 +375,28 @@ class Application(ttk.Frame):
 
     def _construire_parametres(self, parent: ttk.Frame) -> None:
         element = self._bloc(parent, "Élément")
+        self._champ(
+            element, 0, "Type de section",
+            self._liste(element, "type_section", TYPES_SECTION),
+            aide=AIDES["type_section"], cle="type_section",
+        )
         familles = list(noms_par_famille())
         self.liste_familles = self._liste(element, "famille", familles)
-        self._champ(element, 0, "Famille", self.liste_familles)
+        self.etiquette_famille = self._champ(element, 1, "Famille", self.liste_familles)
         self.liste_profils = self._liste(
             element, "profil", noms_par_famille()[self.var["famille"].get()]
         )
-        self._champ(element, 1, "Profilé", self.liste_profils)
-        self._champ(element, 2, "Nuance", self._liste(element, "nuance", ("S235", "S355")))
+        self.etiquette_profil = self._champ(element, 2, "Profilé", self.liste_profils)
+        self._champ(
+            element, 3, "Nuance", self._liste(element, "nuance", ("S235", "S355")),
+            aide=AIDES["nuance"], cle="nuance",
+        )
 
-        efforts = self._bloc(parent, "Sollicitations en incendie")
+        self.bloc_soudee = self._bloc(parent, "Section soudée  ·  cotes en mm")
+        self._construire_section_soudee(self.bloc_soudee)
+
+        self.bloc_efforts = self._bloc(parent, "Sollicitations en incendie")
+        efforts = self.bloc_efforts
         self._champ(efforts, 0, "N_fi,Ed  [kN]", self._nombre(efforts, "N"))
         self._champ(efforts, 1, "M_y,fi,Ed  [kN·m]", self._nombre(efforts, "My"))
         self._champ(efforts, 2, "M_z,fi,Ed  [kN·m]", self._nombre(efforts, "Mz"))
@@ -343,24 +406,39 @@ class Application(ttk.Frame):
         ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(3, 0))
 
         geometrie = self._bloc(parent, "Géométrie")
-        self._champ(geometrie, 0, "Longueur d'épure L  [m]", self._nombre(geometrie, "L"))
-        self._champ(geometrie, 1, "Flambement l_fi  [m]", self._nombre(geometrie, "l_fi"))
-        self._champ(geometrie, 2, "β_M  [-]", self._nombre(geometrie, "beta_M"))
-        ttk.Checkbutton(
+        self._champ(
+            geometrie, 0, "Vide d'étage L  [m]", self._nombre(geometrie, "L"),
+            aide=AIDES["L"], cle="L",
+        )
+        self._champ(
+            geometrie, 1, "Flambement l_fi  [m]", self._nombre(geometrie, "l_fi"),
+            aide=AIDES["l_fi"], cle="l_fi",
+        )
+        self._champ(
+            geometrie, 2, "β_M  [-]", self._nombre(geometrie, "beta_M"),
+            aide=AIDES["beta_M"], cle="beta_M",
+        )
+        maintien = ttk.Checkbutton(
             geometrie, text="Semelle comprimée maintenue",
             variable=self.var["maintien"],
-        ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(3, 0))
+        )
+        maintien.grid(row=3, column=0, columnspan=2, sticky="w", pady=(3, 0))
+        self.infobulles["maintien"] = infobuller(maintien, texte=AIDES["maintien"])
         ttk.Label(
-            geometrie, text="Poteau continu : l_fi = 0,5·L en étage courant, "
-                            "0,7·L au dernier (§4.2.3.2(4)).",
+            geometrie, text="Poteau continu d'un contreventement : "
+                            "l_fi = 0,5·L en étage courant, 0,7·L au dernier.",
             foreground=_GRIS, wraplength=250,
         ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(3, 0))
 
         feu = self._bloc(parent, "Exposition au feu")
-        self._champ(feu, 0, "Configuration", self._liste(feu, "exposition", EXPOSITIONS))
+        self._champ(
+            feu, 0, "Configuration", self._liste(feu, "exposition", EXPOSITIONS),
+            aide=AIDES["exposition"], cle="exposition",
+        )
         self._champ(
             feu, 1, "Courbe de feu",
             self._liste(feu, "feu", [c.nom for c in COURBES.values()]),
+            aide=AIDES["feu"], cle="feu",
         )
         self._champ(
             feu, 2, "Durée exigée  [min]",
@@ -380,12 +458,64 @@ class Application(ttk.Frame):
         self.note_produit.grid(row=2, column=0, columnspan=2, sticky="w", pady=(3, 0))
 
         avances = self._bloc(parent, "Paramètres avancés")
-        self._champ(avances, 0, "Référentiel", self._liste(avances, "contexte", CONTEXTES))
-        self._champ(avances, 1, "κ₁  [-]", self._nombre(avances, "kappa_1"))
-        self._champ(avances, 2, "κ₂  [-]", self._nombre(avances, "kappa_2"))
-        self._champ(avances, 3, "C₁  [-]", self._nombre(avances, "C1"))
+        self._champ(
+            avances, 0, "Référentiel", self._liste(avances, "contexte", CONTEXTES),
+            aide=AIDES["contexte"], cle="contexte",
+        )
+        self._champ(
+            avances, 1, "κ₁  [-]", self._nombre(avances, "kappa_1"),
+            aide=AIDES["kappa_1"], cle="kappa_1",
+        )
+        self._champ(
+            avances, 2, "κ₂  [-]", self._nombre(avances, "kappa_2"),
+            aide=AIDES["kappa_2"], cle="kappa_2",
+        )
+        self._champ(
+            avances, 3, "C₁  [-]", self._nombre(avances, "C1"),
+            aide=AIDES["C1"], cle="C1",
+        )
 
         self._mettre_a_jour_protection()
+
+    def _construire_section_soudee(self, cadre: ttk.Frame) -> None:
+        """Les dimensions d'une section reconstituée.
+
+        Les mêmes six champs servent aux deux formes, mais ne désignent pas
+        la même chose : ``b`` est la largeur du caisson ou celle de la semelle
+        supérieure du H. Les étiquettes changent donc avec le type retenu,
+        plutôt que de porter un libellé assez vague pour convenir aux deux.
+        """
+        self.etiquettes_soudee: dict[str, ttk.Label] = {}
+        self.lignes_h: list[tk.Widget] = []
+
+        for ligne, (cle, libelle) in enumerate(
+            (("h_soudee", "h  [mm]"), ("b_soudee", "b  [mm]"),
+             ("tf_soudee", "t_f  [mm]"), ("tw_soudee", "t_w  [mm]"))
+        ):
+            self.etiquettes_soudee[cle] = self._champ(
+                cadre, ligne, libelle, self._nombre(cadre, cle)
+            )
+
+        for ligne, (cle, libelle) in enumerate(
+            (("b_inf_soudee", "b_inf  [mm]"), ("tf_inf_soudee", "t_f,inf  [mm]")),
+            start=4,
+        ):
+            etiquette = self._champ(cadre, ligne, libelle, self._nombre(cadre, cle))
+            self.etiquettes_soudee[cle] = etiquette
+            self.lignes_h.append(etiquette)
+            self.lignes_h.append(cadre.grid_slaves(row=ligne, column=1)[0])
+
+        liste_face = self._liste(cadre, "face_couverte", FACES_COUVERTES, largeur=18)
+        etiquette_face = self._champ(
+            cadre, 6, "Dalle sur", liste_face,
+            aide=AIDES["face_couverte"], cle="face_couverte",
+        )
+        self.lignes_h.extend((etiquette_face, liste_face))
+
+        self.note_soudee = ttk.Label(
+            cadre, text="", foreground=_GRIS, wraplength=250, justify="left"
+        )
+        self.note_soudee.grid(row=7, column=0, columnspan=2, sticky="w", pady=(4, 0))
 
     def _construire_resultats(self, parent: ttk.Frame) -> None:
         self.banniere = tk.Label(
@@ -416,7 +546,11 @@ class Application(ttk.Frame):
         self.onglets.grid(row=3, column=0, sticky="nsew")
         self.onglets.bind("<<NotebookTabChanged>>", lambda _: self._planifier_figures())
         self.cadre_figure: dict[str, ttk.Frame] = {}
-        for cle, titre in (("nomogramme", "Nomogramme"), ("echauffement", "Échauffement")):
+        for cle, titre in (
+            ("nomogramme", "Nomogramme"),
+            ("echauffement", "Échauffement"),
+            ("section", "Coupe de la section"),
+        ):
             cadre = ttk.Frame(self.onglets)
             self.onglets.add(cadre, text=titre)
             self.cadre_figure[cle] = cadre
@@ -440,7 +574,50 @@ class Application(ttk.Frame):
             return
         if nom == "protection":
             self._mettre_a_jour_protection()
+        if nom == "type_section":
+            self._mettre_a_jour_section()
         self.rafraichir()
+
+    def _mettre_a_jour_section(self) -> None:
+        """Montre les champs de la forme retenue, et cache les autres.
+
+        Trois jeux de champs se disputent la même place : le choix d'un
+        profilé du catalogue, les quatre cotes d'un caisson, les six d'un H.
+        Les laisser tous visibles inviterait à remplir des cases sans effet,
+        et c'est le genre de faux paramètre dont on ne se méfie plus.
+        """
+        type_section = self.var["type_section"].get()
+        du_catalogue = type_section == CATALOGUE
+
+        if du_catalogue:
+            self.bloc_soudee.pack_forget()
+        else:
+            self.bloc_soudee.pack(fill="x", pady=(0, 6), before=self.bloc_efforts)
+
+        etat = "readonly" if du_catalogue else "disabled"
+        self.liste_familles.configure(state=etat)
+        self.liste_profils.configure(state=etat)
+
+        for widget in self.lignes_h:
+            if type_section == H_SOUDE:
+                widget.grid()
+            else:
+                widget.grid_remove()
+
+        if type_section == H_SOUDE:
+            libelles = {
+                "b_soudee": "b_sup  [mm]", "tf_soudee": "t_f,sup  [mm]",
+                "tw_soudee": "t_w — âme  [mm]",
+            }
+        else:
+            libelles = {
+                "b_soudee": "b  [mm]", "tf_soudee": "t_f — semelles  [mm]",
+                "tw_soudee": "t_w — âmes  [mm]",
+            }
+        for cle, libelle in libelles.items():
+            self.etiquettes_soudee[cle].configure(text=libelle)
+
+        self._mettre_a_jour_onglet_section(not du_catalogue)
 
     def _sur_changement_famille(self) -> None:
         """Recharge la liste des profilés, et en choisit un valide."""
@@ -476,16 +653,42 @@ class Application(ttk.Frame):
 
     def rafraichir(self) -> None:
         """Recalcule les chiffres, et programme le redessin des figures."""
+        saisie = self.saisie()
         try:
-            self.resultat = executer(self.saisie())
+            self.resultat = executer(saisie)
             self.erreur = None
         except Exception as souci:  # une saisie incohérente ne doit pas fermer la fenêtre
             self.resultat = None
             self.erreur = str(souci)
 
+        self._afficher_section(saisie)
         self._afficher()
         self._figures_a_jour = False
         self._planifier_figures()
+
+    def _afficher_section(self, saisie: Saisie) -> None:
+        """Le résumé de la section soudée, sous ses champs de saisie.
+
+        Une géométrie impossible — semelles plus épaisses que la hauteur — ne
+        doit pas se traduire par un écran muet : le message d'erreur de la
+        section vaut mieux que le silence, et il est plus précis que celui de
+        la vérification qui échouera ensuite.
+        """
+        if not hasattr(self, "note_soudee") or not saisie.soudee:
+            return
+        try:
+            section = saisie.section()
+        except ValueError as souci:
+            self.note_soudee.configure(text=f"⚠ {souci}", foreground=_ROUGE)
+            return
+        profil = section.profil()
+        lignes = [
+            section.profil().nom,
+            f"A = {profil.A * 1e4:.1f} cm² · {profil.masse:.0f} kg/m · "
+            f"I_y = {profil.Iy * 1e8:.0f} cm⁴ · W_pl,y = {profil.Wply * 1e6:.0f} cm³",
+        ]
+        lignes.extend(f"⚠ {message}" for message in section.controles())
+        self.note_soudee.configure(text="\n".join(lignes), foreground=_GRIS)
 
     def _afficher(self) -> None:
         if self.erreur is not None or self.resultat is None:
@@ -519,22 +722,22 @@ class Application(ttk.Frame):
             else "non atteinte"
         )
 
+        nomogramme = (
+            f"{r.theta_cr_nomogramme:.0f} °C" if r.theta_cr_nomogramme else "—"
+        )
+        croisee = f"{r.theta_cr_exact:.0f} °C" if r.theta_cr_exact else "—"
         lignes = [
-            f"Nomogramme, éq. (4.22) : "
-            f"{r.theta_cr_nomogramme:.0f} °C" if r.theta_cr_nomogramme else
-            "Nomogramme, éq. (4.22) : —",
-            f"Vérification croisée, §4.2.3 : "
-            f"{r.theta_cr_exact:.0f} °C" if r.theta_cr_exact else
-            "Vérification croisée, §4.2.3 : —",
+            f"Nomogramme, {EC3_THETA_CR.courte} : {nomogramme}",
+            f"Vérification croisée, {EC3_RESISTANCES.courte} : {croisee}",
             f"Retenue : {r.source_theta_cr}",
             f"Critère gouvernant : {r.gouverne_par} · {r.classification}",
             self._ligne_massivete(r),
         ]
         if r.ecart_nomogramme is not None and r.ecart_nomogramme > 10.0:
             lignes.append(
-                f"⚠ L'équation (4.22) donne {r.ecart_nomogramme:.0f} °C de plus que "
-                "la vérification complète : l'instabilité gouverne. C'est la valeur "
-                "basse qui est retenue."
+                f"⚠ L'{EC3_THETA_CR.courte} donne {r.ecart_nomogramme:.0f} °C de "
+                "plus que la vérification complète : l'instabilité gouverne. "
+                "C'est la valeur basse qui est retenue."
             )
         lignes.extend(f"⚠ {a}" for a in r.avertissements)
         self.details.configure(text="\n".join(lignes))
@@ -557,12 +760,34 @@ class Application(ttk.Frame):
 
     # -- figures ---------------------------------------------------------
 
-    def _onglet_courant(self) -> str:
+    def _mettre_a_jour_onglet_section(self, visible: bool) -> None:
+        """Masque l'onglet de coupe tant qu'il n'y a pas de section à dessiner.
+
+        Un profilé du catalogue n'a rien à y montrer. Un onglet vide se
+        remarque plus qu'un onglet absent, et laisse croire à une panne.
+        """
+        cadre = getattr(self, "cadre_figure", {}).get("section")
+        if cadre is None:
+            return
         try:
-            index = self.onglets.index(self.onglets.select())
+            self.onglets.tab(cadre, state="normal" if visible else "hidden")
+        except tk.TclError:  # pragma: no cover - Tk trop ancien
+            pass
+
+    def _onglet_courant(self) -> str:
+        """La clé de l'onglet visible.
+
+        Repérée par le widget et non par son rang : l'onglet de coupe se
+        masque, et un rang ne veut alors plus dire la même chose.
+        """
+        try:
+            courant = str(self.onglets.select())
         except (tk.TclError, AttributeError):
             return "nomogramme"
-        return ("nomogramme", "echauffement")[index]
+        for cle, cadre in self.cadre_figure.items():
+            if str(cadre) == courant:
+                return cle
+        return "nomogramme"
 
     def _planifier_figures(self) -> None:
         """Redessine après une pause de saisie, jamais à chaque frappe."""
@@ -581,10 +806,27 @@ class Application(ttk.Frame):
 
         import matplotlib.pyplot as plt
 
-        from nommogramme.nomogramme.trace import tracer_echauffement, tracer_nomogramme
+        from nommogramme.nomogramme.trace import (
+            tracer_echauffement,
+            tracer_nomogramme,
+            tracer_section,
+        )
 
         cle = self._onglet_courant()
         cadre = self.cadre_figure[cle]
+
+        # Une géométrie impossible — hauteur inférieure à ses deux semelles —
+        # ne doit pas remonter jusqu'à la boucle d'événements de Tk : le
+        # message est déjà affiché sous les champs de saisie, il n'y a rien à
+        # dessiner et c'est tout.
+        section = None
+        if cle == "section":
+            try:
+                section = self.saisie().section()
+            except ValueError:
+                return
+            if section is None:
+                return
 
         # Refermer la figure précédente, et pas seulement son widget. Les
         # figures viennent de pyplot, qui les garde dans un registre global :
@@ -594,8 +836,13 @@ class Application(ttk.Frame):
         if ancienne is not None:
             plt.close(ancienne)
 
-        tracer = tracer_nomogramme if cle == "nomogramme" else tracer_echauffement
-        figure = tracer(self.resultat)
+        if cle == "section":
+            figure = tracer_section(
+                section, exposition=self.resultat.exposition
+            )
+        else:
+            tracer = tracer_nomogramme if cle == "nomogramme" else tracer_echauffement
+            figure = tracer(self.resultat)
         self._figures[cle] = figure
         compose = tuple(figure.get_size_inches())
 
@@ -706,17 +953,35 @@ class Application(ttk.Frame):
         if self.resultat is None:
             messagebox.showwarning(_TITRE, "Rien à enregistrer : la saisie est incomplète.")
             return
-        dossier = filedialog.askdirectory(title="Où enregistrer les deux figures ?")
+        dossier = filedialog.askdirectory(title="Où enregistrer les figures ?")
         if not dossier:
             return
 
-        from nommogramme.nomogramme.trace import tracer_echauffement, tracer_nomogramme
+        from nommogramme.nomogramme.trace import (
+            tracer_echauffement,
+            tracer_nomogramme,
+            tracer_section,
+        )
 
-        base = self.resultat.profil.nom.replace(" ", "")
+        base = self.resultat.profil.nom.replace(" ", "").replace("/", "-")
         cible = Path(dossier)
         tracer_nomogramme(self.resultat, cible / f"nomogramme-{base}.png")
         tracer_echauffement(self.resultat, cible / f"echauffement-{base}.png")
-        messagebox.showinfo(_TITRE, f"Deux figures enregistrées dans :\n{dossier}")
+        nombre = 2
+
+        try:
+            section = self.saisie().section()
+        except ValueError:
+            section = None
+        if section is not None:
+            tracer_section(
+                section, cible / f"section-{base}.png",
+                exposition=self.resultat.exposition,
+            )
+            nombre = 3
+        messagebox.showinfo(
+            _TITRE, f"{nombre} figures enregistrées dans :\n{dossier}"
+        )
 
 
 _TAILLE_CONFORTABLE = (1280, 880)

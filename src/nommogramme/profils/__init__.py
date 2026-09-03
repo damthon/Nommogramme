@@ -1,7 +1,15 @@
-"""Catalogue de profilés et géométrie d'exposition au feu."""
+"""Catalogue de profilés, sections soudées, géométrie d'exposition au feu."""
 
 from .chargeur import Catalogue, charger_csv, ecrire_csv, lire_xlsx
 from .coherence import Anomalie, Gravite, auditer, auditer_catalogue
+from .composes import (
+    FaceCouverte,
+    Plaque,
+    SectionCaisson,
+    SectionH,
+    SectionSoudee,
+    caracteristiques,
+)
 from .geometrie import (
     AM_SUR_V_MINIMAL,
     Exposition,
@@ -20,12 +28,18 @@ __all__ = [
     "Anomalie",
     "Catalogue",
     "Exposition",
+    "FaceCouverte",
     "Famille",
     "Forme",
     "Gravite",
+    "Plaque",
     "Profil",
+    "SectionCaisson",
+    "SectionH",
+    "SectionSoudee",
     "auditer",
     "auditer_catalogue",
+    "caracteristiques",
     "charger_csv",
     "ecart_relatif_um",
     "ecrire_csv",

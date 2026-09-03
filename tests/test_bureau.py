@@ -22,10 +22,14 @@ from __future__ import annotations
 import pytest
 
 from nommogramme.interface.saisie import (
+    CAISSON_SOUDE,
+    CATALOGUE,
     CONTEXTES,
     DUREES,
     EXPOSITIONS,
+    H_SOUDE,
     SANS_PROTECTION,
+    TYPES_SECTION,
     Saisie,
     executer,
     noms_par_famille,
@@ -54,6 +58,38 @@ class TestSaisie:
         assert defaut.exposition in EXPOSITIONS
         assert defaut.contexte in CONTEXTES
         assert defaut.duree in DUREES
+        assert defaut.type_section in TYPES_SECTION
+
+    def test_les_sections_soudees_passent_par_le_meme_point(self) -> None:
+        """La conversion millimètres → mètres n'a qu'un endroit, ici aussi."""
+        from nommogramme.profils import SectionCaisson, SectionH
+
+        caisson = Saisie(
+            type_section=CAISSON_SOUDE, h_soudee=400.0, b_soudee=300.0,
+            tf_soudee=20.0, tw_soudee=12.0,
+        )
+        assert caisson.section() == SectionCaisson(h=0.4, b=0.3, tf=0.02, tw=0.012)
+        assert caisson.soudee
+        assert caisson.profil_retenu().soudee
+
+        prs = Saisie(
+            type_section=H_SOUDE, h_soudee=600.0, b_soudee=300.0, tf_soudee=20.0,
+            tw_soudee=10.0, b_inf_soudee=200.0, tf_inf_soudee=15.0,
+        )
+        assert prs.section() == SectionH(
+            h=0.6, tw=0.010, b_sup=0.3, tf_sup=0.02, b_inf=0.2, tf_inf=0.015
+        )
+
+    def test_le_catalogue_ne_produit_pas_de_section(self) -> None:
+        defaut = Saisie()
+        assert defaut.section() is None
+        assert not defaut.soudee
+        assert defaut.profil_retenu().nom == defaut.profil
+        assert defaut.controles_section() == ()
+
+    def test_un_type_de_section_inconnu_est_refuse(self) -> None:
+        with pytest.raises(ValueError, match="Type de section"):
+            Saisie(type_section="Poutre en bois").section()
 
     def test_avec_ne_modifie_pas_l_original(self) -> None:
         """``Saisie`` est gelée : ``avec()`` renvoie une copie."""
@@ -426,6 +462,137 @@ class TestApplicationBureau:
         note = app.resultat.note_de_calcul()
         assert "HEB" in note
         assert len(note) > 500
+
+
+@_SANS_INTERFACE
+class TestInfobulles:
+    """L'aide au survol, qui porte les références normatives.
+
+    C'est la réponse à un besoin précis : κ₁, κ₂, C₁ et β_M ne se comprennent
+    pas sans leur clause, et cette clause ne tient pas sur une étiquette de
+    formulaire.
+    """
+
+    def test_les_parametres_avances_en_ont_une(self, app) -> None:
+        for parametre in ("kappa_1", "kappa_2", "C1", "beta_M"):
+            assert parametre in app.infobulles, f"« {parametre} » sans aide"
+
+    def test_elles_citent_la_norme_et_le_paragraphe(self, app) -> None:
+        for parametre, attendu in (
+            ("kappa_1", "EN 1993-1-2 §4.2.3.3(7)"),
+            ("kappa_2", "EN 1993-1-2 §4.2.3.3(7)"),
+            ("C1", "ENV 1993-1-1 annexe F"),
+            ("beta_M", "EN 1993-1-2 fig. 4.2"),
+        ):
+            assert attendu in app.infobulles[parametre].texte
+
+    def test_une_reference_non_confirmee_le_dit(self, app) -> None:
+        assert "à recouper" in app.infobulles["C1"].texte
+
+    def test_la_bulle_s_ouvre_et_se_referme(self, app, racine) -> None:
+        bulle = app.infobulles["kappa_1"]
+        assert not bulle.visible
+        bulle.montrer()
+        racine.update()
+        assert bulle.visible
+        bulle.cacher()
+        racine.update()
+        assert not bulle.visible
+
+    def test_elle_porte_sur_l_etiquette_et_sur_le_champ(self, app) -> None:
+        """Celui qui hésite survole aussi bien le nom que la case."""
+        assert len(app.infobulles["kappa_1"].widgets) == 2
+
+
+@_SANS_INTERFACE
+class TestSectionSoudee:
+    """Le panneau de section reconstituée et son onglet de coupe."""
+
+    def test_le_catalogue_masque_les_cotes(self, app) -> None:
+        assert app.var["type_section"].get() == CATALOGUE
+        assert not app.bloc_soudee.winfo_ismapped()
+
+    def test_choisir_un_caisson_montre_ses_quatre_cotes(self, app, racine) -> None:
+        app.var["type_section"].set(CAISSON_SOUDE)
+        racine.update()
+        assert app.bloc_soudee.winfo_ismapped()
+        # Les deux cotes propres au H restent cachées.
+        assert not app.etiquettes_soudee["b_inf_soudee"].winfo_ismapped()
+
+    def test_choisir_un_H_montre_les_deux_semelles(self, app, racine) -> None:
+        app.var["type_section"].set(H_SOUDE)
+        racine.update()
+        assert app.etiquettes_soudee["b_inf_soudee"].winfo_ismapped()
+        assert app.etiquettes_soudee["b_soudee"].cget("text").startswith("b_sup")
+
+    def test_les_listes_de_profiles_sont_desactivees(self, app, racine) -> None:
+        """Un champ sans effet est pire qu'un champ absent : on s'y fie."""
+        app.var["type_section"].set(CAISSON_SOUDE)
+        racine.update()
+        assert str(app.liste_profils.cget("state")) == "disabled"
+        app.var["type_section"].set(CATALOGUE)
+        racine.update()
+        assert str(app.liste_profils.cget("state")) == "readonly"
+
+    def test_le_calcul_porte_sur_la_section_saisie(self, app, racine) -> None:
+        app.var["type_section"].set(CAISSON_SOUDE)
+        app.var["h_soudee"].set(500.0)
+        racine.update()
+        assert app.resultat.profil.nom.startswith("CRS 500")
+        assert app.resultat.profil.soudee
+
+    def test_le_resume_donne_les_caracteristiques(self, app, racine) -> None:
+        app.var["type_section"].set(CAISSON_SOUDE)
+        racine.update()
+        texte = app.note_soudee.cget("text")
+        assert "cm²" in texte
+        assert "kg/m" in texte
+
+    def test_une_geometrie_impossible_est_signalee_sans_fermer_la_fenetre(
+        self, app, racine
+    ) -> None:
+        app.var["type_section"].set(CAISSON_SOUDE)
+        app.var["h_soudee"].set(10.0)      # plus mince que ses deux semelles
+        racine.update()
+        assert "⚠" in app.note_soudee.cget("text")
+        assert app.erreur is not None
+        assert "Saisie inexploitable" in app.banniere.cget("text")
+
+        # Et le redessin, qui suit de quelques centaines de millisecondes, ne
+        # doit pas remonter l'erreur jusqu'à la boucle d'événements.
+        app.onglets.select(app.cadre_figure["section"])
+        racine.update()
+        app.dessiner_figures()
+        racine.update()
+
+    def test_l_onglet_de_coupe_ne_s_ouvre_que_pour_une_section_soudee(
+        self, app, racine
+    ) -> None:
+        cadre = app.cadre_figure["section"]
+        assert str(app.onglets.tab(cadre, "state")) == "hidden"
+        app.var["type_section"].set(H_SOUDE)
+        racine.update()
+        assert str(app.onglets.tab(cadre, "state")) == "normal"
+
+    def test_la_coupe_se_dessine(self, app, racine) -> None:
+        app.var["type_section"].set(H_SOUDE)
+        racine.update()
+        app.onglets.select(app.cadre_figure["section"])
+        racine.update()
+        app.dessiner_figures()
+        racine.update()
+        assert "section" in app._figures
+
+    def test_l_onglet_est_repere_par_son_cadre_et_non_par_son_rang(
+        self, app, racine
+    ) -> None:
+        """Un onglet masqué décale les rangs : le repérage doit y survivre."""
+        app.var["type_section"].set(H_SOUDE)
+        racine.update()
+        for cle in ("nomogramme", "echauffement", "section"):
+            app.onglets.select(app.cadre_figure[cle])
+            racine.update()
+            assert app._onglet_courant() == cle
 
 
 @_SANS_INTERFACE
