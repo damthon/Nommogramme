@@ -9,3 +9,4 @@ venv/
 ~$*.xlsx
 packaging/build/
 packaging/dist/
+Release/
