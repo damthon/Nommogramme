@@ -50,7 +50,6 @@ from nommogramme.interface.saisie import (
     CONTEXTES,
     DUREES,
     EXPOSITIONS,
-    FACES_COUVERTES,
     H_SOUDE,
     SANS_PROTECTION,
     TYPES_SECTION,
@@ -157,7 +156,6 @@ class Application(ttk.Frame):
             "tw_soudee": tk.DoubleVar(value=defaut.tw_soudee),
             "b_inf_soudee": tk.DoubleVar(value=defaut.b_inf_soudee),
             "tf_inf_soudee": tk.DoubleVar(value=defaut.tf_inf_soudee),
-            "face_couverte": tk.StringVar(value=defaut.face_couverte),
             "N": tk.DoubleVar(value=defaut.N),
             "My": tk.DoubleVar(value=defaut.My),
             "Mz": tk.DoubleVar(value=defaut.Mz),
@@ -210,7 +208,6 @@ class Application(ttk.Frame):
             tw_soudee=lire("tw_soudee"),
             b_inf_soudee=lire("b_inf_soudee"),
             tf_inf_soudee=lire("tf_inf_soudee"),
-            face_couverte=self.var["face_couverte"].get(),
             N=lire("N"),
             My=lire("My"),
             Mz=lire("Mz"),
@@ -401,7 +398,7 @@ class Application(ttk.Frame):
         self._champ(efforts, 1, "M_y,fi,Ed  [kN·m]", self._nombre(efforts, "My"))
         self._champ(efforts, 2, "M_z,fi,Ed  [kN·m]", self._nombre(efforts, "Mz"))
         ttk.Label(
-            efforts, text="Combinaison accidentelle. N positif en compression.",
+            efforts, text="Combinaison accidentelle. N négatif en compression.",
             foreground=_GRIS, wraplength=250,
         ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(3, 0))
 
@@ -449,9 +446,15 @@ class Application(ttk.Frame):
         libelles = [SANS_PROTECTION] + [
             self._libelle_produit(cle) for cle in sorted(produits())
         ]
-        self._champ(protection, 0, "Produit", self._liste(protection, "protection", libelles))
+        self._champ(
+            protection, 0, "Produit", self._liste(protection, "protection", libelles),
+            aide=AIDES["protection"], cle="protection",
+        )
         self.champ_epaisseur = self._nombre(protection, "epaisseur")
-        self._champ(protection, 1, "Épaisseur d_p  [mm]", self.champ_epaisseur)
+        self._champ(
+            protection, 1, "Épaisseur d_p  [mm]", self.champ_epaisseur,
+            aide=AIDES["epaisseur"], cle="epaisseur",
+        )
         self.note_produit = ttk.Label(
             protection, text="", foreground=_GRIS, wraplength=250, justify="left"
         )
@@ -504,13 +507,6 @@ class Application(ttk.Frame):
             self.etiquettes_soudee[cle] = etiquette
             self.lignes_h.append(etiquette)
             self.lignes_h.append(cadre.grid_slaves(row=ligne, column=1)[0])
-
-        liste_face = self._liste(cadre, "face_couverte", FACES_COUVERTES, largeur=18)
-        etiquette_face = self._champ(
-            cadre, 6, "Dalle sur", liste_face,
-            aide=AIDES["face_couverte"], cle="face_couverte",
-        )
-        self.lignes_h.extend((etiquette_face, liste_face))
 
         self.note_soudee = ttk.Label(
             cadre, text="", foreground=_GRIS, wraplength=250, justify="left"
@@ -648,6 +644,11 @@ class Application(ttk.Frame):
                 f"c_p = {fiche['c_p']:.0f} J/kg·K · pose {fiche['pose']}\n"
                 f"épaisseurs usuelles {fiche['dp_min'] * 1e3:.0f} à "
                 f"{fiche['dp_max'] * 1e3:.0f} mm"
+                + (
+                    f"\ncombustible : β_n = {fiche['beta_n_mm_min']} mm/min "
+                    "(EN 1995-1-2 tab. 3.1)"
+                    if "beta_n_mm_min" in fiche else ""
+                )
             )
         )
 
@@ -753,10 +754,14 @@ class Application(ttk.Frame):
         """
         if r.protection is None:
             return f"A_m/V = {r.Am_sur_V:.1f} m⁻¹ · k_sh = {r.k_sh:.3f}"
-        return (
+        ligne = (
             f"A_p/V = {r.Am_sur_V:.1f} m⁻¹ · {r.protection.libelle or r.protection.nom}, "
             f"d_p = {r.protection.d_p * 1e3:.1f} mm"
         )
+        t_ch = r.thermique.t_carbonisation
+        if t_ch is not None:
+            ligne += f" · protection perdue à {t_ch / 60.0:.0f} min"
+        return ligne
 
     # -- figures ---------------------------------------------------------
 

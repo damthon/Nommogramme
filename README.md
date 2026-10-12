@@ -40,6 +40,11 @@ calcule aussi bien en ligne de commande que dans un navigateur.
 | 10 | Application de bureau distribuable | fait |
 | 11 | Sections reconstituées soudées, coupe cotée à l'échelle | fait |
 | 12 | Registre des références normatives, infobulles | fait |
+| 13 | Protection en bois lamellé-collé, compression négative | fait |
+
+**Convention de signe** : l'effort normal N_fi,Ed est **négatif en
+compression**, positif en traction, partout (interfaces, ligne de commande,
+bibliothèque). En ligne de commande, écrire `--N=-850`.
 
 ### Ce qui est validé, et contre quoi
 
@@ -113,16 +118,16 @@ l'installation, avec Visual Studio Code.
 
 ```bash
 # Vérification complète N + M par la méthode du nomogramme
-nommo verifier "HEB 300" --nuance S355 --N 850 --My 120 \
+nommo verifier "HEB 300" --nuance S355 --N=-850 --My 120 \
       --L 4 --lfi 2 --duree R60 --protection flocage_fibreux --dp 25
 
 # La même, avec note de calcul et figures
-nommo verifier "HEB 300" --N 850 --My 120 --L 4 --lfi 2 --duree R60 \
+nommo verifier "HEB 300" --N=-850 --My 120 --L 4 --lfi 2 --duree R60 \
       --rapport note.md --tracer nomogramme.png --tracer-echauffement courbe.png
 
 # Sur une section soudée : caisson 400 × 300, tôles de 20 et 12 mm
 nommo verifier --section caisson --h 400 --b 300 --tf 20 --tw 12 \
-      --N 800 --My 120 --L 4 --lfi 2 --duree R30
+      --N=-800 --My 120 --L 4 --lfi 2 --duree R30
 
 # Un PRS à semelles inégales, dalle sur la semelle supérieure
 nommo section --section h --h 600 --b 300 --tf 20 --tw 10 \
@@ -165,9 +170,9 @@ sortie vaut 0 si l'exigence est satisfaite, 2 sinon — utilisable en script.
 
 Section soudée, communes à `verifier` et `section` : `--section {caisson,h}`,
 puis `--h --b --tf --tw` en millimètres, et pour un H à semelles inégales
-`--b-inf --tf-inf` ainsi que `--face-couverte {superieure,inferieure}`. Les
-cotes de la semelle inférieure reprennent celles de la supérieure quand on ne
-les donne pas.
+`--b-inf --tf-inf`. Les cotes de la semelle inférieure reprennent celles de la
+supérieure quand on ne les donne pas. En exposition sur trois faces, la dalle
+est toujours sur la semelle supérieure.
 
 ## Utilisation comme bibliothèque
 
@@ -179,7 +184,7 @@ from nommogramme import (
 )
 
 cas = CasDeCharge(
-    N_fi_Ed=850e3,      # N, positif en compression
+    N_fi_Ed=-850e3,     # N, négatif en compression
     My_fi_Ed=120e3,     # N·m
     L=4.0,              # m, vide d'étage (longueur d'épure)
     l_fi_y=2.0,         # m, poteau continu d'étage courant : 0,5·L
@@ -336,7 +341,7 @@ compile sur une machine Windows fournie par GitHub, puis publie l'archive dans
 les Releases. Pousser une étiquette suffit :
 
 ```bash
-git tag v0.2.0 && git push origin v0.2.0
+git tag v0.3.0 && git push origin v0.3.0
 ```
 
 Le paquet produit est contrôlé avant publication, sur l'exécutable lui-même et
@@ -420,6 +425,60 @@ print(requis)   # → « … : 12.4 mm requis → 12.5 mm retenus (θ_a = 548 °
 
 Les unités internes sont strictement SI (m, m², N, W, s). Les températures
 sont en degrés Celsius, comme dans la norme.
+
+### Protection en bois lamellé-collé
+
+Le produit `bois_lamelle_colle` décrit un **moulage négatif** du profilé en
+lamellé-collé, dont la face extérieure est rectangulaire.
+
+**Saisie.**
+- Exposition **caisson** : la chaleur entre par le rectangle extérieur, et
+  A_p est le périmètre de l'encaissement (EN 1993-1-2 §4.2.5.1, tab. 4.3).
+- **d_p = enrobage minimal** : la plus petite distance entre la face
+  extérieure du bois et l'acier, devant la semelle ou le bout d'aile. Jamais
+  l'épaisseur au droit de l'âme.
+- Le bois qui remplit les chambres entre les ailes est négligé, ce qui va dans
+  le sens de la sécurité.
+
+**Modèle.** L'EN 1993-1-2 ne prévoit pas d'isolant combustible : ce modèle est
+une hypothèse du projet, à justifier par un calcul avancé ou un essai.
+
+| Étape | Formule | Référence |
+|---|---|---|
+| Épaisseur saine | d(t) = d_p − β_n·t | EN 1995-1-2 §3.4.2(2), éq. (3.2) |
+| Vitesse de carbonisation fictive, coins et fentes inclus | β_n = 0,7 mm/min | EN 1995-1-2 §3.4.2, tab. 3.1 |
+| Échauffement tant que d(t) ≥ 5 mm | éq. (4.27) et (4.28) avec d(t) | EN 1993-1-2 §4.2.5.2 |
+| Échauffement ensuite, acier nu en contour | éq. (4.25), k_sh éq. (4.26) | EN 1993-1-2 §4.2.5.1 |
+
+Valeurs constantes retenues, du côté défavorable sur la plage du bois sain
+(20 à 300 °C) :
+
+| Grandeur | Valeur | Origine |
+|---|---|---|
+| λ_p | 0,15 W/m·K | maximum de l'EN 1995-1-2 annexe B, tab. B.1 |
+| c_p | 1530 J/kg·K | valeur à 20 °C, hors pic d'évaporation, tab. B.2 |
+| ρ_p | 385 kg/m³ | ρ_g,k du GL24h, EN 14080 tab. 5 |
+| humidité | 0 | déjà comprise dans β_n ; le palier à 100 °C la compterait deux fois |
+
+Pourquoi des valeurs constantes et pas les lois de l'annexe B : l'éq. (4.27)
+traite l'isolant comme une seule couche, sans température propre, alors que
+les tables B.1 et B.2 dépendent de la température locale du bois, qui varie
+dans l'épaisseur. Elles décrivent en outre le charbon, ici négligé, et
+l'évaporation, déjà comprise dans β_n.
+
+**Simplifications, toutes sécuritaires :**
+- le charbon est négligé comme isolant ;
+- le bois sain est supposé directement exposé aux gaz ;
+- l'effet de puits thermique de l'acier, qui ralentit la carbonisation à son
+  contact, est ignoré.
+
+**Non sécuritaire, à connaître :** β_n est une moyenne calibrée pour la
+résistance de la section. Localement, sous un angle du caisson, la
+carbonisation avance un peu plus vite (environ 0,84 mm/min d'après la règle
+d'arrondi r = d_char,0).
+
+Le seuil de 5 mm (`EPAISSEUR_SAINE_MIN`) est un choix numérique, sans base
+normative. La note de calcul indique l'instant où la protection est perdue.
 
 ## Données
 

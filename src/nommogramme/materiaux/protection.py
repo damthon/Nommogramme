@@ -6,13 +6,17 @@ conductivité, sa masse volumique et sa chaleur spécifique.
 
 Les valeurs livrées dans ``data/protections.toml`` sont génériques. Une étude
 de projet doit utiliser celles de l'agrément technique du produit retenu.
+
+Une protection **combustible** (bois lamellé-collé) sort de ce modèle : elle
+carbonise. Son épaisseur saine décroît selon l'EN 1995-1-2 §3.4.2(2),
+éq. (3.2), d_char,n = β_n·t ; voir ``thermique/evolution.py``.
 """
 
 from __future__ import annotations
 
 import tomllib
 from bisect import bisect_left
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from ..profils.geometrie import Exposition
@@ -57,6 +61,13 @@ class Protection:
 
     lambda_p_variable: tuple[tuple[float, float], ...] = field(default=())
 
+    beta_n: float = 0.0
+    """Vitesse de carbonisation fictive [m/s]. Zéro pour un isolant incombustible.
+
+    EN 1995-1-2 §3.4.2(2) : constante avec le temps, elle inclut l'effet des
+    arrondis en coins et des fentes (fig. 3.2).
+    """
+
     def __post_init__(self) -> None:
         if self.d_p <= 0.0:
             raise ValueError(f"Épaisseur de protection non positive : {self.d_p} m")
@@ -64,6 +75,20 @@ class Protection:
             raise ValueError(f"Conductivité non positive : {self.lambda_p} W/m·K")
         if self.pose not in ("contour", "caisson"):
             raise ValueError(f"Pose inconnue : {self.pose!r}")
+        if self.beta_n < 0.0:
+            raise ValueError(f"Vitesse de carbonisation négative : {self.beta_n} m/s")
+
+    @property
+    def combustible(self) -> bool:
+        return self.beta_n > 0.0
+
+    def epaisseur_saine(self, t: float) -> float:
+        """Épaisseur non carbonisée à l'instant ``t`` [s], en mètres.
+
+        EN 1995-1-2 §3.4.2(2), éq. (3.2) : d_char,n = β_n·t, donc
+        d(t) = d_p − β_n·t. La couche carbonisée est négligée comme isolant.
+        """
+        return self.d_p - self.beta_n * t
 
     def conductivite(self, theta_a: float) -> float:
         """Conductivité à la température d'acier donnée [W/m·K].
@@ -99,17 +124,7 @@ class Protection:
         Utilisé par la recherche d'épaisseur requise, qui balaie ``d_p`` sans
         modifier l'objet d'origine.
         """
-        return Protection(
-            nom=self.nom,
-            lambda_p=self.lambda_p,
-            rho_p=self.rho_p,
-            c_p=self.c_p,
-            d_p=d_p,
-            libelle=self.libelle,
-            pose=self.pose,
-            humidite=self.humidite,
-            lambda_p_variable=self.lambda_p_variable,
-        )
+        return replace(self, d_p=d_p)
 
     @classmethod
     def depuis_catalogue(
@@ -140,6 +155,7 @@ class Protection:
             libelle=fiche.get("libelle", nom),
             pose=fiche.get("pose", "contour"),
             humidite=humidite,
+            beta_n=fiche.get("beta_n_mm_min", 0.0) * 1e-3 / 60.0,
         )
 
     def __str__(self) -> str:

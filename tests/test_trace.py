@@ -79,7 +79,7 @@ def _verification(cat, **remplacements):
         profil=cat["HEB 300"],
         nuance=Nuance.S355,
         cas=CasDeCharge(
-            N_fi_Ed=850e3, My_fi_Ed=120e3, L=4.0,
+            N_fi_Ed=-850e3, My_fi_Ed=120e3, L=4.0,
             l_fi_y=2.0, l_fi_z=2.0, beta_M_y=1.4,
         ),
         exposition=Exposition.CONTOUR_4_FACES,
@@ -107,7 +107,7 @@ def elance(cat):
     return _verification(
         cat,
         cas=CasDeCharge(
-            N_fi_Ed=850e3, My_fi_Ed=120e3, L=8.0,
+            N_fi_Ed=-850e3, My_fi_Ed=120e3, L=8.0,
             l_fi_y=8.0, l_fi_z=8.0, beta_M_y=1.4,
         ),
     )
@@ -150,7 +150,7 @@ class TestProduction:
             cat,
             profil=cat["IPE 200"],
             nuance=Nuance.S235,
-            cas=CasDeCharge(N_fi_Ed=2000e3, L=6.0),
+            cas=CasDeCharge(N_fi_Ed=-2000e3, L=6.0),
         )
         assert resultat.mu_0 >= 1.0
         tracer_nomogramme(resultat, tmp_path / "surcharge.png")
@@ -424,13 +424,13 @@ def _debordements(figure) -> list[str]:
 # empile « acier » et « t_fi,d » à l'origine.
 _CAS_DE_LISIBILITE = {
     "courant": {},
-    "peu_sollicite": {"cas": CasDeCharge(N_fi_Ed=50e3, My_fi_Ed=5e3, L=4.0,
+    "peu_sollicite": {"cas": CasDeCharge(N_fi_Ed=-50e3, My_fi_Ed=5e3, L=4.0,
                                          l_fi_y=2.0, l_fi_z=2.0)},
     "surcharge": {"profil_nom": "IPE 200", "cas": CasDeCharge(
-        N_fi_Ed=400e3, My_fi_Ed=60e3, L=6.0, l_fi_y=6.0, l_fi_z=6.0)},
-    "elance": {"cas": CasDeCharge(N_fi_Ed=850e3, My_fi_Ed=120e3, L=8.0,
+        N_fi_Ed=-400e3, My_fi_Ed=60e3, L=6.0, l_fi_y=6.0, l_fi_z=6.0)},
+    "elance": {"cas": CasDeCharge(N_fi_Ed=-850e3, My_fi_Ed=120e3, L=8.0,
                                   l_fi_y=8.0, l_fi_z=8.0, beta_M_y=1.4)},
-    "traction": {"cas": CasDeCharge(N_fi_Ed=-300e3, My_fi_Ed=30e3, L=5.0,
+    "traction": {"cas": CasDeCharge(N_fi_Ed=300e3, My_fi_Ed=30e3, L=5.0,
                                     l_fi_y=5.0, l_fi_z=5.0)},
     "protege_long": {
         "protection": lambda: Protection.depuis_catalogue("flocage_fibreux", d_p=0.025),
@@ -440,24 +440,24 @@ _CAS_DE_LISIBILITE = {
         "profil_nom": "HEA 100",
         "protection": lambda: Protection.depuis_catalogue("plaques_platre", d_p=0.015),
         "duree_requise_min": 15,
-        "cas": CasDeCharge(N_fi_Ed=100e3, My_fi_Ed=5e3, L=3.0, l_fi_y=3.0, l_fi_z=3.0),
+        "cas": CasDeCharge(N_fi_Ed=-100e3, My_fi_Ed=5e3, L=3.0, l_fi_y=3.0, l_fi_z=3.0),
     },
     "tres_protege": {
         "profil_nom": "HEB 400",
         "protection": lambda: Protection.depuis_catalogue("plaques_silicate", d_p=0.020),
         "duree_requise_min": 120,
         "exposition": Exposition.CAISSON_4_FACES,
-        "cas": CasDeCharge(N_fi_Ed=1200e3, My_fi_Ed=150e3, L=4.0,
+        "cas": CasDeCharge(N_fi_Ed=-1200e3, My_fi_Ed=150e3, L=4.0,
                            l_fi_y=2.0, l_fi_z=2.0, beta_M_y=1.4),
     },
     "profil_creux": {
         "profil_nom": "RRW 200/200/8",
-        "cas": CasDeCharge(N_fi_Ed=600e3, My_fi_Ed=40e3, L=4.0,
+        "cas": CasDeCharge(N_fi_Ed=-600e3, My_fi_Ed=40e3, L=4.0,
                            l_fi_y=4.0, l_fi_z=4.0),
     },
     "classe_4": {
         "profil_nom": "HEA 1000",
-        "cas": CasDeCharge(N_fi_Ed=2000e3, L=3.0, l_fi_y=3.0, l_fi_z=3.0),
+        "cas": CasDeCharge(N_fi_Ed=-2000e3, L=3.0, l_fi_y=3.0, l_fi_z=3.0),
     },
     "hydrocarbure": {"profil_nom": "HEM 300", "feu": "hydrocarbure"},
 }

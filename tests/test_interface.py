@@ -89,8 +89,9 @@ class TestSaisie:
             "maintien", "beta_M", "exposition", "feu", "duree", "produit",
             "contexte", "kappa_1", "kappa_2", "C1",
         }
-        presents = set(app.session_state.filtered_state)
-        assert attendus <= presents, f"widgets manquants : {attendus - presents}"
+        # « in » plutôt que filtered_state, attribut privé retiré de Streamlit.
+        manquants = {cle for cle in attendus if cle not in app.session_state}
+        assert not manquants, f"widgets manquants : {manquants}"
 
     def test_le_profil_par_defaut_est_raisonnable(self, app: AppTest) -> None:
         """Le premier profilé d'une famille est le plus petit : sous les charges
@@ -102,9 +103,9 @@ class TestSaisie:
         # Instance propre : la fixture « app » est partagée par tout le module,
         # et la modifier ici fausserait les tests de cohérence qui suivent.
         application = _application()
-        assert "dp" not in application.session_state.filtered_state
+        assert "dp" not in application.session_state
         application.sidebar.selectbox(key="produit").set_value("flocage_fibreux").run()
-        assert "dp" in application.session_state.filtered_state
+        assert "dp" in application.session_state
 
 
 class TestCoherenceAvecLaBibliotheque:
@@ -115,7 +116,7 @@ class TestCoherenceAvecLaBibliotheque:
             profil=charger_csv()["HEB300"],
             nuance=Nuance.S355,
             cas=CasDeCharge(
-                N_fi_Ed=850e3, My_fi_Ed=120e3, L=4.0,
+                N_fi_Ed=-850e3, My_fi_Ed=120e3, L=4.0,
                 l_fi_y=2.0, l_fi_z=2.0,
                 beta_M_y=1.4, beta_M_z=1.4, beta_M_LT=1.4,
             ),
@@ -135,7 +136,7 @@ class TestCoherenceAvecLaBibliotheque:
             profil=charger_csv()["HEB300"],
             nuance=Nuance.S355,
             cas=CasDeCharge(
-                N_fi_Ed=850e3, My_fi_Ed=120e3, L=4.0,
+                N_fi_Ed=-850e3, My_fi_Ed=120e3, L=4.0,
                 l_fi_y=2.0, l_fi_z=2.0,
                 beta_M_y=1.4, beta_M_z=1.4, beta_M_LT=1.4,
             ),
@@ -169,7 +170,7 @@ class TestReactions:
 
     def test_element_surcharge_signale_sans_planter(self) -> None:
         application = _application()
-        application.sidebar.number_input(key="N").set_value(9000.0).run()
+        application.sidebar.number_input(key="N").set_value(-9000.0).run()
         assert not application.exception
         assert "ne tient pas à 20 °C" in _alertes(application)
 

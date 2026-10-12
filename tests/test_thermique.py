@@ -6,6 +6,8 @@ publié au §9 de ``docs/plan-conception.html``.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from nommogramme.materiaux.protection import Protection
@@ -13,6 +15,7 @@ from nommogramme.profils import Exposition, charger_csv
 from nommogramme.thermique import (
     DT_MAX_NON_PROTEGE,
     DT_MAX_PROTEGE,
+    EPAISSEUR_SAINE_MIN,
     FEU_EXTERIEUR,
     HYDROCARBURE,
     ISO834,
@@ -281,6 +284,90 @@ class TestEchauffementProtege:
             protection=flocage, dt=1.0,
         ).temperature_finale
         assert abs(grossier - fin) < 1.0
+
+
+class TestProtectionCombustible:
+    """Bois lamellé-collé : éq. (4.27) sur l'épaisseur saine d(t) = d_p − β_n·t
+    (EN 1995-1-2 §3.4.2(2), éq. (3.2)), puis éq. (4.25) une fois le bois perdu.
+    """
+
+    @pytest.fixture
+    def bois(self):
+        return Protection.depuis_catalogue("bois_lamelle_colle", d_p=0.060)
+
+    def test_fiche_du_catalogue(self, bois) -> None:
+        assert bois.combustible
+        assert bois.beta_n * 60e3 == pytest.approx(0.7)
+        assert bois.pose == "caisson"
+        assert not Protection.depuis_catalogue("plaques_platre", d_p=0.02).combustible
+
+    def test_epaisseur_saine(self, bois) -> None:
+        assert bois.epaisseur_saine(0.0) == pytest.approx(0.060)
+        assert bois.epaisseur_saine(minutes(60)) == pytest.approx(0.060 - 0.042)
+
+    def test_instant_de_perte(self, ipe300, bois) -> None:
+        resultat = echauffement(
+            ipe300, Exposition.CAISSON_4_FACES, minutes(120), ISO834, protection=bois
+        )
+        attendu = (0.060 - EPAISSEUR_SAINE_MIN) / bois.beta_n
+        assert resultat.t_carbonisation == pytest.approx(attendu, abs=5.0)
+        assert "combustible" in resultat.avertissements[-1]
+
+    def test_jamais_plus_froid_qu_un_isolant_identique_incombustible(
+        self, ipe300, bois
+    ) -> None:
+        """Le bois qui brûle protège moins que le même matériau qui resterait."""
+        stable = echauffement(
+            ipe300, Exposition.CAISSON_4_FACES, minutes(90), ISO834,
+            protection=replace(bois, beta_n=0.0),
+        )
+        brule = echauffement(
+            ipe300, Exposition.CAISSON_4_FACES, minutes(90), ISO834, protection=bois
+        )
+        assert stable.t_carbonisation is None
+        for froid, chaud in zip(stable.temperatures, brule.temperatures):
+            assert chaud >= froid - 1e-9
+
+    def test_bois_perdu_d_emblee_equivaut_a_l_acier_nu(self, ipe300, bois) -> None:
+        nu = echauffement(
+            ipe300, Exposition.CONTOUR_4_FACES, minutes(30), ISO834
+        ).temperature_finale
+        perdu = echauffement(
+            ipe300, Exposition.CAISSON_4_FACES, minutes(30), ISO834,
+            protection=bois.avec_epaisseur(EPAISSEUR_SAINE_MIN / 2),
+        )
+        assert perdu.t_carbonisation == 0.0
+        assert perdu.temperature_finale == pytest.approx(nu, abs=3.0)
+
+    def test_humidite_ignoree_et_signalee(self, ipe300, bois) -> None:
+        humide = replace(bois, humidite=9.0)
+        sec = echauffement(
+            ipe300, Exposition.CAISSON_4_FACES, minutes(60), ISO834, protection=bois
+        )
+        resultat = echauffement(
+            ipe300, Exposition.CAISSON_4_FACES, minutes(60), ISO834, protection=humide
+        )
+        assert resultat.temperatures == sec.temperatures
+        assert any("β_n" in a and "Humidité" in a for a in resultat.avertissements)
+
+    def test_refus_d_un_pas_trop_grand(self, ipe300, bois) -> None:
+        with pytest.raises(ValueError, match="combustible"):
+            echauffement(
+                ipe300, Exposition.CAISSON_4_FACES, minutes(60), ISO834,
+                protection=bois, dt=DT_MAX_NON_PROTEGE + 1.0,
+            )
+
+    def test_epaisseur_requise(self, ipe300, bois) -> None:
+        epaisseurs = [
+            epaisseur_requise_minutes(
+                profil=ipe300, exposition=Exposition.CAISSON_4_FACES,
+                protection=bois, theta_cible=550.0, duree_requise_min=duree,
+            ).d_p
+            for duree in (30.0, 60.0, 90.0)
+        ]
+        assert epaisseurs == sorted(epaisseurs)
+        # R60 : environ 42 mm carbonisés, plus quelques minutes d'acier nu.
+        assert 0.035 < epaisseurs[1] < 0.050
 
 
 class TestSolveurEpaisseur:

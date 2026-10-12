@@ -94,9 +94,9 @@ class TestSaisie:
     def test_avec_ne_modifie_pas_l_original(self) -> None:
         """``Saisie`` est gelée : ``avec()`` renvoie une copie."""
         defaut = Saisie()
-        autre = defaut.avec(N=1200.0)
-        assert defaut.N == 850.0
-        assert autre.N == 1200.0
+        autre = defaut.avec(N=-1200.0)
+        assert defaut.N == -850.0
+        assert autre.N == -1200.0
         assert autre.profil == defaut.profil
 
     def test_conversion_des_unites(self) -> None:
@@ -107,11 +107,11 @@ class TestSaisie:
         """
         from nommogramme import CasDeCharge, Exposition, Nuance, catalogue, verifier
 
-        saisie = Saisie(N=700.0, My=90.0, Mz=5.0, protection=SANS_PROTECTION)
+        saisie = Saisie(N=-700.0, My=90.0, Mz=5.0, protection=SANS_PROTECTION)
         par_interface = executer(saisie)
 
         cas = CasDeCharge(
-            N_fi_Ed=kN(700.0), My_fi_Ed=kNm(90.0), Mz_fi_Ed=kNm(5.0),
+            N_fi_Ed=kN(-700.0), My_fi_Ed=kNm(90.0), Mz_fi_Ed=kNm(5.0),
             L=saisie.L, l_fi_y=saisie.l_fi, l_fi_z=saisie.l_fi,
             beta_M_y=saisie.beta_M, beta_M_z=saisie.beta_M,
             beta_M_LT=saisie.beta_M, maintien_lateral=saisie.maintien,
@@ -219,7 +219,7 @@ class TestApplicationBureau:
 
     def test_les_chiffres_suivent_la_saisie(self, app, racine) -> None:
         avant = app.resultat.mu_0
-        app.var["N"].set(1500.0)
+        app.var["N"].set(-1500.0)
         racine.update()
         assert app.resultat.mu_0 > avant
         assert app.indicateur["mu_0"].cget("text") == f"{app.resultat.mu_0:.3f}"
@@ -402,7 +402,7 @@ class TestApplicationBureau:
             racine.update()
             assert self._image_affichee(cadre), f"{cle} : rien affiché au premier dessin"
 
-            app.var["N"].set(700.0)
+            app.var["N"].set(-700.0)
             racine.update()
             app.dessiner_figures()
             racine.update()
@@ -455,7 +455,7 @@ class TestApplicationBureau:
         gèlerait la fenêtre. Le test vérifie qu'une tâche est bien en attente,
         pas que le dessin a eu lieu.
         """
-        app.var["N"].set(900.0)
+        app.var["N"].set(-900.0)
         assert app._tache_figures is not None
 
     def test_la_note_de_calcul_est_produite(self, app) -> None:
@@ -609,7 +609,7 @@ class TestCoherenceDesDeuxInterfaces:
         streamlit = pytest.importorskip("streamlit")  # noqa: F841
         from nommogramme.interface import app as streamlit_app
 
-        saisie = Saisie(N=640.0, My=75.0)
+        saisie = Saisie(N=-640.0, My=75.0)
         assert streamlit_app._verifier(saisie).theta_cr == pytest.approx(
             executer(saisie).theta_cr
         )

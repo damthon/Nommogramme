@@ -196,7 +196,7 @@ def _taux_a(
         module_z=module_z,
     )
     return taux(
-        N_Ed=cas.N_fi_Ed,
+        N_Ed=cas.N_compression,
         My_Ed=cas.My_fi_Ed,
         Mz_Ed=cas.Mz_fi_Ed,
         resistances=resistances,
@@ -260,7 +260,7 @@ def verifier(
     )
 
     fy, lambda_y, lambda_z, lambda_LT = _elancements(profil, nuance, cas, C1)
-    classe = classifier(profil, fy, N_Ed=cas.N_fi_Ed, My_Ed=cas.My_fi_Ed)
+    classe = classifier(profil, fy, N_Ed=cas.N_compression, My_Ed=cas.My_fi_Ed)
 
     def evaluer(theta: float) -> float:
         return _taux_a(

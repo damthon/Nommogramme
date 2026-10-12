@@ -6,7 +6,19 @@ Référence : EN 1993-1-2 §4.2.5.
 * §4.2.5.2, éq. (4.27) et (4.28) : acier protégé, pas de temps ≤ 30 s.
 
 Les deux formulations sont des schémas d'Euler explicites, imposés par la
-norme. La chaleur spécifique de l'acier étant fortement non linéaire — pic à
+norme.
+
+Protection combustible (bois lamellé-collé) — hypothèse du projet, hors du
+domaine de l'EN 1993-1-2, qui ne prévoit pas d'isolant qui brûle :
+
+* l'épaisseur saine décroît selon l'EN 1995-1-2 §3.4.2(2), éq. (3.2) :
+  d(t) = d_p − β_n·t, la vitesse fictive β_n incluant les arrondis de coins ;
+* la couche carbonisée est négligée comme isolant, et le bois sain est
+  supposé exposé directement aux gaz — sécuritaire ;
+* l'éq. (4.27) est appliquée à chaque pas avec d(t) ;
+* sous ``EPAISSEUR_SAINE_MIN`` de bois sain, la protection est considérée
+  perdue et l'acier s'échauffe comme un profilé nu exposé en contour,
+  éq. (4.25), à partir de la température atteinte. La chaleur spécifique de l'acier étant fortement non linéaire — pic à
 735 °C dû à la transformation de phase — elle est réévaluée à chaque pas.
 """
 
@@ -34,6 +46,7 @@ __all__ = [
     "DT_PROTEGE",
     "DT_MAX_NON_PROTEGE",
     "DT_MAX_PROTEGE",
+    "EPAISSEUR_SAINE_MIN",
     "ResultatThermique",
     "echauffement",
 ]
@@ -50,6 +63,13 @@ DT_NON_PROTEGE = 2.0
 
 DT_PROTEGE = 5.0
 """Pas retenu par défaut pour l'acier protégé [s]."""
+
+EPAISSEUR_SAINE_MIN = 0.005
+"""Bois sain sous lequel une protection combustible est perdue [m].
+
+Choix numérique du projet, sans base normative : il évite la singularité
+λ_p/d_p → ∞ de l'éq. (4.27) quand le front de carbonisation atteint l'acier.
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +94,11 @@ class ResultatThermique:
     """Facteur d'ombre appliqué [-]. Vaut 1 pour un élément protégé."""
     phi: float | None = None
     """Paramètre φ de l'éq. (4.28) [-], pour un élément protégé."""
+    t_carbonisation: float | None = None
+    """Instant [s] où une protection combustible est perdue, s'il est atteint.
+
+    Au-delà, l'acier est calculé nu, éq. (4.25).
+    """
 
     avertissements: tuple[str, ...] = field(default=())
 
@@ -205,6 +230,9 @@ def echauffement(
         dt=dt if dt is not None else DT_PROTEGE,
         Ap_sur_V=Am_sur_V,
         delai_evaporation=delai_evaporation,
+        epsilon_m=epsilon_m,
+        epsilon_f=epsilon_f,
+        phi_forme=phi_forme,
         avertissements=avertissements,
     )
 
@@ -283,6 +311,9 @@ def _protege(
     dt: float,
     Ap_sur_V: float,
     delai_evaporation: float | None,
+    epsilon_m: float,
+    epsilon_f: float,
+    phi_forme: float,
     avertissements: list[str],
 ) -> ResultatThermique:
     """Acier protégé — EN 1993-1-2 §4.2.5.2, éq. (4.27) et (4.28).
@@ -296,6 +327,10 @@ def _protege(
     l'isolant absorbe une part importante de la chaleur. La norme impose alors
     de le ramener à zéro — sans quoi la température de l'acier descendrait
     sous l'ambiante.
+
+    Pour une protection combustible, ``d_p`` est remplacée à chaque pas par
+    l'épaisseur saine d(t) = d_p − β_n·t (EN 1995-1-2 §3.4.2(2), éq. (3.2)),
+    puis l'éq. (4.25) prend le relais — voir l'en-tête du module.
     """
     if dt > DT_MAX_PROTEGE:
         raise ValueError(
@@ -303,8 +338,36 @@ def _protege(
             "de l'EN 1993-1-2 §4.2.5.2(2)."
         )
 
-    d_p = protection.d_p
-    if delai_evaporation is None:
+    combustible = protection.combustible
+    if combustible:
+        # La phase nue suit l'éq. (4.25), dont la borne de pas est plus serrée.
+        if dt > DT_MAX_NON_PROTEGE:
+            raise ValueError(
+                f"Pas de temps {dt} s supérieur à la borne de {DT_MAX_NON_PROTEGE} s "
+                "de l'EN 1993-1-2 §4.2.5.1(4), requise pour une protection "
+                "combustible."
+            )
+        exposition_nue = (
+            Exposition.CONTOUR_3_FACES if exposition.trois_faces
+            else Exposition.CONTOUR_4_FACES
+        )
+        Am_sur_V_nu = facteur_massivete(profil, exposition_nue)
+        k_sh_nu = facteur_ombre(profil, exposition_nue, feu_nominal=courbe.nominale)
+        avertissements.append(
+            "Protection combustible : hors du domaine de l'EN 1993-1-2. Modèle du "
+            "projet — épaisseur saine d(t) = d_p − β_n·t (EN 1995-1-2 §3.4.2(2), "
+            "éq. (3.2)), charbon négligé, puis acier nu (éq. (4.25)) sous "
+            f"{EPAISSEUR_SAINE_MIN * 1e3:.0f} mm de bois sain. À justifier par un "
+            "calcul avancé ou un essai."
+        )
+        if protection.humidite > 0.0:
+            avertissements.append(
+                "Humidité ignorée pour une protection combustible : son effet est "
+                "déjà compris dans β_n, le palier à 100 °C le compterait deux fois."
+            )
+        if delai_evaporation is None:
+            delai_evaporation = 0.0
+    elif delai_evaporation is None:
         delai_evaporation = _delai_evaporation(protection)
 
     temps: list[float] = [0.0]
@@ -315,6 +378,7 @@ def _protege(
     t = 0.0
     phi_dernier = 0.0
     reste_palier = delai_evaporation
+    t_carbonisation: float | None = None
 
     while t < duree - 1e-9:
         pas = min(dt, duree - t)
@@ -322,6 +386,26 @@ def _protege(
         delta_theta_g = courbe.temperature(t + pas) - theta_g
 
         c_a = chaleur_specifique(theta_a)
+        d_p = protection.epaisseur_saine(t)
+
+        if combustible and d_p < EPAISSEUR_SAINE_MIN:
+            if t_carbonisation is None:
+                t_carbonisation = t
+            h_net = flux_net(
+                theta_g=theta_g,
+                theta_m=theta_a,
+                alpha_c=courbe.alpha_c,
+                epsilon_m=epsilon_m,
+                epsilon_f=epsilon_f,
+                phi=phi_forme,
+            )
+            theta_a += k_sh_nu * Am_sur_V_nu / (c_a * RHO_A) * h_net * pas
+            t += pas
+            temps.append(t)
+            acier.append(theta_a)
+            gaz.append(courbe.temperature(t))
+            continue
+
         lambda_p = protection.conductivite(theta_a)
 
         phi = (protection.c_p * protection.rho_p) / (c_a * RHO_A) * d_p * Ap_sur_V
@@ -363,6 +447,7 @@ def _protege(
         Am_sur_V=Ap_sur_V,
         k_sh=1.0,
         phi=phi_dernier,
+        t_carbonisation=t_carbonisation,
         avertissements=tuple(avertissements),
     )
 

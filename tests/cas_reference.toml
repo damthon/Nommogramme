@@ -8,7 +8,7 @@
 # moins une valeur dans [cas.attendu].
 #
 # Champs de chargement (tous facultatifs, valeur par défaut nulle) :
-#   N_fi_Ed_kN     effort normal, POSITIF EN COMPRESSION
+#   N_fi_Ed_kN     effort normal, NÉGATIF EN COMPRESSION
 #   My_fi_Ed_kNm   moment autour de l'axe fort
 #   Mz_fi_Ed_kNm   moment autour de l'axe faible
 #   L              longueur d'épure [m]
@@ -41,7 +41,7 @@ source = "steelacademy 2019, Horw, 12.09.2019, Dr. P. R. Schulthess, planches 36
 reference_externe = true
 profil = "HEA 300"
 nuance = "S235"
-N_fi_Ed_kN = 1205.0
+N_fi_Ed_kN = -1205.0
 L = 3.0
 l_fi_y = 1.5
 l_fi_z = 1.5
@@ -62,7 +62,7 @@ source = "steelacademy 2019, Lausanne, 25.09.2019, Dr. R. Bärtschi, planches 22
 reference_externe = true
 profil = "HEB 360"
 nuance = "S355"
-N_fi_Ed_kN = 537.0
+N_fi_Ed_kN = -537.0
 L = 4.0
 l_fi_y = 4.0
 l_fi_z = 4.0
@@ -122,7 +122,7 @@ source = "SZS steeltec 02:2015, ch. 3.7, p. 33"
 reference_externe = true
 profil = "HEB 340"
 nuance = "S235"
-N_fi_Ed_kN = 760.0
+N_fi_Ed_kN = -760.0
 L = 4.0
 l_fi_y = 2.8
 l_fi_z = 2.8
@@ -156,7 +156,7 @@ source = "non-régression — valeur produite par l'outil, non vérifiée"
 reference_externe = false
 profil = "HEB 300"
 nuance = "S355"
-N_fi_Ed_kN = 850.0
+N_fi_Ed_kN = -850.0
 My_fi_Ed_kNm = 120.0
 L = 4.0
 l_fi_y = 2.0
@@ -178,7 +178,7 @@ source = "non-régression — illustre l'écart capté par la vérification croi
 reference_externe = false
 profil = "HEB 300"
 nuance = "S355"
-N_fi_Ed_kN = 850.0
+N_fi_Ed_kN = -850.0
 My_fi_Ed_kNm = 120.0
 L = 8.0
 l_fi_y = 8.0
@@ -199,7 +199,7 @@ source = "non-régression — valeur produite par l'outil, non vérifiée"
 reference_externe = false
 profil = "HEB 300"
 nuance = "S355"
-N_fi_Ed_kN = 850.0
+N_fi_Ed_kN = -850.0
 My_fi_Ed_kNm = 120.0
 L = 4.0
 l_fi_y = 2.0
@@ -235,7 +235,7 @@ source = "non-régression — couvre la correction du rayon de giration"
 reference_externe = false
 profil = "RRW 200/200/10"
 nuance = "S355"
-N_fi_Ed_kN = 900.0
+N_fi_Ed_kN = -900.0
 L = 6.0
 l_fi_y = 6.0
 l_fi_z = 6.0
