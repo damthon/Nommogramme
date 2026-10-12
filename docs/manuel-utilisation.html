@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuel d'utilisation</title>
+<style>
+:root{
+  --ground:#F6F5F1;
+  --surface:#FFFFFF;
+  --surface-2:#EEEDE7;
+  --ink:#17191C;
+  --muted:#666A70;
+  --rule:#D6D4CC;
+  --accent:#0B4F6C;
+  --accent-soft:rgba(11,79,108,.10);
+  --heat:#B44A16;
+  --heat-soft:rgba(180,74,22,.09);
+  --ok:#2E7D32;
+  --serif: Charter,"Bitstream Charter","Sitka Text",Cambria,Georgia,"Times New Roman",serif;
+  --mono:"JetBrains Mono","SF Mono",SFMono-Regular,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#131417;--surface:#1A1C1F;--surface-2:#212428;--ink:#E6E4DF;
+    --muted:#969AA1;--rule:#2E3237;--accent:#6BB8D8;--accent-soft:rgba(107,184,216,.14);
+    --heat:#E8814A;--heat-soft:rgba(232,129,74,.13);--ok:#7BC47F;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131417;--surface:#1A1C1F;--surface-2:#212428;--ink:#E6E4DF;
+  --muted:#969AA1;--rule:#2E3237;--accent:#6BB8D8;--accent-soft:rgba(107,184,216,.14);
+  --heat:#E8814A;--heat-soft:rgba(232,129,74,.13);--ok:#7BC47F;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--ground);color:var(--ink);font-family:var(--serif);
+  font-size:17px;line-height:1.62;margin:0;padding:0 16px 6rem;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1010px;margin:0 auto}
+.masthead{padding:3.5rem 0 2rem;border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 1rem}
+h1{font-weight:600;font-size:clamp(2rem,5vw,2.8rem);line-height:1.12;letter-spacing:-.015em;margin:0 0 .8rem;text-wrap:balance}
+.standfirst{font-size:1.1rem;color:var(--muted);max-width:64ch;margin:0 0 1.6rem}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem 1.6rem;border-top:1px solid var(--rule);padding-top:1.1rem;margin:0}
+.meta dt{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 .25rem}
+.meta dd{margin:0;font-family:var(--mono);font-size:.82rem}
+nav.toc{border-bottom:1px solid var(--rule);padding:1.2rem 0}
+nav.toc ol{margin:0;padding-left:1.3rem;columns:2;column-gap:2rem;font-size:.95rem}
+nav.toc li{break-inside:avoid;margin-bottom:.25rem}
+section{border-top:1px solid var(--rule);padding:2.4rem 0 .4rem}
+section:first-of-type{border-top:none}
+.sechead{display:grid;grid-template-columns:3.2rem minmax(0,1fr);gap:0 1.2rem;align-items:baseline;margin-bottom:1.2rem}
+.secnum{font-family:var(--mono);font-size:.82rem;color:var(--accent);letter-spacing:.04em}
+h2{font-weight:600;font-size:1.5rem;line-height:1.25;letter-spacing:-.01em;margin:0;text-wrap:balance}
+h3{font-weight:600;font-size:1.06rem;margin:1.8rem 0 .6rem}
+.body{max-width:74ch}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1.1rem;padding-left:1.3rem}
+li{margin-bottom:.4rem}
+li::marker{color:var(--muted)}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+code,kbd{font-family:var(--mono);font-size:.84em;background:var(--surface-2);padding:.08em .32em;border-radius:2px}
+.c{font-family:var(--mono);font-size:.76em;background:var(--accent-soft);color:var(--accent);padding:.12em .38em;border-radius:2px;white-space:nowrap}
+.step{display:inline-flex;align-items:center;justify-content:center;width:1.6em;height:1.6em;border-radius:50%;background:var(--heat);color:#fff;font-family:var(--mono);font-size:.8em;font-weight:600;margin-right:.35em;vertical-align:.08em}
+figure{margin:1.4rem 0 1.8rem}
+figure a{display:block;border:1px solid var(--rule);background:var(--surface);line-height:0}
+figure img{width:100%;height:auto;display:block}
+figcaption{font-size:.88rem;color:var(--muted);margin-top:.5rem;max-width:74ch}
+.pages{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin:1.2rem 0 1.6rem}
+.pages figure{margin:0}
+table{border-collapse:collapse;width:100%;margin:.6rem 0 1.4rem;font-size:.92rem}
+th,td{text-align:left;padding:.4rem .6rem .4rem 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500}
+td.n{font-family:var(--mono);font-size:.86rem;white-space:nowrap}
+.tablewrap{overflow-x:auto}
+.note{background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);padding:.9rem 1.1rem;margin:1.2rem 0;max-width:74ch}
+.note.chaud{border-left-color:var(--heat);background:var(--heat-soft)}
+.note p:last-child{margin-bottom:0}
+.eq{font-family:var(--mono);font-size:.86rem;background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);padding:.8rem 1rem;margin:1rem 0 1.3rem;overflow-x:auto;white-space:pre;line-height:1.7}
+pre{font-family:var(--mono);font-size:.82rem;background:var(--surface);border:1px solid var(--rule);padding:.8rem 1rem;overflow-x:auto;margin:1rem 0 1.3rem}
+.ok{color:var(--ok);font-weight:600}
+.body,.tablewrap,pre,.eq,.note{max-width:min(74ch,100%)}
+main,section,.wrap{min-width:0}
+@media (max-width:640px){
+  nav.toc ol{columns:1}
+  td.n{white-space:normal}
+  .eq{white-space:pre;font-size:.74rem}
+  .sechead{grid-template-columns:1fr}
+  body{font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Nommogramme · manuel d'utilisation</p>
+  <h1>Vérifier un poteau caisson soudé et protégé, pas à pas</h1>
+  <p class="standfirst">Un exemple complet, de la saisie à la note de calcul : chaque étape montre
+  l'écran correspondant, ce qu'il faut y entrer, et ce que l'outil calcule derrière.</p>
+  <dl class="meta">
+    <div><dt>Élément</dt><dd>Caisson soudé 400×300×20/12</dd></div>
+    <div><dt>Acier</dt><dd>S355</dd></div>
+    <div><dt>Exigence</dt><dd>R90 · ISO 834</dd></div>
+    <div><dt>Protection</dt><dd>Plaques silicate 15 mm</dd></div>
+    <div><dt>Résultat</dt><dd class="ok">Satisfait · marge +55 °C</dd></div>
+  </dl>
+</header>
+
+<nav class="toc" aria-label="Sommaire">
+  <ol>
+    <li><a href="#cas">Le cas traité</a></li>
+    <li><a href="#fenetre">La fenêtre</a></li>
+    <li><a href="#section">Étape 1 — la section</a></li>
+    <li><a href="#efforts">Étape 2 — sollicitations et géométrie</a></li>
+    <li><a href="#feu">Étape 3 — feu, protection, paramètres</a></li>
+    <li><a href="#resultats">Étape 4 — lire les résultats</a></li>
+    <li><a href="#figures">Étape 5 — les figures</a></li>
+    <li><a href="#note">Étape 6 — la note de calcul</a></li>
+    <li><a href="#variantes">Variantes : bois, trois faces, ligne de commande</a></li>
+    <li><a href="#limites">Limites à garder en tête</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<section id="cas">
+  <div class="sechead"><span class="secnum">01</span><h2>Le cas traité</h2></div>
+  <div class="body">
+    <p>Un poteau intérieur d'un bâtiment contreventé, formé de quatre tôles soudées en caisson,
+    doit tenir 90 minutes sous le feu normalisé. Il est encaissé dans des plaques de fibres-silicate
+    de calcium de 15 mm, exposé sur ses quatre faces.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Donnée</th><th>Valeur</th><th>Remarque</th></tr></thead>
+      <tbody>
+        <tr><td>Section</td><td class="n">h 400 · b 300 · t<sub>f</sub> 20 · t<sub>w</sub> 12 mm</td><td>caisson rectangulaire soudé, A = 206,4 cm²</td></tr>
+        <tr><td>Nuance</td><td class="n">S355</td><td>f<sub>y</sub> = 355 N/mm² pour t ≤ 40 mm</td></tr>
+        <tr><td>Effort normal</td><td class="n">N<sub>fi,Ed</sub> = −3500 kN</td><td>négatif en compression</td></tr>
+        <tr><td>Moment</td><td class="n">M<sub>y,fi,Ed</sub> = 100 kN·m</td><td>combinaison accidentelle</td></tr>
+        <tr><td>Longueurs</td><td class="n">L = 4,0 m · l<sub>fi</sub> = 2,0 m</td><td>poteau continu, étage courant : l<sub>fi</sub> = 0,5·L <span class="c">EN 1993-1-2 §4.2.3.2(4)</span></td></tr>
+        <tr><td>β<sub>M</sub></td><td class="n">1,4</td><td>diagramme de moment <span class="c">fig. 4.2</span></td></tr>
+        <tr><td>Exposition</td><td class="n">caisson, 4 faces</td><td>encaissement par plaques</td></tr>
+        <tr><td>Feu, durée</td><td class="n">ISO 834 · R90</td><td><span class="c">EN 1991-1-2 §3.2</span></td></tr>
+        <tr><td>Protection</td><td class="n">plaques silicate, d<sub>p</sub> = 15 mm</td><td>λ<sub>p</sub> = 0,15 W/m·K, ρ<sub>p</sub> = 600 kg/m³, c<sub>p</sub> = 1200 J/kg·K</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section id="fenetre">
+  <div class="sechead"><span class="secnum">02</span><h2>La fenêtre</h2></div>
+  <div class="body">
+    <p>Lancez <code>Nommogramme.exe</code> (Windows, aucune installation), ou <code>nommo bureau</code>
+    sur un poste où le paquet Python est installé. La fenêtre s'ouvre sur un cas par défaut, un
+    HEB 300 sans protection.</p>
+    <ul>
+      <li><strong>À gauche</strong>, la saisie, de haut en bas dans l'ordre du calcul : élément, section,
+      sollicitations, géométrie, feu, protection, paramètres avancés.</li>
+      <li><strong>À droite</strong>, le verdict, les quatre chiffres clés, le détail, puis trois onglets
+      de figures.</li>
+      <li><strong>En bas</strong>, l'enregistrement de la note de calcul et des figures.</li>
+    </ul>
+    <p>Tout se recalcule à chaque modification : il n'y a pas de bouton « calculer ». Quand le curseur prend
+    la forme d'un point d'interrogation au survol d'un nom de paramètre, une infobulle donne son
+    explication et sa clause normative.</p>
+  </div>
+  <figure>
+    <a href="manuel/images/01-demarrage.png"><img src="manuel/images/01-demarrage.png" alt="Fenêtre de l'application au démarrage, saisie à gauche et résultats à droite" loading="lazy"></a>
+    <figcaption>La fenêtre au démarrage. Le cas par défaut ne tient pas R60 : le verdict rouge, en haut à droite, le dit d'emblée.</figcaption>
+  </figure>
+</section>
+
+<section id="section">
+  <div class="sechead"><span class="secnum">03</span><h2><span class="step">1</span>Décrire la section</h2></div>
+  <div class="body">
+    <p>Dans le bloc <strong>Élément</strong>, choisissez <em>Type de section → Caisson rectangulaire
+    soudé</em>, et la nuance <strong>S355</strong>. Le bloc <strong>Section soudée</strong> apparaît :
+    entrez les cotes en millimètres, h = 400, b = 300, t<sub>f</sub> = 20, t<sub>w</sub> = 12.</p>
+    <p>Sous les champs, l'outil affiche aussitôt le nom de la section et ses caractéristiques
+    principales : A = 206,4 cm², 162 kg/m, I<sub>y</sub> = 52 691 cm⁴, W<sub>pl,y</sub> = 3058 cm³. Elles
+    sont calculées tôle par tôle, gorges de soudure et congés négligés. Aucune valeur tabulée ne vient
+    les recouper : c'est la raison d'être de l'onglet <em>Coupe de la section</em>, à l'échelle, où une
+    erreur d'un facteur dix se voit d'un coup d'œil.</p>
+  </div>
+  <figure>
+    <a href="manuel/images/02-section.png"><img src="manuel/images/02-section.png" alt="Blocs Élément et Section soudée remplis pour le caisson 400×300×20/12" loading="lazy"></a>
+    <figcaption>Étape 1 : type de section, nuance et cotes. Les caractéristiques calculées s'affichent sous les champs.</figcaption>
+  </figure>
+</section>
+
+<section id="efforts">
+  <div class="sechead"><span class="secnum">04</span><h2><span class="step">2</span>Sollicitations et géométrie</h2></div>
+  <div class="body">
+    <p>Dans <strong>Sollicitations en incendie</strong>, entrez les efforts de la combinaison
+    accidentelle : <strong>N<sub>fi,Ed</sub> = −3500 kN</strong>, M<sub>y,fi,Ed</sub> = 100 kN·m,
+    M<sub>z,fi,Ed</sub> = 0.</p>
+    <div class="note chaud"><p><strong>Convention de signe : la compression est négative.</strong> Un
+    effort positif est une traction, et l'outil appliquerait alors la vérification en traction. Les
+    formules de l'EN 1993-1-2 raisonnent en compression positive ; la conversion est faite en un seul
+    endroit du code, et la note de calcul emploie la valeur absolue dans ses formules.</p></div>
+    <p>Dans <strong>Géométrie</strong> : vide d'étage <strong>L = 4,0 m</strong>, longueur de flambement
+    <strong>l<sub>fi</sub> = 2,0 m</strong>, et <strong>β<sub>M</sub> = 1,4</strong>. Un poteau continu
+    d'un bâtiment contreventé est bridé par les étages froids adjacents : la norme admet
+    l<sub>fi</sub> = 0,5·L en étage courant et 0,7·L au dernier étage <span class="c">EN 1993-1-2 §4.2.3.2(4)</span>.
+    Laisser l<sub>fi</sub> à zéro reprend le vide d'étage, ce qui est sécuritaire.</p>
+    <p>La case <em>Semelle comprimée maintenue</em> ne concerne que les poutres sous dalle : cochée,
+    elle écarte le critère de déversement.</p>
+  </div>
+  <figure>
+    <a href="manuel/images/03-sollicitations.png"><img src="manuel/images/03-sollicitations.png" alt="Blocs Sollicitations en incendie et Géométrie remplis" loading="lazy"></a>
+    <figcaption>Étape 2 : N négatif en compression, longueurs de l'épure et de flambement, β<sub>M</sub>.</figcaption>
+  </figure>
+</section>
+
+<section id="feu">
+  <div class="sechead"><span class="secnum">05</span><h2><span class="step">3</span>Feu, protection et paramètres avancés</h2></div>
+  <div class="body">
+    <h3>Exposition au feu</h3>
+    <p><em>Configuration → Caisson, 4 faces</em>, courbe <em>ISO 834</em>, durée exigée <strong>90</strong>.</p>
+    <ul>
+      <li><strong>Contour</strong> : la protection suit la forme du profilé (élément nu, flocage, peinture).</li>
+      <li><strong>Caisson</strong> : encaissement rectangulaire par plaques ; la chaleur entre par le
+      périmètre du rectangle <span class="c">EN 1993-1-2 §4.2.5.1, tab. 4.2 et 4.3</span>.</li>
+      <li><strong>3 faces</strong> : une face est couverte par une dalle, toujours la semelle supérieure.</li>
+    </ul>
+    <h3>Protection</h3>
+    <p><em>Produit → Plaques de fibres-silicate de calcium</em>, <strong>épaisseur d<sub>p</sub> = 15 mm</strong>.
+    Sous le champ, la fiche du produit rappelle λ<sub>p</sub>, ρ<sub>p</sub>, c<sub>p</sub>, le mode de
+    pose et la plage d'épaisseurs usuelles. Ces valeurs sont génériques : une étude de projet doit
+    reprendre celles de l'agrément du produit retenu.</p>
+    <h3>Paramètres avancés</h3>
+    <ul>
+      <li><strong>Référentiel</strong> : Suisse (SIA 263 / SIA 260) ou Eurocode, valeurs recommandées.
+      Seul l'encadrement change (γ<sub>M,fi</sub>, combinaison), pas les équations.</li>
+      <li><strong>κ<sub>1</sub></strong> n'est plus saisi : il est <strong>déduit de l'exposition</strong>
+      <span class="c">EN 1993-1-2 §4.2.3.3(7)</span>. 1,00 sur quatre faces ; sur trois faces, 0,70
+      sans protection et 0,85 avec. Ici, 1,00.</li>
+      <li><strong>κ<sub>2</sub></strong> : 0,85 aux appuis d'une poutre hyperstatique, 1,00 sinon.</li>
+      <li><strong>C<sub>1</sub></strong> : forme du diagramme de moment, pour le moment critique de
+      déversement ; 1,00 (moment constant) est le cas le plus défavorable.</li>
+    </ul>
+  </div>
+  <figure>
+    <a href="manuel/images/04-feu-protection.png"><img src="manuel/images/04-feu-protection.png" alt="Blocs Exposition au feu, Protection et Paramètres avancés remplis, κ1 affiché à 1,00" loading="lazy"></a>
+    <figcaption>Étape 3 : exposition, protection, paramètres. κ<sub>1</sub> s'affiche, déduit de l'exposition.</figcaption>
+  </figure>
+</section>
+
+<section id="resultats">
+  <div class="sechead"><span class="secnum">06</span><h2><span class="step">4</span>Lire les résultats</h2></div>
+  <div class="body">
+    <p>Le bandeau du haut donne le verdict : <span class="ok">R90 satisfait</span>, θ<sub>a</sub> = 485 °C
+    à l'échéance contre θ<sub>cr</sub> = 540 °C, marge +55 °C. Les quatre chiffres clés suivent.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Grandeur</th><th>Valeur</th><th>Ce qu'elle dit</th></tr></thead>
+      <tbody>
+        <tr><td>μ<sub>0</sub></td><td class="n">0,645</td><td>degré d'utilisation à 20 °C sous charges d'incendie <span class="c">EN 1993-1-2 §4.2.4, éq. (4.23)</span></td></tr>
+        <tr><td>θ<sub>cr</sub> retenue</td><td class="n">540 °C</td><td>la plus défavorable des deux voies, voir ci-dessous</td></tr>
+        <tr><td>θ<sub>a</sub> à l'échéance</td><td class="n">485 °C</td><td>température de l'acier à 90 min</td></tr>
+        <tr><td>t<sub>fi,d</sub></td><td class="n">105 min</td><td>durée avant d'atteindre θ<sub>cr</sub></td></tr>
+      </tbody>
+    </table></div>
+    <h3>Deux températures critiques</h3>
+    <p>La <strong>méthode du nomogramme</strong> tire θ<sub>cr</sub> de μ<sub>0</sub> par l'équation (4.22) :
+    541 °C. Elle est exacte quand la ruine est une ruine de section, mais elle ignore que l'élancement
+    croît avec la température. La <strong>vérification croisée</strong> cherche donc la température à
+    laquelle le taux complet, flambement et interaction compris, atteint 1,00 : 540 °C. L'outil retient
+    la plus basse. Ici, l'écart est faible ; sur un poteau élancé, il dépasse souvent 30 °C, et un
+    avertissement le signale.</p>
+    <p>Le détail indique aussi le critère gouvernant (ici l'éq. (4.21b), avec χ<sub>z</sub>), la classe de
+    section (classe 3 : l'âme de 360 mm sur 12 mm est trop élancée pour la plastification, et le module
+    élastique est retenu), le facteur de massiveté A<sub>p</sub>/V = 67,8 m⁻¹ et la protection.</p>
+  </div>
+  <figure>
+    <a href="manuel/images/05-resultats.png"><img src="manuel/images/05-resultats.png" alt="Zone des résultats : verdict satisfait, chiffres clés et détail" loading="lazy"></a>
+    <figcaption>Étape 4 : verdict, chiffres clés, températures critiques des deux voies, critère gouvernant.</figcaption>
+  </figure>
+</section>
+
+<section id="figures">
+  <div class="sechead"><span class="secnum">07</span><h2><span class="step">5</span>Les figures</h2></div>
+  <div class="body">
+    <p><strong>Nomogramme.</strong> Il se lit de gauche à droite. À gauche, la courbe de l'éq. (4.22) :
+    partir de μ<sub>0</sub> = 0,65 en abscisse, monter jusqu'à la courbe, lire θ<sub>cr</sub> sur l'axe
+    vertical commun. À droite, suivre cette horizontale jusqu'à la courbe d'échauffement de l'acier :
+    l'abscisse du croisement est t<sub>fi,d</sub> = 105 min. La verticale R90 doit tomber à gauche de ce
+    point.</p>
+  </div>
+  <figure>
+    <a href="manuel/images/06-nomogramme.png"><img src="manuel/images/06-nomogramme.png" alt="Onglet Nomogramme : chemin de lecture de μ0 à θcr puis à tfi,d" loading="lazy"></a>
+    <figcaption>Le nomogramme : μ<sub>0</sub> → θ<sub>cr</sub> → t<sub>fi,d</sub>.</figcaption>
+  </figure>
+  <div class="body">
+    <p><strong>Échauffement.</strong> Températures des gaz et de l'acier dans le temps, avec θ<sub>cr</sub> et
+    l'échéance. Le point vert marque la température de l'acier à 90 min et la marge.</p>
+  </div>
+  <figure>
+    <a href="manuel/images/07-echauffement.png"><img src="manuel/images/07-echauffement.png" alt="Onglet Échauffement : courbes des gaz et de l'acier" loading="lazy"></a>
+    <figcaption>L'échauffement de l'acier protégé, EN 1993-1-2 éq. (4.27).</figcaption>
+  </figure>
+  <div class="body">
+    <p><strong>Coupe de la section.</strong> Pour une section soudée seulement : la coupe à l'échelle,
+    cotée, avec le centre de gravité. C'est le contrôle de la saisie.</p>
+  </div>
+  <figure>
+    <a href="manuel/images/08-coupe.png"><img src="manuel/images/08-coupe.png" alt="Onglet Coupe de la section : caisson à l'échelle, coté" loading="lazy"></a>
+    <figcaption>La coupe du caisson 400×300×20/12, à l'échelle.</figcaption>
+  </figure>
+</section>
+
+<section id="note">
+  <div class="sechead"><span class="secnum">08</span><h2><span class="step">6</span>La note de calcul</h2></div>
+  <div class="body">
+    <p>Cliquez sur <strong>Enregistrer la note de calcul…</strong> en bas de la fenêtre. Le format
+    proposé est le <strong>PDF détaillé</strong> ; choisir l'extension <code>.md</code> donne à la place
+    un résumé Markdown, plus court, sans application numérique. Dans l'interface web, deux boutons de
+    téléchargement proposent les deux formats ; en ligne de commande, <code>--rapport note.pdf</code>.</p>
+    <p>La note PDF de cet exemple : <a href="manuel/images/note-exemple.pdf">note-exemple.pdf</a> (9 pages).</p>
+    <h3>Ce qu'elle contient</h3>
+    <p>Chaque calcul y est donné en trois temps, avec sa clause en marge : <strong>la formule
+    littérale</strong>, <strong>la même avec les valeurs substituées</strong>, puis <strong>le
+    résultat</strong>. Un vérificateur peut la refaire à la calculatrice, ligne par ligne.</p>
+    <div class="eq">θ_a,cr = 39,19 · ln[ 1 / (0,9674 · μ₀^3,833) − 1 ] + 482
+       = 39,19 · ln[ 1 / (0,9674 · 0,645^3,833) − 1 ] + 482
+       = 541,3 °C
+                                  EN 1993-1-2 §4.2.4, éq. (4.22)</div>
+    <ol>
+      <li><strong>Données</strong> : profilé, nuance, exposition, feu, protection, référentiel, γ<sub>M,fi</sub>,
+      κ<sub>1</sub> avec son origine (« quatre faces exposées »).</li>
+      <li><strong>Section</strong> : les tôles une à une, l'aire refaite par leur somme, les caractéristiques.</li>
+      <li><strong>Sollicitations</strong>, avec la convention de signe.</li>
+      <li><strong>Matériau et classification</strong> : ε, c/t de chaque paroi rapporté à ε, classe.</li>
+      <li><strong>Élancements à 20 °C</strong> : λ<sub>1</sub>, λ̄<sub>y</sub>, λ̄<sub>z</sub>, et M<sub>cr</sub>, λ̄<sub>LT</sub> quand le déversement s'applique.</li>
+      <li><strong>Résistances à 20 °C</strong> : α, φ<sub>θ</sub>, χ<sub>fi</sub> par axe, N<sub>b,fi,Rd</sub>, M<sub>fi,Rd</sub>.</li>
+      <li><strong>Interaction</strong> : μ<sub>y</sub>, k<sub>y</sub>, μ<sub>z</sub>, k<sub>z</sub>, μ<sub>LT</sub>, k<sub>LT</sub>, éq. (4.21a) et (4.21b), d'où μ<sub>0</sub>.</li>
+      <li><strong>Température critique</strong> : l'éq. (4.22), puis la vérification croisée <em>refaite à la
+      température trouvée</em> — k<sub>y,θ</sub>, k<sub>E,θ</sub>, élancements à chaud, résistances, taux — pour
+      montrer qu'il vaut bien 1,00.</li>
+      <li><strong>Échauffement</strong> : A<sub>p</sub>/V, puis un pas de l'intégration refait à la main
+      (c<sub>a</sub>, φ, Δθ<sub>a</sub>) et confronté à l'historique calculé, et le tableau θ<sub>g</sub>, θ<sub>a</sub>
+      toutes les 10 minutes.</li>
+      <li><strong>Vérification</strong> : θ<sub>a</sub>(90 min) ≤ θ<sub>cr</sub>, marge, t<sub>fi,d</sub>, verdict.</li>
+    </ol>
+    <p>Suivent les avertissements, la liste des clauses qui restent à recouper avec un exemplaire
+    officiel des normes, puis les figures : nomogramme, échauffement, coupe.</p>
+  </div>
+  <div class="pages">
+    <figure><a href="manuel/images/note-page-1.png"><img src="manuel/images/note-page-1.png" alt="Page 1 de la note : verdict, données, section" loading="lazy"></a><figcaption>Page 1 — verdict, données, section tôle par tôle.</figcaption></figure>
+    <figure><a href="manuel/images/note-page-4.png"><img src="manuel/images/note-page-4.png" alt="Page 4 de la note : interaction et équation (4.22)" loading="lazy"></a><figcaption>Page 4 — interaction N + M, μ<sub>0</sub>, éq. (4.22).</figcaption></figure>
+    <figure><a href="manuel/images/note-page-5.png"><img src="manuel/images/note-page-5.png" alt="Page 5 de la note : vérification croisée à 539,9 °C" loading="lazy"></a><figcaption>Page 5 — vérification croisée refaite à 539,9 °C : taux = 1,000.</figcaption></figure>
+    <figure><a href="manuel/images/note-page-6.png"><img src="manuel/images/note-page-6.png" alt="Page 6 de la note : échauffement, pas refait à la main, verdict" loading="lazy"></a><figcaption>Page 6 — échauffement, un pas refait à la main, vérification.</figcaption></figure>
+  </div>
+  <div class="body">
+    <div class="note"><p><strong>Comment contrôler la note.</strong> Le pas thermique refait page 6 donne
+    Δθ<sub>a</sub> = 0,326 K, et l'historique passe de 484,84 °C à 485,16 °C : les deux concordent. La
+    vérification croisée page 5 retombe sur un taux de 1,000. Ce sont les deux recoupements à regarder
+    en premier : s'ils tiennent, la chaîne de calcul est cohérente avec elle-même.</p></div>
+  </div>
+</section>
+
+<section id="variantes">
+  <div class="sechead"><span class="secnum">09</span><h2>Variantes</h2></div>
+  <div class="body">
+    <h3>Protection en bois lamellé-collé</h3>
+    <p>Pour un moulage négatif du profilé en lamellé-collé, à face extérieure rectangulaire : produit
+    <em>Bois lamellé-collé GL24h</em>, exposition <strong>caisson</strong>, et pour d<sub>p</sub>
+    <strong>l'enrobage minimal</strong> de bois devant l'acier (devant la semelle ou le bout d'aile),
+    jamais l'épaisseur au droit de l'âme.</p>
+    <p>Le bois carbonise : son épaisseur saine décroît selon d(t) = d<sub>p</sub> − β<sub>n</sub>·t, avec
+    β<sub>n</sub> = 0,7 mm/min <span class="c">EN 1995-1-2 §3.4.2(2), éq. (3.2)</span>. Sous 5 mm de bois
+    sain, l'acier est calculé nu. Le résultat affiche l'instant où la protection est perdue, et un
+    avertissement rappelle que ce modèle sort du domaine de l'EN 1993-1-2 : il doit être justifié par un
+    calcul avancé ou un essai.</p>
+    <h3>Poutre sous dalle, trois faces</h3>
+    <p>Choisissez <em>Contour, 3 faces</em> ou <em>Caisson, 3 faces</em> : la semelle supérieure est
+    couverte, et κ<sub>1</sub> passe de lui-même à 0,70 (acier nu) ou 0,85 (protégé). Cochez
+    <em>Semelle comprimée maintenue</em> si la dalle la bloque latéralement.</p>
+    <h3>Le même calcul en ligne de commande</h3>
+<pre>nommo verifier --section caisson --h 400 --b 300 --tf 20 --tw 12 \
+      --nuance S355 --N=-3500 --My 100 --L 4 --lfi 2 --beta-M 1.4 \
+      --exposition caisson4 --duree R90 \
+      --protection plaques_silicate --dp 15 \
+      --rapport note.pdf</pre>
+    <p>Écrire <code>--N=-3500</code> avec le signe égal : sans lui, le tiret serait pris pour une option.</p>
+  </div>
+</section>
+
+<section id="limites">
+  <div class="sechead"><span class="secnum">10</span><h2>Limites à garder en tête</h2></div>
+  <div class="body">
+    <ul>
+      <li>L'outil ne constitue pas une justification de projet. La compression et la flexion simple sont
+      recoupées avec la documentation SZS steeltec 02 ; <strong>le déversement et l'interaction N + M
+      ne l'ont été avec aucun calcul de référence externe</strong>.</li>
+      <li>Les propriétés des produits de protection sont génériques : reprenez celles de l'agrément.</li>
+      <li>Les sections soudées ne sont recoupées par aucune table : contrôlez la coupe.</li>
+      <li>La note liste en fin les clauses qui restent à recouper avec un exemplaire officiel des normes.</li>
+    </ul>
+    <p>Le détail de la validation est dans <a href="validation.md">validation.md</a>, celui des clauses
+    citées dans <a href="references.md">references.md</a>.</p>
+  </div>
+</section>
+
+</main>
+</div>
+</body>
+</html>

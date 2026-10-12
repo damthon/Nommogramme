@@ -14,6 +14,12 @@ Toutes les clauses citées portent leur norme et leur paragraphe —
 [`docs/references.md`](docs/references.md), qui dit aussi lesquelles restent à
 recouper avec un exemplaire officiel.
 
+Pour prendre l'outil en main, [`docs/manuel-utilisation.html`](docs/manuel-utilisation.html)
+déroule un exemple complet — poteau caisson soudé protégé par plaques, R90 —
+écran par écran, jusqu'à la note de calcul PDF. Ouvrez-le depuis un clone du
+dépôt pour que les captures s'affichent ; `docs/manuel/capturer.py` les
+régénère.
+
 La conception d'ensemble — architecture, équations et clauses normatives — est
 décrite dans [`docs/plan-conception.html`](docs/plan-conception.html).
 GitHub affichant le code source d'un fichier HTML plutôt que son rendu, ouvrez
