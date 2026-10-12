@@ -30,6 +30,7 @@ from ..mecanique.interaction import TauxUtilisation, taux
 from ..mecanique.resistances import (
     elancement_reduit,
     elancement_reduit_LT,
+    kappa_1_pour,
     resistances_a,
 )
 from ..profils.geometrie import Exposition, facteur_massivete
@@ -96,6 +97,10 @@ class ResultatVerification:
     verdict: Verdict
     gouverne_par: str
     avertissements: tuple[str, ...] = field(default=())
+    C1: float = 1.0
+    kappa_1: float = 1.0
+    kappa_2: float = 1.0
+    """Paramètres d'entrée conservés pour la note de calcul."""
 
     @property
     def Am_sur_V(self) -> float:
@@ -119,6 +124,16 @@ class ResultatVerification:
         from ..rapport import note_de_calcul
 
         return note_de_calcul(self)
+
+    def note_de_calcul_pdf(self, chemin, section=None):
+        """Note de calcul en PDF, avec l'application numérique de chaque formule.
+
+        ``section`` : la section soudée d'origine, pour le détail des tôles et
+        la coupe. Voir ``nommogramme.note_pdf``.
+        """
+        from ..note_pdf import note_pdf
+
+        return note_pdf(self, chemin, section)
 
     @property
     def ecart_nomogramme(self) -> float | None:
@@ -241,7 +256,7 @@ def verifier(
     protection: Protection | None = None,
     courbe: CourbeFeu = ISO834,
     contexte: ContexteNormatif = SUISSE_SIA,
-    kappa_1: float = 1.0,
+    kappa_1: float | None = None,
     kappa_2: float = 1.0,
     C1: float = 1.0,
     duree_simulee_min: float | None = None,
@@ -250,10 +265,14 @@ def verifier(
 
     ``duree_requise_min`` est la durée exigée en minutes (30 pour R30, etc.).
     ``kappa_1`` et ``kappa_2`` sont les facteurs d'adaptation de flexion du
-    §4.2.3.3, ``C1`` le facteur de forme du diagramme de moment pour le calcul
+    §4.2.3.3. ``kappa_1`` laissé à ``None`` est déduit de l'exposition et de
+    la présence d'une protection (``kappa_1_pour``) ; une valeur donnée
+    l'impose. ``C1`` est le facteur de forme du diagramme de moment pour le calcul
     du moment critique de déversement.
     """
     avertissements: list[str] = []
+    if kappa_1 is None:
+        kappa_1 = kappa_1_pour(exposition.trois_faces, protection is not None)
     duree_requise = minutes(duree_requise_min)
     duree_simulee = minutes(
         duree_simulee_min if duree_simulee_min is not None else max(duree_requise_min * 2, 240)
@@ -370,4 +389,7 @@ def verifier(
         verdict=verdict,
         gouverne_par=utilisation_initiale.critere,
         avertissements=tuple(avertissements),
+        C1=C1,
+        kappa_1=kappa_1,
+        kappa_2=kappa_2,
     )

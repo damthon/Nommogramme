@@ -169,7 +169,6 @@ class Application(ttk.Frame):
             "protection": tk.StringVar(value=SANS_PROTECTION),
             "epaisseur": tk.DoubleVar(value=10.0),
             "contexte": tk.StringVar(value=defaut.contexte),
-            "kappa_1": tk.DoubleVar(value=defaut.kappa_1),
             "kappa_2": tk.DoubleVar(value=defaut.kappa_2),
             "C1": tk.DoubleVar(value=defaut.C1),
         }
@@ -221,7 +220,6 @@ class Application(ttk.Frame):
             protection=produit,
             epaisseur=lire("epaisseur") if produit != SANS_PROTECTION else None,
             contexte=self.var["contexte"].get(),
-            kappa_1=lire("kappa_1"),
             kappa_2=lire("kappa_2"),
             C1=lire("C1"),
         )
@@ -465,8 +463,10 @@ class Application(ttk.Frame):
             avances, 0, "Référentiel", self._liste(avances, "contexte", CONTEXTES),
             aide=AIDES["contexte"], cle="contexte",
         )
+        # κ₁ n'est plus saisi : il découle de l'exposition et de la protection.
+        self.etiquette_kappa_1 = ttk.Label(avances, text="")
         self._champ(
-            avances, 1, "κ₁  [-]", self._nombre(avances, "kappa_1"),
+            avances, 1, "κ₁  [-]", self.etiquette_kappa_1,
             aide=AIDES["kappa_1"], cle="kappa_1",
         )
         self._champ(
@@ -663,6 +663,9 @@ class Application(ttk.Frame):
             self.erreur = str(souci)
 
         self._afficher_section(saisie)
+        self.etiquette_kappa_1.configure(
+            text=f"{saisie.kappa_1:.2f}  (déduit de l'exposition)".replace(".", ",")
+        )
         self._afficher()
         self._figures_a_jour = False
         self._planifier_figures()
@@ -943,15 +946,19 @@ class Application(ttk.Frame):
         if self.resultat is None:
             messagebox.showwarning(_TITRE, "Rien à enregistrer : la saisie est incomplète.")
             return
+        nom = self.resultat.profil.nom.replace(" ", "").replace("/", "-")
         chemin = filedialog.asksaveasfilename(
             title="Enregistrer la note de calcul",
-            defaultextension=".md",
-            initialfile=f"note-{self.resultat.profil.nom.replace(' ', '')}.md",
-            filetypes=[("Markdown", "*.md"), ("Tous les fichiers", "*.*")],
+            defaultextension=".pdf",
+            initialfile=f"note-{nom}.pdf",
+            filetypes=[("PDF détaillé", "*.pdf"), ("Markdown", "*.md")],
         )
         if not chemin:
             return
-        Path(chemin).write_text(self.resultat.note_de_calcul(), encoding="utf-8")
+        if chemin.lower().endswith(".md"):
+            Path(chemin).write_text(self.resultat.note_de_calcul(), encoding="utf-8")
+        else:
+            self.resultat.note_de_calcul_pdf(chemin, self.saisie().section())
         messagebox.showinfo(_TITRE, f"Note enregistrée :\n{chemin}")
 
     def enregistrer_figures(self) -> None:

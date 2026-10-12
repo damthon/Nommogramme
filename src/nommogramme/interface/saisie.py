@@ -31,6 +31,7 @@ from nommogramme.contexte import EUROCODE_REC, SUISSE_SIA, ContexteNormatif
 from nommogramme.materiaux.acier import Nuance
 from nommogramme.materiaux.protection import Protection, charger_protections
 from nommogramme.mecanique.actions import CasDeCharge
+from nommogramme.mecanique.resistances import kappa_1_pour
 from nommogramme.nomogramme.verification import ResultatVerification, verifier
 from nommogramme.profils import Catalogue, Exposition, Famille, Profil, charger_csv
 from nommogramme.profils.composes import (
@@ -119,9 +120,11 @@ AIDES: dict[str, str] = {
         "moment quelconque au moment constant équivalent."
     ),
     "kappa_1": EC3_KAPPA.infobulle(
-        "Facteur d'adaptation pour température non uniforme sur la section. "
-        "Une poutre sous dalle est plus froide en semelle supérieure que ne "
-        "le suppose l'hypothèse de température uniforme."
+        "Facteur d'adaptation pour température non uniforme sur la section, "
+        "déduit de l'exposition : 1,00 sur quatre faces ; sur trois faces, "
+        "0,70 sans protection et 0,85 avec. Une poutre sous dalle est plus "
+        "froide en semelle supérieure que ne le suppose l'hypothèse de "
+        "température uniforme."
     ),
     "kappa_2": EC3_KAPPA.infobulle(
         "Facteur d'adaptation pour température non uniforme le long de la "
@@ -267,7 +270,6 @@ class Saisie:
     """Épaisseur de protection [mm]. Ignorée sans protection."""
 
     contexte: str = "Suisse — SIA 263 / SIA 260"
-    kappa_1: float = 1.0
     kappa_2: float = 1.0
     C1: float = 1.0
 
@@ -294,6 +296,11 @@ class Saisie:
     def soudee(self) -> bool:
         """La section est-elle reconstituée plutôt que tirée du catalogue ?"""
         return self.type_section != CATALOGUE
+
+    @property
+    def kappa_1(self) -> float:
+        """κ₁ déduit de l'exposition et de la protection, §4.2.3.3(7)."""
+        return kappa_1_pour(EXPOSITIONS[self.exposition].trois_faces, self.protegee)
 
     def section(self) -> SectionSoudee | None:
         """La section soudée décrite, ou ``None`` si elle vient du catalogue.
@@ -374,7 +381,6 @@ def executer(saisie: Saisie) -> ResultatVerification:
         protection=protection,
         courbe=COURBES[saisie.feu],
         contexte=CONTEXTES[saisie.contexte],
-        kappa_1=saisie.kappa_1,
         kappa_2=saisie.kappa_2,
         C1=saisie.C1,
     )

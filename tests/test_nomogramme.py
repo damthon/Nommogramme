@@ -219,8 +219,10 @@ class TestVerification:
             cas=CasDeCharge(My_fi_Ed=60e3, L=6.0, maintien_lateral=True),
             exposition=Exposition.CONTOUR_3_FACES, duree_requise_min=30,
         )
-        sans = verifier(**commun)
+        sans = verifier(kappa_1=1.0, **commun)
         avec = verifier(kappa_1=0.70, **commun)
+        # Laissé libre, κ₁ est déduit de l'exposition : 3 faces, nu → 0,70.
+        assert verifier(**commun).mu_0 == avec.mu_0
         assert avec.mu_0 < sans.mu_0
         assert avec.theta_cr > sans.theta_cr
 

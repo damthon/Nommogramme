@@ -87,7 +87,7 @@ class TestSaisie:
         attendus = {
             "famille", "profil", "nuance", "N", "My", "Mz", "L", "l_fi",
             "maintien", "beta_M", "exposition", "feu", "duree", "produit",
-            "contexte", "kappa_1", "kappa_2", "C1",
+            "contexte", "kappa_2", "C1",
         }
         # « in » plutôt que filtered_state, attribut privé retiré de Streamlit.
         manquants = {cle for cle in attendus if cle not in app.session_state}
@@ -207,8 +207,9 @@ class TestRestitution:
 
     def test_la_note_de_calcul_est_telechargeable(self, app: AppTest) -> None:
         boutons = app.get("download_button")
-        assert len(boutons) == 1
+        assert len(boutons) == 2
         assert "note de calcul" in boutons[0].label.lower()
+        assert "pdf" in boutons[0].label.lower()
 
     def test_l_avertissement_de_validation_est_affiche(self, app: AppTest) -> None:
         """La validation est partielle : l'écran doit dire où elle s'arrête.

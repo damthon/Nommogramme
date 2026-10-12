@@ -14,6 +14,12 @@ Toutes les clauses citées portent leur norme et leur paragraphe —
 [`docs/references.md`](docs/references.md), qui dit aussi lesquelles restent à
 recouper avec un exemplaire officiel.
 
+Pour prendre l'outil en main, [`docs/manuel-utilisation.html`](docs/manuel-utilisation.html)
+déroule un exemple complet — poteau caisson soudé protégé par plaques, R90 —
+écran par écran, jusqu'à la note de calcul PDF. Ouvrez-le depuis un clone du
+dépôt pour que les captures s'affichent ; `docs/manuel/capturer.py` les
+régénère.
+
 La conception d'ensemble — architecture, équations et clauses normatives — est
 décrite dans [`docs/plan-conception.html`](docs/plan-conception.html).
 GitHub affichant le code source d'un fichier HTML plutôt que son rendu, ouvrez
@@ -167,6 +173,17 @@ Propres à `verifier` : `--contexte {sia,eurocode}` pour changer de référentie
 `--kappa1` et `--kappa2` pour les facteurs d'adaptation du §4.2.3.3(7), `--C1`
 pour le diagramme de moment, `--theme clair|sombre` pour les figures. Le code de
 sortie vaut 0 si l'exigence est satisfaite, 2 sinon — utilisable en script.
+
+κ₁ se déduit de l'exposition quand `--kappa1` est omis, et les deux interfaces
+n'en proposent plus la saisie : 1,00 sur quatre faces ; sur trois faces, 0,70
+sans protection et 0,85 avec (EN 1993-1-2 §4.2.3.3(7)). La documentation SZS
+retient 0,70 dans deux exemples protégés : pour la suivre, imposer `--kappa1 0.7`.
+
+`--rapport note.pdf` écrit la **note de calcul détaillée en PDF** : chaque
+formule y figure littéralement, puis avec ses valeurs substituées, puis son
+résultat et sa clause normative ; la vérification croisée est refaite à la
+température critique trouvée, un pas de l'échauffement est refait à la main, et
+les figures suivent. Toute autre extension donne le résumé Markdown.
 
 Section soudée, communes à `verifier` et `section` : `--section {caisson,h}`,
 puis `--h --b --tf --tw` en millimètres, et pour un H à semelles inégales

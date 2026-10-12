@@ -47,6 +47,7 @@ from nommogramme.interface.saisie import (
     produits,
 )
 from nommogramme.materiaux.acier import Nuance
+from nommogramme.mecanique.resistances import kappa_1_pour
 from nommogramme.nomogramme.trace import (
     tracer_echauffement,
     tracer_nomogramme,
@@ -227,8 +228,12 @@ def _saisie() -> Saisie:
         contexte = st.selectbox(
             "Référentiel", list(_CONTEXTES), key="contexte", help=AIDES["contexte"]
         )
-        kappa_1 = st.number_input(
-            "κ₁  [-]", value=1.00, key="kappa_1", min_value=0.5, max_value=1.0, step=0.05,
+        kappa_1 = kappa_1_pour(
+            _EXPOSITIONS[exposition].trois_faces, choix != SANS_PROTECTION
+        )
+        st.caption(
+            f"κ₁ = {kappa_1:.2f} — déduit de l'exposition et de la protection "
+            "(EN 1993-1-2 §4.2.3.3(7)).".replace(".", ",", 1),
             help=AIDES["kappa_1"],
         )
         kappa_2 = st.number_input(
@@ -245,7 +250,7 @@ def _saisie() -> Saisie:
         N=N, My=My, Mz=Mz, L=L, l_fi=l_fi,
         maintien=maintien, beta_M=beta_M, exposition=exposition, feu=feu,
         duree=duree, protection=choix, epaisseur=epaisseur,
-        contexte=contexte, kappa_1=kappa_1, kappa_2=kappa_2, C1=C1,
+        contexte=contexte, kappa_2=kappa_2, C1=C1,
         **dimensions,
     )
 
@@ -347,13 +352,24 @@ def _figures(r: ResultatVerification, saisie: Saisie) -> None:
             )
 
 
-def _note(r: ResultatVerification) -> None:
+def _note(r: ResultatVerification, saisie: Saisie) -> None:
+    import io
+
     note = r.note_de_calcul()
+    base = f"note-{r.profil.nom.replace(' ', '').replace('/', '-')}-R" \
+           f"{en_minutes(r.duree_requise):.0f}"
+    pdf = io.BytesIO()
+    r.note_de_calcul_pdf(pdf, saisie.section())
     st.download_button(
-        "Télécharger la note de calcul",
+        "Télécharger la note de calcul (PDF détaillé)",
+        data=pdf.getvalue(),
+        file_name=f"{base}.pdf",
+        mime="application/pdf",
+    )
+    st.download_button(
+        "Télécharger le résumé (Markdown)",
         data=note.encode("utf-8"),
-        file_name=f"note-{r.profil.nom.replace(' ', '')}-R"
-                  f"{en_minutes(r.duree_requise):.0f}.md",
+        file_name=f"{base}.md",
         mime="text/markdown",
     )
     with st.expander("Voir la note de calcul"):
@@ -390,7 +406,7 @@ def principal() -> None:
         st.warning(reserve)
 
     _figures(resultat, saisie)
-    _note(resultat)
+    _note(resultat, saisie)
 
     st.divider()
     st.caption(

@@ -312,3 +312,16 @@ class TestInteraction:
         t = taux(-1000e3, 100e3, 0.0, res, profil.A)
         assert "hors §4.2.3.5" in t.critere
         assert t.facteurs is None
+
+
+class TestKappa1DeduitDeLExposition:
+    """EN 1993-1-2 §4.2.3.3(7) : κ₁ suit l'exposition et la protection."""
+
+    @pytest.mark.parametrize("trois_faces, protege, attendu", [
+        (False, False, 1.00), (False, True, 1.00),
+        (True, False, 0.70), (True, True, 0.85),
+    ])
+    def test_regle(self, trois_faces, protege, attendu) -> None:
+        from nommogramme.mecanique.resistances import kappa_1_pour
+
+        assert kappa_1_pour(trois_faces, protege) == attendu
