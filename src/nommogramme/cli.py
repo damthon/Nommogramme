@@ -36,7 +36,7 @@ from .profils import (
     facteur_ombre,
     perimetre_expose,
 )
-from .profils.composes import FaceCouverte, SectionCaisson, SectionH, SectionSoudee
+from .profils.composes import SectionCaisson, SectionH, SectionSoudee
 from .references import EC3_RESISTANCES, EC3_THETA_CR
 from .thermique import echauffement
 from .thermique.courbes import COURBES, courbe as courbe_par_nom
@@ -48,11 +48,6 @@ _EXPOSITIONS = {
     "contour3": Exposition.CONTOUR_3_FACES,
     "caisson4": Exposition.CAISSON_4_FACES,
     "caisson3": Exposition.CAISSON_3_FACES,
-}
-
-_FACES = {
-    "superieure": FaceCouverte.SUPERIEURE,
-    "inferieure": FaceCouverte.INFERIEURE,
 }
 
 _DUREES_USUELLES = (15, 30, 60, 90, 120, 180)
@@ -103,10 +98,6 @@ def _ajouter_arguments_section(analyseur: argparse.ArgumentParser) -> None:
     groupe.add_argument(
         "--tf-inf", type=float, help="Épaisseur de la semelle inférieure du H [mm]"
     )
-    groupe.add_argument(
-        "--face-couverte", choices=sorted(_FACES), default="superieure",
-        help="Semelle masquée par la dalle en exposition sur trois faces",
-    )
 
 
 def _section_depuis_arguments(a: argparse.Namespace) -> SectionSoudee | None:
@@ -138,7 +129,6 @@ def _section_depuis_arguments(a: argparse.Namespace) -> SectionSoudee | None:
         b_sup=mm(b_sup), tf_sup=mm(tf_sup),
         b_inf=mm(a.b_inf if a.b_inf is not None else b_sup),
         tf_inf=mm(a.tf_inf if a.tf_inf is not None else tf_sup),
-        face_couverte=_FACES[a.face_couverte],
     )
 
 
@@ -230,7 +220,7 @@ def _construire_analyseur() -> argparse.ArgumentParser:
     p_ver.add_argument("--nuance", choices=[n.value for n in Nuance], default="S355")
     p_ver.add_argument("--duree", type=_duree_minutes, required=True, help="En minutes")
     p_ver.add_argument("--N", type=float, default=0.0,
-                       help="Effort normal [kN], positif en compression")
+                       help="Effort normal [kN], négatif en compression (--N=-850)")
     p_ver.add_argument("--My", type=float, default=0.0, help="Moment axe fort [kN·m]")
     p_ver.add_argument("--Mz", type=float, default=0.0, help="Moment axe faible [kN·m]")
     p_ver.add_argument("--L", type=float, default=0.0, help="Longueur d'épure [m]")

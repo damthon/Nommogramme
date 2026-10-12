@@ -348,7 +348,7 @@ class TestChaineComplete:
             profil=section.profil(),
             nuance=Nuance.S355,
             cas=CasDeCharge(
-                N_fi_Ed=600e3, My_fi_Ed=100e3, L=5.0, l_fi_y=5.0, l_fi_z=5.0,
+                N_fi_Ed=-600e3, My_fi_Ed=100e3, L=5.0, l_fi_y=5.0, l_fi_z=5.0,
                 beta_M_y=1.4,
             ),
             exposition=Exposition.CONTOUR_4_FACES,
@@ -362,7 +362,7 @@ class TestChaineComplete:
         """Une section soudée n'existe nulle part ailleurs que dans la note."""
         resultat = verifier(
             profil=H_MONOSYMETRIQUE.profil(), nuance=Nuance.S355,
-            cas=CasDeCharge(N_fi_Ed=400e3, My_fi_Ed=80e3, L=5.0, l_fi_y=5.0, l_fi_z=5.0),
+            cas=CasDeCharge(N_fi_Ed=-400e3, My_fi_Ed=80e3, L=5.0, l_fi_y=5.0, l_fi_z=5.0),
             exposition=Exposition.CONTOUR_3_FACES, duree_requise_min=60,
         )
         note = resultat.note_de_calcul()

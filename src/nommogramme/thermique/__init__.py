@@ -6,6 +6,7 @@ from .evolution import (
     DT_MAX_PROTEGE,
     DT_NON_PROTEGE,
     DT_PROTEGE,
+    EPAISSEUR_SAINE_MIN,
     ResultatThermique,
     echauffement,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "DT_MAX_PROTEGE",
     "DT_NON_PROTEGE",
     "DT_PROTEGE",
+    "EPAISSEUR_SAINE_MIN",
     "EPAISSEURS_COMMERCIALES",
     "EPSILON_ACIER_CARBONE",
     "EPSILON_ACIER_INOX",

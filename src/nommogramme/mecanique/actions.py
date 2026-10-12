@@ -50,8 +50,9 @@ def beta_M_lineaire(psi: float) -> float:
 class CasDeCharge:
     """Sollicitations et conditions d'appui en situation d'incendie.
 
-    Convention de signe : ``N_fi_Ed`` est **positif en compression**, négatif
-    en traction, conformément à l'usage des vérifications de flambement.
+    Convention de signe : ``N_fi_Ed`` est **négatif en compression**, positif
+    en traction. Les formules de l'EN 1993-1-2 raisonnent en compression
+    positive : ``N_compression`` en fait la traduction, en un seul endroit.
 
     Les longueurs de flambement sont celles de la situation d'incendie, pas
     celles de l'ELU : un poteau continu d'un contreventement est bridé par les
@@ -60,7 +61,7 @@ class CasDeCharge:
     """
 
     N_fi_Ed: float = 0.0
-    """Effort normal [N], positif en compression."""
+    """Effort normal [N], négatif en compression."""
     My_fi_Ed: float = 0.0
     """Moment de flexion autour de l'axe fort [N·m], en valeur absolue."""
     Mz_fi_Ed: float = 0.0
@@ -110,11 +111,16 @@ class CasDeCharge:
 
     @property
     def comprime(self) -> bool:
-        return self.N_fi_Ed > 0.0
+        return self.N_fi_Ed < 0.0
 
     @property
     def tendu(self) -> bool:
-        return self.N_fi_Ed < 0.0
+        return self.N_fi_Ed > 0.0
+
+    @property
+    def N_compression(self) -> float:
+        """Effort normal [N] positif en compression, convention des formules."""
+        return -self.N_fi_Ed
 
     @property
     def flechi(self) -> bool:

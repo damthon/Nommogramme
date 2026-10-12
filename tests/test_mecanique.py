@@ -63,8 +63,8 @@ class TestActions:
             beta_M_lineaire(1.5)
 
     def test_convention_de_signe(self) -> None:
-        assert CasDeCharge(N_fi_Ed=100.0).comprime
-        assert CasDeCharge(N_fi_Ed=-100.0).tendu
+        assert CasDeCharge(N_fi_Ed=-100.0).comprime
+        assert CasDeCharge(N_fi_Ed=100.0).tendu
         assert not CasDeCharge(N_fi_Ed=0.0).comprime
 
     def test_moment_negatif_refuse(self) -> None:

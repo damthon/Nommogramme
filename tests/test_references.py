@@ -18,7 +18,7 @@ from nommogramme.references import REFERENCES, Reference, a_recouper
 
 _NORMES_CONNUES = {
     "EN 1993-1-2", "EN 1993-1-1", "EN 1991-1-2", "ENV 1993-1-1",
-    "SIA 263", "SIA 260", "SZS C5/05",
+    "SIA 263", "SIA 260", "SZS C5/05", "EN 1995-1-2", "EN 14080",
 }
 
 
@@ -102,7 +102,7 @@ class TestUsageDansLeCode:
 
         resultat = verifier(
             profil=catalogue["HEB 300"], nuance=Nuance.S355,
-            cas=CasDeCharge(N_fi_Ed=850e3, My_fi_Ed=120e3, L=4.0,
+            cas=CasDeCharge(N_fi_Ed=-850e3, My_fi_Ed=120e3, L=4.0,
                             l_fi_y=2.0, l_fi_z=2.0),
             exposition=Exposition.CONTOUR_4_FACES, duree_requise_min=60,
         )
@@ -120,6 +120,8 @@ class TestUsageDansLeCode:
             ("beta_M", "EN 1993-1-2 fig. 4.2"),
             ("l_fi", "EN 1993-1-2 §4.2.3.2(4)"),
             ("maintien", "éq. (4.21b)"),
+            ("protection", "EN 1995-1-2 §3.4.2"),
+            ("epaisseur", "EN 1995-1-2 §3.4.2(2), éq. (3.2)"),
         ):
             assert attendu in AIDES[parametre], (
                 f"l'aide de « {parametre} » ne cite pas {attendu}"

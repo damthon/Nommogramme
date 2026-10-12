@@ -132,7 +132,7 @@ class TestVerifier:
         code = main(
             [
                 "verifier", "HEB 300", "--nuance", "S355",
-                "--N", "850", "--My", "120", "--L", "4", "--lfi", "2",
+                "--N", "-850", "--My", "120", "--L", "4", "--lfi", "2",
                 "--duree", "R60",
             ]
         )
@@ -145,7 +145,7 @@ class TestVerifier:
     def test_code_de_sortie_signale_l_echec(self, capsys) -> None:
         """Un élément nu sous forte charge ne tient pas R90 : code 2."""
         code = main(
-            ["verifier", "HEB 300", "--N", "850", "--My", "120",
+            ["verifier", "HEB 300", "--N", "-850", "--My", "120",
              "--L", "4", "--lfi", "2", "--duree", "R90"]
         )
         assert code == 2
@@ -153,7 +153,7 @@ class TestVerifier:
 
     def test_la_protection_fait_passer(self, capsys) -> None:
         code = main(
-            ["verifier", "HEB 300", "--N", "850", "--My", "120",
+            ["verifier", "HEB 300", "--N", "-850", "--My", "120",
              "--L", "4", "--lfi", "2", "--duree", "R60",
              "--protection", "flocage_fibreux", "--dp", "25"]
         )
@@ -162,7 +162,7 @@ class TestVerifier:
 
     def test_avertissement_si_le_nomogramme_est_optimiste(self, capsys) -> None:
         main(
-            ["verifier", "HEB 300", "--N", "850", "--My", "120",
+            ["verifier", "HEB 300", "--N", "-850", "--My", "120",
              "--L", "8", "--lfi", "8", "--duree", "R60"]
         )
         assert "non conservatif" in capsys.readouterr().out
@@ -175,14 +175,14 @@ class TestVerifier:
         assert "4.21a" in capsys.readouterr().out
 
     def test_choix_du_referentiel(self, capsys) -> None:
-        main(["verifier", "HEB 300", "--N", "500", "--L", "4",
+        main(["verifier", "HEB 300", "--N", "-500", "--L", "4",
               "--duree", "R30", "--contexte", "eurocode"])
         assert "Eurocode" in capsys.readouterr().out
 
     def test_ecriture_de_la_note(self, tmp_path, capsys) -> None:
         destination = tmp_path / "note.md"
         main(
-            ["verifier", "HEB 300", "--N", "850", "--My", "120",
+            ["verifier", "HEB 300", "--N", "-850", "--My", "120",
              "--L", "4", "--lfi", "2", "--duree", "R60",
              "--rapport", str(destination)]
         )
@@ -226,20 +226,6 @@ class TestSection:
         ) == 0
         assert "PRS 600×300×20/10" in capsys.readouterr().out
 
-    def test_la_face_couverte_change_le_perimetre(self, capsys) -> None:
-        perimetres = []
-        for face in ("superieure", "inferieure"):
-            main(["section", *self._PRS, "--exposition", "contour3",
-                  "--face-couverte", face])
-            sortie = capsys.readouterr().out
-            ligne = next(
-                l for l in sortie.splitlines() if l.startswith("Périmètre exposé")
-            )
-            perimetres.append(float(ligne.split(":")[1].strip().removesuffix(" mm")))
-        # Semelle supérieure de 300 mm, inférieure de 200 : couvrir la petite
-        # laisse 100 mm de plus exposés.
-        assert perimetres[1] - perimetres[0] == pytest.approx(100.0, abs=1.0)
-
     def test_une_cote_manquante_est_signalee(self, capsys) -> None:
         assert main(["section", "--section", "caisson", "--h", "400"]) == 1
         assert "--b est requis" in capsys.readouterr().err
@@ -264,7 +250,7 @@ class TestSection:
 
     def test_verifier_accepte_une_section_soudee(self, capsys) -> None:
         code = main(
-            ["verifier", *self._CAISSON, "--N", "800", "--My", "120",
+            ["verifier", *self._CAISSON, "--N", "-800", "--My", "120",
              "--L", "4", "--lfi", "2", "--duree", "R30"]
         )
         sortie = capsys.readouterr().out
@@ -279,7 +265,7 @@ class TestSection:
     def test_la_note_decrit_la_section(self, tmp_path, capsys) -> None:
         destination = tmp_path / "note.md"
         main(
-            ["verifier", *self._PRS, "--N", "400", "--My", "80", "--L", "5",
+            ["verifier", *self._PRS, "--N", "-400", "--My", "80", "--L", "5",
              "--duree", "R60", "--exposition", "contour3",
              "--rapport", str(destination)]
         )
@@ -291,7 +277,7 @@ class TestSection:
     def test_tracer_section_exige_une_section(self, tmp_path, capsys) -> None:
         pytest.importorskip("matplotlib", reason="le tracé demande l'extra [trace]")
         assert main(
-            ["verifier", "HEB 300", "--N", "500", "--L", "4", "--duree", "R30",
+            ["verifier", "HEB 300", "--N", "-500", "--L", "4", "--duree", "R30",
              "--tracer-section", str(tmp_path / "x.png")]
         ) == 1
         assert "section soudée" in capsys.readouterr().err

@@ -222,6 +222,52 @@ EC3_1_1_CISAILLEMENT = Reference(
     "EN 1993-1-1", "§6.2.6", objet="aire de cisaillement A_v"
 )
 
+# --- EN 1995-1-2 : structures en bois, situation d'incendie --------------------
+#
+# Citées pour la protection en bois lamellé-collé. L'EN 1993-1-2 ne prévoit pas
+# d'isolant combustible : le modèle qui les combine est une hypothèse du projet,
+# décrite dans ``thermique/evolution.py``.
+
+EC5_CARBONISATION = Reference(
+    "EN 1995-1-2",
+    "§3.4.2(2)",
+    "(3.2)",
+    "profondeur de carbonisation fictive d_char,n = β_n·t",
+    remarque=(
+        "β_n inclut l'effet des arrondis en coins et des fentes (fig. 3.2) ; "
+        "elle est constante avec le temps."
+    ),
+)
+EC5_BETA_N = Reference(
+    "EN 1995-1-2",
+    "§3.4.2, tab. 3.1",
+    objet="vitesse de carbonisation fictive β_n = 0,7 mm/min du lamellé-collé résineux",
+    confirmee=False,
+    remarque=(
+        "Valeur pour un lamellé-collé résineux de ρ_k ≥ 290 kg/m³, β₀ = 0,65 mm/min "
+        "en unidimensionnel. Ligne du tableau à recouper sur l'exemplaire."
+    ),
+)
+EC5_PROPRIETES_THERMIQUES = Reference(
+    "EN 1995-1-2",
+    "annexe B, tab. B.1 et B.2",
+    objet="conductivité et chaleur spécifique du bois en fonction de la température",
+    confirmee=False,
+    remarque=(
+        "Valeurs constantes retenues sur la plage du bois sain, 20 à 300 °C : "
+        "λ = 0,15 W/m·K, maximum de B.1 ; c = 1530 J/kg·K, valeur à 20 °C hors "
+        "pic d'évaporation de B.2. Tableaux lus de mémoire, à recouper."
+    ),
+)
+EN14080_MASSE_VOLUMIQUE = Reference(
+    "EN 14080",
+    "tab. 5",
+    objet="masse volumique du lamellé-collé, ρ_g,k = 385 kg/m³ en GL24h",
+    confirmee=False,
+    remarque="ρ_g,k du GL24h retenue ; à adapter à la classe réelle et à recouper.",
+)
+
+
 # --- hors Eurocodes -----------------------------------------------------------
 
 MCR_C1 = Reference(

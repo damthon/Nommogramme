@@ -522,6 +522,8 @@ autres écarts se résolvent de la même façon.
 | Numérotation exacte des éq. des facteurs k_y, k_z, k_LT (§4.2.3.5) | à recouper |
 | Valeurs de κ₁ selon protection ou type de dalle (§4.2.3.3(7)) | à recouper — divergence signalée ci-dessous |
 | Chiffre SIA 263 traitant la résistance au feu | à recouper |
+| **Protection en bois lamellé-collé** — d(t) = d_p − β_n·t puis éq. (4.25) | **non validé** — hors EN 1993-1-2, hypothèse du projet, voir README |
+| β_n, propriétés thermiques du bois, ρ du GL24h | à recouper — EN 1995-1-2 tab. 3.1 et annexe B, EN 14080 tab. 5 |
 | Constante de gauchissement I_w ≈ I_z·(h−t_f)²/4 | approximation, absente du catalogue SZS |
 
 Le détail des clauses citées et de leur état de vérification est dans
@@ -631,7 +633,7 @@ libelle = "Poteau HEB 300, R60, vérifié à la main le 12.03"
 source = "note de calcul interne 2024-117"
 profil = "HEB 300"
 nuance = "S355"
-N_fi_Ed_kN = 850.0
+N_fi_Ed_kN = -850.0          # négatif en compression
 My_fi_Ed_kNm = 120.0
 L = 4.0
 l_fi_y = 2.0

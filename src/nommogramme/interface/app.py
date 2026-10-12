@@ -38,7 +38,6 @@ from nommogramme.interface.saisie import (
 from nommogramme.interface.saisie import (
     AIDES,
     CATALOGUE,
-    FACES_COUVERTES,
     H_SOUDE,
     SANS_PROTECTION,
     TYPES_SECTION,
@@ -113,10 +112,6 @@ def _section_soudee(defaut: Saisie, type_section: str) -> dict[str, float | str]
             "t_f,inf  [mm]", value=defaut.tf_inf_soudee,
             min_value=1.0, step=1.0, key="tf_inf_soudee",
         )
-        dimensions["face_couverte"] = st.sidebar.selectbox(
-            "Dalle sur", list(FACES_COUVERTES), key="face_couverte",
-            help=AIDES["face_couverte"],
-        )
     return dimensions
 
 
@@ -156,9 +151,9 @@ def _saisie() -> Saisie:
     st.sidebar.header("Sollicitations en incendie")
     st.sidebar.caption(
         "Combinaison accidentelle, pas l'ELU fondamental. "
-        "N positif en compression."
+        "N négatif en compression."
     )
-    N = st.sidebar.number_input("N_fi,Ed  [kN]", value=850.0, step=50.0, key="N")
+    N = st.sidebar.number_input("N_fi,Ed  [kN]", value=-850.0, step=50.0, key="N")
     My = st.sidebar.number_input("M_y,fi,Ed  [kN·m]", value=120.0, min_value=0.0, step=10.0, key="My")
     Mz = st.sidebar.number_input("M_z,fi,Ed  [kN·m]", value=0.0, min_value=0.0, step=10.0, key="Mz")
 
@@ -202,6 +197,7 @@ def _saisie() -> Saisie:
     fiches = produits()
     choix = st.sidebar.selectbox(
         "Produit", [SANS_PROTECTION] + sorted(fiches), key="produit",
+        help=AIDES["protection"],
         format_func=lambda cle: (
             SANS_PROTECTION if cle == SANS_PROTECTION
             else fiches[cle].get("libelle", cle)
@@ -213,11 +209,17 @@ def _saisie() -> Saisie:
         epaisseur = st.sidebar.number_input(
             "Épaisseur d_p  [mm]", key="dp",
             value=float(fiche["dp_min"] * 1e3),
-            min_value=0.1, step=1.0,
+            min_value=0.1, step=1.0, help=AIDES["epaisseur"],
         )
         st.sidebar.caption(
             f"λ_p = {fiche['lambda_p']} W/m·K · ρ_p = {fiche['rho_p']:.0f} kg/m³ · "
-            f"c_p = {fiche['c_p']:.0f} J/kg·K · pose {fiche['pose']}. "
+            f"c_p = {fiche['c_p']:.0f} J/kg·K · pose {fiche['pose']}"
+            + (
+                f" · combustible, β_n = {fiche['beta_n_mm_min']} mm/min "
+                "(EN 1995-1-2 tab. 3.1)"
+                if "beta_n_mm_min" in fiche else ""
+            )
+            + ". "
             "Valeurs génériques, à remplacer par celles de l'agrément du produit."
         )
 

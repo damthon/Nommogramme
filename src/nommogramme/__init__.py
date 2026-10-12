@@ -23,7 +23,7 @@ des normes.
 Exemple :
 
     >>> from nommogramme import catalogue, Exposition, CasDeCharge, Nuance, verifier
-    >>> cas = CasDeCharge(N_fi_Ed=850e3, My_fi_Ed=120e3, L=4.0, l_fi_y=2.0, l_fi_z=2.0)
+    >>> cas = CasDeCharge(N_fi_Ed=-850e3, My_fi_Ed=120e3, L=4.0, l_fi_y=2.0, l_fi_z=2.0)
     >>> r = verifier(catalogue["HEB 300"], Nuance.S355, cas,
     ...              Exposition.CONTOUR_4_FACES, duree_requise_min=60)
     >>> round(r.mu_0, 3)
@@ -94,7 +94,7 @@ from .thermique import (
 )
 from .unites import en_minutes, kN, kNm, minutes, mm
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "Catalogue",

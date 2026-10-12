@@ -26,7 +26,7 @@ d'interrogation de Streamlit.
 
 ## Ce qui reste à recouper
 
-Cinq clauses sur trente-six n'ont **pas** été confrontées à un exemplaire
+Huit clauses sur quarante n'ont **pas** été confrontées à un exemplaire
 officiel des normes. Elles sont marquées comme telles dans le registre, dans
 les infobulles, et en fin de note de calcul. Ce n'est pas un détail
 d'affichage : c'est la seule façon honnête de distinguer ce qui a été vérifié
@@ -86,6 +86,22 @@ Les numéros de chiffres SIA correspondants n'ont pas été recoupés, et l'outi
 préfère ne pas en inventer : il nomme le chapitre plutôt qu'un numéro dont il
 n'est pas sûr.
 
+### EN 1995-1-2 et EN 14080 — la protection en bois lamellé-collé
+
+L'EN 1995-1-2 §3.4.2(2) et son éq. (3.2) sont confirmées par le texte de la
+norme : la vitesse fictive β_n inclut l'effet des arrondis en coins et des
+fentes (fig. 3.2), et elle est constante avec le temps. Restent à recouper,
+car lues de mémoire :
+
+- la ligne du tableau 3.1 : β_n = 0,7 mm/min, β₀ = 0,65 mm/min, pour un
+  lamellé-collé résineux de ρ_k ≥ 290 kg/m³ ;
+- les tableaux B.1 et B.2 de l'annexe B, dont sont tirées λ = 0,15 W/m·K et
+  c = 1530 J/kg·K ;
+- l'EN 14080 tab. 5, pour ρ_g,k = 385 kg/m³ en GL24h.
+
+Le modèle qui combine ces clauses avec l'EN 1993-1-2 est une hypothèse du
+projet, décrite dans le README.
+
 ## Le registre complet
 
 | Norme | Paragraphe | Équation | Objet | État |
@@ -122,6 +138,10 @@ n'est pas sûr.
 | EN 1993-1-2 | §4.2.5.1, tab. 4.2 et 4.3 | — | facteur de massiveté A_m/V et périmètres exposés | confirmée |
 | EN 1993-1-2 | §4.2.5.2 | (4.27) | échauffement d'un élément protégé | confirmée |
 | EN 1993-1-2 | §4.2.5.2 | (4.28) | rapport des capacités thermiques φ | confirmée |
+| EN 1995-1-2 | §3.4.2(2) | (3.2) | profondeur de carbonisation fictive d_char,n = β_n·t | confirmée |
+| EN 1995-1-2 | §3.4.2, tab. 3.1 | — | vitesse de carbonisation fictive β_n = 0,7 mm/min du lamellé-collé résineux | **à recouper** |
+| EN 1995-1-2 | annexe B, tab. B.1 et B.2 | — | conductivité et chaleur spécifique du bois en fonction de la température | **à recouper** |
+| EN 14080 | tab. 5 | — | masse volumique du lamellé-collé, ρ_g,k = 385 kg/m³ en GL24h | **à recouper** |
 | ENV 1993-1-1 | annexe F | — | moment critique élastique de déversement et facteur C₁ | **à recouper** |
 | SIA 260 | situations de projet accidentelles | — | combinaison d'actions, ψ₂ pour toutes les actions variables | **à recouper** |
 | SIA 263 | chapitre « Résistance au feu » | — | cadre suisse — renvoi à l'EN 1993-1-2 pour les méthodes détaillées | **à recouper** |

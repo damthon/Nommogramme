@@ -28,9 +28,14 @@ from .references import (
     EC3_PHI_PROTECTION,
     EC3_RESISTANCES,
     EC3_THETA_CR,
+    EC5_BETA_N,
+    EC5_CARBONISATION,
+    EC5_PROPRIETES_THERMIQUES,
+    EN14080_MASSE_VOLUMIQUE,
     SZS_C5,
     a_recouper,
 )
+from .thermique.evolution import EPAISSEUR_SAINE_MIN
 from .unites import en_kN, en_kNm, en_minutes
 
 __all__ = ["note_de_calcul"]
@@ -38,6 +43,25 @@ __all__ = ["note_de_calcul"]
 
 def _ligne(libelle: str, valeur: str, clause: str = "") -> str:
     return f"| {libelle} | {valeur} | {clause} |"
+
+
+def _protection_combustible(r: ResultatVerification) -> list[str]:
+    """Lignes du tableau thermique propres à une protection en bois."""
+    p = r.protection
+    t_ch = r.thermique.t_carbonisation
+    return [
+        _ligne("β_n", f"{p.beta_n * 60e3:.2f} mm/min", EC5_BETA_N.courte),
+        _ligne("Épaisseur saine d(t)", "d_p − β_n·t", EC5_CARBONISATION.courte),
+        _ligne("λ_p, c_p", f"{p.lambda_p} W/m·K, {p.c_p:.0f} J/kg·K",
+               EC5_PROPRIETES_THERMIQUES.courte),
+        _ligne("ρ_p", f"{p.rho_p:.0f} kg/m³", EN14080_MASSE_VOLUMIQUE.courte),
+        _ligne(
+            "Protection perdue à",
+            f"{en_minutes(t_ch):.1f} min" if t_ch is not None
+            else f"> {en_minutes(r.thermique.duree):.0f} min",
+            f"d(t) < {EPAISSEUR_SAINE_MIN * 1e3:.0f} mm, puis {EC3_ECHAUFFEMENT_NU.courte}",
+        ),
+    ]
 
 
 def _section_soudee(r: ResultatVerification) -> list[str]:
@@ -187,6 +211,8 @@ def note_de_calcul(r: ResultatVerification) -> str:
     lignes.append(_ligne("k_sh", f"{r.k_sh:.3f}", EC3_OMBRE.courte))
     if r.thermique.phi is not None:
         lignes.append(_ligne("φ", f"{r.thermique.phi:.3f}", EC3_PHI_PROTECTION.courte))
+    if r.protection is not None and r.protection.combustible:
+        lignes.extend(_protection_combustible(r))
     echauffement = (
         EC3_ECHAUFFEMENT_PROTEGE if r.protection else EC3_ECHAUFFEMENT_NU
     )

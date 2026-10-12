@@ -151,7 +151,7 @@ votre installation est bonne — inutile de chercher plus loin.
 ### Un calcul
 
 ```powershell
-nommo verifier "HEB 300" --nuance S355 --N 850 --My 120 --L 4 --lfi 2 --duree R60
+nommo verifier "HEB 300" --nuance S355 --N=-850 --My 120 --L 4 --lfi 2 --duree R60
 ```
 
 Vous devez voir apparaître μ₀, les deux températures critiques et le verdict.
@@ -168,7 +168,7 @@ paramètres sont dans la barre latérale, et chaque modification recalcule.
 ### Une figure
 
 ```powershell
-nommo verifier "HEB 300" --N 850 --My 120 --L 8 --lfi 8 --duree R90 --protection flocage_fibreux --dp 30 --tracer nomogramme.png
+nommo verifier "HEB 300" --N=-850 --My 120 --L 8 --lfi 8 --duree R90 --protection flocage_fibreux --dp 30 --tracer nomogramme.png
 ```
 
 Le fichier `nomogramme.png` apparaît dans le dossier du projet. Cliquez
@@ -186,7 +186,7 @@ from nommogramme import (
 )
 
 cas = CasDeCharge(
-    N_fi_Ed=850e3,      # N — attention, des newtons, pas des kN
+    N_fi_Ed=-850e3,     # N, négatif en compression — attention, des newtons, pas des kN
     My_fi_Ed=120e3,     # N·m
     L=4.0,              # m
     l_fi_y=2.0,
@@ -216,7 +216,7 @@ Si les kN vous vont mieux que les newtons :
 ```python
 from nommogramme import kN, kNm
 
-cas = CasDeCharge(N_fi_Ed=kN(850), My_fi_Ed=kNm(120), L=4.0, l_fi_y=2.0, l_fi_z=2.0)
+cas = CasDeCharge(N_fi_Ed=kN(-850), My_fi_Ed=kNm(120), L=4.0, l_fi_y=2.0, l_fi_z=2.0)
 ```
 
 ---

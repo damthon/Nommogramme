@@ -34,7 +34,6 @@ from nommogramme.mecanique.actions import CasDeCharge
 from nommogramme.nomogramme.verification import ResultatVerification, verifier
 from nommogramme.profils import Catalogue, Exposition, Famille, Profil, charger_csv
 from nommogramme.profils.composes import (
-    FaceCouverte,
     SectionCaisson,
     SectionH,
     SectionSoudee,
@@ -42,11 +41,13 @@ from nommogramme.profils.composes import (
 from nommogramme.references import (
     EC1_COURBES,
     EC3_BETA_M,
+    EC3_ECHAUFFEMENT_PROTEGE,
     EC3_GAMMA_M_FI,
     EC3_INTERACTION_DEVERSEMENT,
     EC3_KAPPA,
     EC3_LONGUEUR_FLAMBEMENT,
     EC3_MASSIVETE,
+    EC5_CARBONISATION,
     MCR_C1,
 )
 from nommogramme.thermique.courbes import COURBES
@@ -59,7 +60,6 @@ __all__ = [
     "CONTEXTES",
     "DUREES",
     "EXPOSITIONS",
-    "FACES_COUVERTES",
     "H_SOUDE",
     "SANS_PROTECTION",
     "TYPES_SECTION",
@@ -94,11 +94,6 @@ H_SOUDE = "Profilé en H soudé (PRS)"
 
 TYPES_SECTION: tuple[str, ...] = (CATALOGUE, CAISSON_SOUDE, H_SOUDE)
 """Origines possibles de la section, dans l'ordre des listes déroulantes."""
-
-FACES_COUVERTES: dict[str, FaceCouverte] = {
-    "Semelle supérieure": FaceCouverte.SUPERIEURE,
-    "Semelle inférieure": FaceCouverte.INFERIEURE,
-}
 
 
 AIDES: dict[str, str] = {
@@ -156,10 +151,21 @@ AIDES: dict[str, str] = {
         "Nuance d'acier. La limite d'élasticité décroît avec l'épaisseur de "
         "semelle, et cette décroissance est appliquée automatiquement."
     ),
-    "face_couverte": EC3_MASSIVETE.infobulle(
-        "Semelle que la dalle recouvre, en exposition sur trois faces. Sur "
-        "une section à semelles inégales, se tromper de face fausse le "
-        "périmètre exposé, donc l'échauffement."
+    "protection": EC3_ECHAUFFEMENT_PROTEGE.infobulle(
+        "Produit de protection. Un isolant classique garde son épaisseur. Le "
+        "bois lamellé-collé est combustible : son épaisseur saine décroît de "
+        "β_n = 0,7 mm/min (EN 1995-1-2 §3.4.2, tab. 3.1), le charbon est "
+        "négligé, et sous 5 mm de bois sain l'acier est calculé nu "
+        "(éq. (4.25)). Ce modèle est hors du domaine de l'EN 1993-1-2 : à "
+        "justifier par un calcul avancé ou un essai."
+    ),
+    "epaisseur": EC5_CARBONISATION.infobulle(
+        "Épaisseur d_p de la protection. Pour un moulage en bois à face "
+        "extérieure rectangulaire, choisir l'exposition « Caisson » et donner "
+        "l'enrobage minimal : la plus petite distance entre la face extérieure "
+        "du bois et l'acier (devant la semelle ou le bout d'aile), jamais "
+        "l'épaisseur au droit de l'âme. Le bois des chambres entre les ailes "
+        "est négligé, ce qui est sécuritaire."
     ),
     "type_section": (
         "Profilé du catalogue SZS, ou section reconstituée soudée dont vous "
@@ -233,11 +239,10 @@ class Saisie:
     """Largeur de la semelle inférieure du H [mm]. Ignorée pour un caisson."""
     tf_inf_soudee: float = 20.0
     """Épaisseur de la semelle inférieure du H [mm]. Ignorée pour un caisson."""
-    face_couverte: str = "Semelle supérieure"
     """Semelle masquée par la dalle, en exposition sur trois faces."""
 
-    N: float = 850.0
-    """Effort normal [kN], **positif en compression**."""
+    N: float = -850.0
+    """Effort normal [kN], **négatif en compression**."""
     My: float = 120.0
     """Moment autour de l'axe fort [kN·m]."""
     Mz: float = 0.0
@@ -307,7 +312,6 @@ class Saisie:
                 h=mm(self.h_soudee), tw=mm(self.tw_soudee),
                 b_sup=mm(self.b_soudee), tf_sup=mm(self.tf_soudee),
                 b_inf=mm(self.b_inf_soudee), tf_inf=mm(self.tf_inf_soudee),
-                face_couverte=FACES_COUVERTES[self.face_couverte],
             )
         if self.type_section != CATALOGUE:
             raise ValueError(

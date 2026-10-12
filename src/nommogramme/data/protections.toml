@@ -14,6 +14,8 @@
 # dp_min   : épaisseur usuelle minimale [m]
 # dp_max   : épaisseur usuelle maximale [m]
 # pose     : "contour" (suit la forme du profilé) ou "caisson" (encaissement)
+# beta_n_mm_min : vitesse de carbonisation fictive [mm/min], pour un produit
+#                 combustible seulement (EN 1995-1-2 §3.4.2, tab. 3.1)
 
 [flocage_fibreux]
 libelle = "Flocage fibreux (laine minérale projetée)"
@@ -60,3 +62,21 @@ c_p = 1200.0
 dp_min = 0.020
 dp_max = 0.060
 pose = "caisson"
+
+# Protection combustible : moulage négatif du profilé en lamellé-collé, face
+# extérieure rectangulaire. d_p est l'enrobage minimal de bois devant l'acier.
+# Valeurs constantes retenues sur la plage du bois sain (20 à 300 °C), du côté
+# défavorable — voir docs/references.md :
+#   lambda_p : 0,15, maximum de l'EN 1995-1-2 annexe B, tab. B.1
+#   c_p      : 1530, valeur à 20 °C hors pic d'évaporation, tab. B.2
+#   rho_p    : 385, rho_g,k du GL24h, EN 14080 tab. 5
+#   beta_n   : 0,7 mm/min, EN 1995-1-2 tab. 3.1, arrondis de coins inclus
+[bois_lamelle_colle]
+libelle = "Bois lamellé-collé GL24h (moulage, combustible)"
+lambda_p = 0.15
+rho_p = 385.0
+c_p = 1530.0
+dp_min = 0.040
+dp_max = 0.120
+pose = "caisson"
+beta_n_mm_min = 0.7

@@ -230,7 +230,7 @@ class TestExempleHEA300:
 
     def test_temperature_critique(self, profil, protection) -> None:
         """θ_crit = 580 °C lu dans la table."""
-        cas = CasDeCharge(N_fi_Ed=1205e3, L=3.0, l_fi_y=1.5, l_fi_z=1.5)
+        cas = CasDeCharge(N_fi_Ed=-1205e3, L=3.0, l_fi_y=1.5, l_fi_z=1.5)
         resultat = verifier(
             profil=profil, nuance=Nuance.S235,
             cas=cas, exposition=Exposition.CAISSON_4_FACES,

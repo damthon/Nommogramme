@@ -82,14 +82,14 @@ class TestVerificationCroisee:
 
     def test_element_trapu_les_deux_voies_concordent(self, cat) -> None:
         resultat = self._verifier(
-            cat, "HEB 300", N_fi_Ed=850e3, My_fi_Ed=120e3, L=4.0, l_fi_y=2.0, l_fi_z=2.0
+            cat, "HEB 300", N_fi_Ed=-850e3, My_fi_Ed=120e3, L=4.0, l_fi_y=2.0, l_fi_z=2.0
         )
         assert abs(resultat.ecart_nomogramme) < 10.0
 
     def test_element_elance_le_nomogramme_est_optimiste(self, cat) -> None:
         """C'est le cas que le plan annonce et que le garde-fou doit rattraper."""
         resultat = self._verifier(
-            cat, "HEB 300", N_fi_Ed=850e3, My_fi_Ed=120e3, L=8.0, l_fi_y=8.0, l_fi_z=8.0
+            cat, "HEB 300", N_fi_Ed=-850e3, My_fi_Ed=120e3, L=8.0, l_fi_y=8.0, l_fi_z=8.0
         )
         assert resultat.ecart_nomogramme > 50.0
         assert resultat.theta_cr == pytest.approx(resultat.theta_cr_exact)
@@ -99,7 +99,7 @@ class TestVerificationCroisee:
         compares = 0
         for longueur in (2.0, 4.0, 6.0, 8.0, 10.0):
             resultat = self._verifier(
-                cat, "HEA 200", N_fi_Ed=250e3, My_fi_Ed=20e3,
+                cat, "HEA 200", N_fi_Ed=-250e3, My_fi_Ed=20e3,
                 L=longueur, l_fi_y=longueur, l_fi_z=longueur,
             )
             if resultat.mu_0 >= 1.0:
@@ -118,14 +118,14 @@ class TestVerificationCroisee:
 
     def test_traction_les_deux_voies_concordent(self, cat) -> None:
         """Sans instabilité, l'éq. (4.22) est rigoureuse."""
-        resultat = self._verifier(cat, "IPE 300", N_fi_Ed=-400e3, L=6.0)
+        resultat = self._verifier(cat, "IPE 300", N_fi_Ed=400e3, L=6.0)
         assert abs(resultat.ecart_nomogramme) < 5.0
 
 
 class TestVerification:
     def _cas_poteau(self):
         return CasDeCharge(
-            N_fi_Ed=850e3, My_fi_Ed=120e3, L=4.0,
+            N_fi_Ed=-850e3, My_fi_Ed=120e3, L=4.0,
             l_fi_y=2.0, l_fi_z=2.0, beta_M_y=1.4,
         )
 
@@ -168,7 +168,7 @@ class TestVerification:
 
     def test_plus_de_charge_donne_moins_de_temperature_critique(self, cat) -> None:
         temperatures = []
-        for effort in (200e3, 600e3, 1000e3, 1400e3):
+        for effort in (-200e3, -600e3, -1000e3, -1400e3):
             resultat = verifier(
                 profil=cat["HEB 300"], nuance=Nuance.S355,
                 cas=CasDeCharge(N_fi_Ed=effort, L=4.0, l_fi_y=2.0, l_fi_z=2.0),
@@ -180,7 +180,7 @@ class TestVerification:
     def test_element_surcharge_signale(self, cat) -> None:
         resultat = verifier(
             profil=cat["IPE 200"], nuance=Nuance.S235,
-            cas=CasDeCharge(N_fi_Ed=2000e3, L=6.0),
+            cas=CasDeCharge(N_fi_Ed=-2000e3, L=6.0),
             exposition=Exposition.CONTOUR_4_FACES, duree_requise_min=30,
         )
         assert resultat.mu_0 >= 1.0
@@ -242,7 +242,7 @@ class TestNoteDeCalcul:
     def test_contenu(self, cat) -> None:
         resultat = verifier(
             profil=cat["HEB 300"], nuance=Nuance.S355,
-            cas=CasDeCharge(N_fi_Ed=850e3, My_fi_Ed=120e3, L=4.0, l_fi_y=2.0, l_fi_z=2.0),
+            cas=CasDeCharge(N_fi_Ed=-850e3, My_fi_Ed=120e3, L=4.0, l_fi_y=2.0, l_fi_z=2.0),
             exposition=Exposition.CONTOUR_4_FACES, duree_requise_min=60,
         )
         note = resultat.note_de_calcul()
@@ -261,7 +261,7 @@ class TestNoteDeCalcul:
         """
         resultat = verifier(
             profil=cat["HEB 300"], nuance=Nuance.S355,
-            cas=CasDeCharge(N_fi_Ed=850e3, My_fi_Ed=120e3, L=4.0, l_fi_y=2.0, l_fi_z=2.0),
+            cas=CasDeCharge(N_fi_Ed=-850e3, My_fi_Ed=120e3, L=4.0, l_fi_y=2.0, l_fi_z=2.0),
             exposition=Exposition.CONTOUR_4_FACES, duree_requise_min=60,
         )
         note = resultat.note_de_calcul()
@@ -278,7 +278,7 @@ class TestNoteDeCalcul:
     def test_mentionne_l_equation_de_protection(self, cat) -> None:
         resultat = verifier(
             profil=cat["HEB 300"], nuance=Nuance.S355,
-            cas=CasDeCharge(N_fi_Ed=850e3, L=4.0, l_fi_y=2.0, l_fi_z=2.0),
+            cas=CasDeCharge(N_fi_Ed=-850e3, L=4.0, l_fi_y=2.0, l_fi_z=2.0),
             exposition=Exposition.CONTOUR_4_FACES, duree_requise_min=60,
             protection=Protection.depuis_catalogue("flocage_fibreux", d_p=0.020),
         )
