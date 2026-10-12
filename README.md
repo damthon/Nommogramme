@@ -168,6 +168,17 @@ Propres à `verifier` : `--contexte {sia,eurocode}` pour changer de référentie
 pour le diagramme de moment, `--theme clair|sombre` pour les figures. Le code de
 sortie vaut 0 si l'exigence est satisfaite, 2 sinon — utilisable en script.
 
+κ₁ se déduit de l'exposition quand `--kappa1` est omis, et les deux interfaces
+n'en proposent plus la saisie : 1,00 sur quatre faces ; sur trois faces, 0,70
+sans protection et 0,85 avec (EN 1993-1-2 §4.2.3.3(7)). La documentation SZS
+retient 0,70 dans deux exemples protégés : pour la suivre, imposer `--kappa1 0.7`.
+
+`--rapport note.pdf` écrit la **note de calcul détaillée en PDF** : chaque
+formule y figure littéralement, puis avec ses valeurs substituées, puis son
+résultat et sa clause normative ; la vérification croisée est refaite à la
+température critique trouvée, un pas de l'échauffement est refait à la main, et
+les figures suivent. Toute autre extension donne le résumé Markdown.
+
 Section soudée, communes à `verifier` et `section` : `--section {caisson,h}`,
 puis `--h --b --tf --tw` en millimètres, et pour un H à semelles inégales
 `--b-inf --tf-inf`. Les cotes de la semelle inférieure reprennent celles de la

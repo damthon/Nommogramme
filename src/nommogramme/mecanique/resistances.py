@@ -34,6 +34,7 @@ __all__ = [
     "N_fi_Rd_traction",
     "N_b_fi_Rd",
     "M_fi_Rd",
+    "kappa_1_pour",
     "M_b_fi_Rd",
     "V_fi_Rd",
     "Resistances",
@@ -227,6 +228,21 @@ def M_fi_Rd(
     if kappa_1 <= 0.0 or kappa_2 <= 0.0:
         raise ValueError("Les facteurs d'adaptation doivent être positifs.")
     return module_plastique * k_y(theta) * fy / (gamma_M_fi * kappa_1 * kappa_2)
+
+
+def kappa_1_pour(trois_faces: bool, protege: bool) -> float:
+    """Facteur d'adaptation κ₁ déduit de l'exposition [-].
+
+    EN 1993-1-2 §4.2.3.3(7) : 1,00 pour un élément exposé sur quatre faces ;
+    sur trois faces, dalle en quatrième face, 0,70 non protégé et 0,85
+    protégé.
+
+    >>> kappa_1_pour(False, True), kappa_1_pour(True, False), kappa_1_pour(True, True)
+    (1.0, 0.7, 0.85)
+    """
+    if not trois_faces:
+        return 1.0
+    return 0.85 if protege else 0.70
 
 
 def M_b_fi_Rd(

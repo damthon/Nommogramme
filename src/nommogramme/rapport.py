@@ -22,6 +22,7 @@ from .references import (
     EC3_EPSILON,
     EC3_GAMMA_M_FI,
     EC3_INTERACTION_FLAMBEMENT,
+    EC3_KAPPA,
     EC3_MASSIVETE,
     EC3_MU_0,
     EC3_OMBRE,
@@ -139,6 +140,8 @@ def note_de_calcul(r: ResultatVerification) -> str:
         _ligne("Protection", str(r.protection) if r.protection else "aucune", "")
     )
     lignes.append(_ligne("γ_M,fi", f"{r.contexte.gamma_M_fi:.2f}", EC3_GAMMA_M_FI.courte))
+    lignes.append(_ligne("κ₁ ; κ₂", f"{r.kappa_1:.2f} ; {r.kappa_2:.2f}",
+                         f"{EC3_KAPPA.courte}, κ₁ déduit de l'exposition"))
     lignes.append("")
 
     if r.profil.soudee:

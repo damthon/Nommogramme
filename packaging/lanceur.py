@@ -115,11 +115,22 @@ def autotest() -> int:
         return 1
     tracer_section(section, exposition=soudee.exposition)
 
+    # La note PDF passe par backend_pdf et par mathtext, que rien d'autre
+    # n'emploie : un paquet qui les aurait perdus échouerait à l'export.
+    import io
+
+    tampon = io.BytesIO()
+    soudee.note_de_calcul_pdf(tampon, section)
+    if not tampon.getvalue().startswith(b"%PDF") or len(tampon.getvalue()) < 20_000:
+        print("La note de calcul PDF n'est pas produite.", file=sys.stderr)
+        return 1
+
     print(
         f"Autotest réussi — {len(differes)} modules différés présents, "
         f"{profils} profilés, {len(produits())} produits, "
         f"θ_cr = {resultat.theta_cr:.0f} °C, figures tracées, "
-        f"section soudée {soudee.profil.nom} calculée et dessinée."
+        f"section soudée {soudee.profil.nom} calculée et dessinée, "
+        f"note PDF de {len(tampon.getvalue()) // 1024} ko."
     )
     return 0
 

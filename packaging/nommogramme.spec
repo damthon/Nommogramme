@@ -56,6 +56,7 @@ analyse = Analysis(
     # vide sans message. C'est ce que le mode « --autotest » vérifie.
     hiddenimports=[
         "matplotlib.backends.backend_agg",
+        "matplotlib.backends.backend_pdf",
         "matplotlib.backends.backend_tkagg",
         "PIL.ImageTk",
         "PIL._tkinter_finder",

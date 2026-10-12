@@ -234,8 +234,9 @@ def _construire_analyseur() -> argparse.ArgumentParser:
     )
     p_ver.add_argument("--beta-M", type=float, default=1.3,
                        help="Facteur de moment uniforme équivalent [-]")
-    p_ver.add_argument("--kappa1", type=float, default=1.0,
-                       help="Facteur d'adaptation sur la section [-]")
+    p_ver.add_argument("--kappa1", type=float, default=None,
+                       help="Facteur d'adaptation sur la section [-] ; déduit de "
+                            "l'exposition s'il est omis (§4.2.3.3(7))")
     p_ver.add_argument("--kappa2", type=float, default=1.0,
                        help="Facteur d'adaptation sur la longueur [-]")
     p_ver.add_argument("--C1", type=float, default=1.0,
@@ -245,7 +246,8 @@ def _construire_analyseur() -> argparse.ArgumentParser:
     p_ver.add_argument("--protection")
     p_ver.add_argument("--dp", type=float, help="Épaisseur de protection [mm]")
     p_ver.add_argument("--contexte", choices=("sia", "eurocode"), default="sia")
-    p_ver.add_argument("--rapport", help="Écrire la note de calcul dans ce fichier")
+    p_ver.add_argument("--rapport", help="Écrire la note de calcul dans ce fichier : PDF détaillé si le nom "
+                            "finit par .pdf, Markdown sinon")
     p_ver.add_argument("--tracer", help="Écrire le nomogramme dans ce fichier image")
     p_ver.add_argument(
         "--tracer-echauffement", help="Écrire la courbe θ_a(t) dans ce fichier image"
@@ -437,8 +439,11 @@ def _cmd_verifier(a: argparse.Namespace) -> int:
     )
 
     if a.rapport:
-        with open(a.rapport, "w", encoding="utf-8") as fichier:
-            fichier.write(resultat.note_de_calcul())
+        if a.rapport.lower().endswith(".pdf"):
+            resultat.note_de_calcul_pdf(a.rapport, _section_depuis_arguments(a))
+        else:
+            with open(a.rapport, "w", encoding="utf-8") as fichier:
+                fichier.write(resultat.note_de_calcul())
         print(f"Note de calcul écrite dans {a.rapport}")
 
     if a.tracer or a.tracer_echauffement or a.tracer_section:
