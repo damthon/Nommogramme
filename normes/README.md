@@ -49,6 +49,8 @@ renvoi dans le `.md`.
 
 ```
 normes/
+├── pdf/                        # PDF originaux, non versionnés
+│   └── EN-1993-1-2.pdf
 └── EN-1993-1-2/
     ├── EN-1993-1-2.md          # texte intégral
     └── EN-1993-1-2-images.zip  # toutes les images, sous images/
@@ -58,6 +60,8 @@ normes/
   `SIA-263`, `EN-1993-1-2`, `EN-1991-1-2`…
 - Le zip contient un unique dossier `images/`. Une fois décompressé à côté du
   `.md`, les liens s'affichent directement.
+- Les PDF originaux se déposent dans `normes/pdf/`, qui n'est **pas versionné**
+  (voir [`.gitignore`](../.gitignore)) : seuls le `.md` et le zip entrent dans git.
 - Le dossier `images/` décompressé n'est **pas versionné** (voir
   [`.gitignore`](../.gitignore)) : le zip fait foi.
 
@@ -98,7 +102,7 @@ Outils : `pdfimages`, `pdftoppm` (paquet `poppler-utils`), `zip`.
 
    ```bash
    mkdir -p normes/EN-1993-1-2/images
-   pdfimages -png -p EN-1993-1-2.pdf normes/EN-1993-1-2/images/page
+   pdfimages -png -p normes/pdf/EN-1993-1-2.pdf normes/EN-1993-1-2/images/page
    ```
 
    Les fichiers sortent en `page-027-003.png` (page 27, 3ᵉ image du PDF). On les
@@ -112,7 +116,7 @@ Outils : `pdfimages`, `pdftoppm` (paquet `poppler-utils`), `zip`.
    ```bash
    # page 27, zone x y largeur hauteur en pixels à 300 dpi
    pdftoppm -png -r 300 -f 27 -l 27 -x 250 -y 900 -W 2000 -H 1400 -singlefile \
-     EN-1993-1-2.pdf normes/EN-1993-1-2/images/figure-4.1
+     normes/pdf/EN-1993-1-2.pdf normes/EN-1993-1-2/images/figure-4.1
    ```
 
 3. **Transcrire le texte** page par page en suivant les règles ci-dessus, en

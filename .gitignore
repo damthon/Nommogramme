@@ -12,3 +12,5 @@ packaging/dist/
 Release/
 # Images décompressées des normes : le zip fait foi
 normes/*/images/
+# PDF originaux des normes : protégés, jamais versionnés
+normes/pdf/
