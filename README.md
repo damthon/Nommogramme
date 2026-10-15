@@ -20,6 +20,10 @@ déroule un exemple complet — poteau caisson soudé protégé par plaques, R90
 dépôt pour que les captures s'affichent ; `docs/manuel/capturer.py` les
 régénère.
 
+Les normes de référence, transcrites intégralement des PDF originaux en
+Markdown avec leurs images en zip, sont rangées dans [`normes/`](normes/README.md),
+qui fixe les règles de transcription.
+
 La conception d'ensemble — architecture, équations et clauses normatives — est
 décrite dans [`docs/plan-conception.html`](docs/plan-conception.html).
 GitHub affichant le code source d'un fichier HTML plutôt que son rendu, ouvrez
