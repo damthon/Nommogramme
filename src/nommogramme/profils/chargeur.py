@@ -160,7 +160,12 @@ class Catalogue:
 
 
 def charger_csv(chemin: Path | str | None = None) -> Catalogue:
-    """Charge le catalogue depuis le CSV normalisé (unités SI)."""
+    """Charge le catalogue depuis le CSV normalisé (unités SI).
+
+    Le catalogue par défaut reçoit en plus les barres et tubes de
+    ``profils.barres`` (RND, VKT, ROR, FLA, FLB), calculés depuis leurs cotes.
+    """
+    defaut = chemin is None
     chemin = Path(chemin) if chemin is not None else _CSV_DEFAUT
     if not chemin.exists():
         raise FileNotFoundError(
@@ -179,6 +184,10 @@ def charger_csv(chemin: Path | str | None = None) -> Catalogue:
                 brut = ligne[champ]
                 valeurs[champ] = float(brut) if brut else None
             profils.append(Profil(**valeurs))  # type: ignore[arg-type]
+    if defaut:
+        from .barres import barres
+
+        profils += barres()
     return Catalogue(profils)
 
 

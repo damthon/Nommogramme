@@ -15,6 +15,8 @@ __all__ = [
     "E_A",
     "TABLEAU_3_1",
     "Nuance",
+    "TABLEAU_D_1",
+    "k_b",
     "k_y",
     "k_p",
     "k_E",
@@ -52,6 +54,14 @@ TABLEAU_3_1: dict[int, tuple[float, float, float]] = {
     1200: (0.000, 0.000, 0.0000),
 }
 
+# EN 1993-1-2 annexe D, tableau D.1 : θ [°C] → k_b,θ des boulons.
+TABLEAU_D_1: dict[int, float] = {
+    20: 1.000, 100: 0.968, 150: 0.952, 200: 0.935, 300: 0.903, 400: 0.775,
+    500: 0.550, 600: 0.220, 700: 0.100, 800: 0.067, 900: 0.033, 1000: 0.000,
+}
+_T_BOULONS = sorted(TABLEAU_D_1)
+_K_B = [TABLEAU_D_1[t] for t in _T_BOULONS]
+
 _TEMPERATURES = sorted(TABLEAU_3_1)
 _K_Y = [TABLEAU_3_1[t][0] for t in _TEMPERATURES]
 _K_P = [TABLEAU_3_1[t][1] for t in _TEMPERATURES]
@@ -61,24 +71,39 @@ TEMPERATURE_MIN = float(_TEMPERATURES[0])
 TEMPERATURE_MAX = float(_TEMPERATURES[-1])
 
 
-def _interpoler(theta: float, valeurs: list[float]) -> float:
-    """Interpolation linéaire dans le tableau 3.1, avec saturation aux bornes."""
-    if theta <= TEMPERATURE_MIN:
+def _interpoler(
+    theta: float, valeurs: list[float], temperatures: list[int] = _TEMPERATURES
+) -> float:
+    """Interpolation linéaire dans un tableau, avec saturation aux bornes."""
+    if theta <= temperatures[0]:
         return valeurs[0]
-    if theta >= TEMPERATURE_MAX:
+    if theta >= temperatures[-1]:
         return valeurs[-1]
 
-    indice = bisect_left(_TEMPERATURES, theta)
-    t0, t1 = _TEMPERATURES[indice - 1], _TEMPERATURES[indice]
+    indice = bisect_left(temperatures, theta)
+    t0, t1 = temperatures[indice - 1], temperatures[indice]
     v0, v1 = valeurs[indice - 1], valeurs[indice]
     return v0 + (v1 - v0) * (theta - t0) / (t1 - t0)
 
 
-def k_y(theta: float) -> float:
+def k_b(theta: float) -> float:
+    """Facteur de réduction de la résistance des boulons k_b,θ [-].
+
+    EN 1993-1-2 annexe D, tableau D.1. Chute plus tôt que k_y,θ : 0,55 contre
+    0,78 à 500 °C.
+    """
+    return _interpoler(theta, _K_B, _T_BOULONS)
+
+
+def k_y(theta: float, nuance: "Nuance | None" = None) -> float:
     """Facteur de réduction de la limite d'élasticité efficace [-].
 
     EN 1993-1-2 tableau 3.1. Vaut 1 jusqu'à 400 °C, puis chute rapidement.
+    Pour une classe de boulon (``nuance.est_boulon``), c'est k_b,θ du
+    tableau D.1 qui s'applique.
     """
+    if nuance is not None and nuance.est_boulon:
+        return k_b(theta)
     return _interpoler(theta, _K_Y)
 
 
@@ -175,6 +200,17 @@ class Nuance(str, Enum):
     S355 = "S355"
     S420 = "S420"
     S460 = "S460"
+    B4_6 = "4.6"
+    B5_6 = "5.6"
+    B8_8 = "8.8"
+    B10_9 = "10.9"
+    """Classes de résistance des boulons (SN EN 20898-2), pour vérifier une
+    tige — un rond RND — avec f_yb de SIA 263 tableau 2."""
+
+    @property
+    def est_boulon(self) -> bool:
+        """Classe de boulon : réduction à chaud par k_b,θ (EN 1993-1-2 tab. D.1)."""
+        return not self.value.startswith("S")
 
     @property
     def _bandes(self) -> _Bandes:
@@ -192,6 +228,11 @@ _BANDES: dict[Nuance, _Bandes] = {
     Nuance.S355: _Bandes(355e6, 335e6),
     Nuance.S420: _Bandes(420e6, 390e6),
     Nuance.S460: _Bandes(460e6, 430e6),
+    # SIA 263 tableau 2 : f_yb, sans réduction avec le diamètre.
+    Nuance.B4_6: _Bandes(240e6, 240e6),
+    Nuance.B5_6: _Bandes(300e6, 300e6),
+    Nuance.B8_8: _Bandes(640e6, 640e6),
+    Nuance.B10_9: _Bandes(900e6, 900e6),
 }
 
 

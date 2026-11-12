@@ -160,7 +160,7 @@ def _saisie() -> Saisie:
 
     st.sidebar.header("Géométrie")
     L = st.sidebar.number_input(
-        "Vide d'étage L  [m]", value=4.0, min_value=0.0, step=0.5, key="L",
+        "Longueur de l'élément L  [m]", value=4.0, min_value=0.0, step=0.5, key="L",
         help=AIDES["L"],
     )
     st.sidebar.caption(
@@ -365,6 +365,14 @@ def _note(r: ResultatVerification, saisie: Saisie) -> None:
         data=pdf.getvalue(),
         file_name=f"{base}.pdf",
         mime="application/pdf",
+    )
+    docx = io.BytesIO()
+    r.note_de_calcul_word(docx, saisie.section())
+    st.download_button(
+        "Télécharger la note de calcul (Word, équations éditables)",
+        data=docx.getvalue(),
+        file_name=f"{base}.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
     st.download_button(
         "Télécharger le résumé (Markdown)",

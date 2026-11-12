@@ -37,9 +37,25 @@ class Famille(str, Enum):
     """Profilé reconstitué soudé, en H, semelles éventuellement inégales."""
     CRS = "CRS"
     """Caisson rectangulaire soudé, quatre tôles."""
+    RND = "RND"
+    """Rond plein (Stahlbau-Tabellen SZS, p. 54)."""
+    VKT = "VKT"
+    """Carré plein (p. 55)."""
+    ROR = "ROR"
+    """Tube rond, sans soudure ou soudé (p. 60-61)."""
+    FLA = "FLA"
+    """Plat (p. 74)."""
+    FLB = "FLB"
+    """Large plat (p. 74)."""
 
     @property
     def forme(self) -> "Forme":
+        if self is Famille.RND:
+            return Forme.ROND_PLEIN
+        if self in (Famille.VKT, Famille.FLA, Famille.FLB):
+            return Forme.RECTANGLE_PLEIN
+        if self is Famille.ROR:
+            return Forme.TUBE_ROND
         if self is Famille.INP:
             return Forme.I_AILES_INCLINEES
         if self in (Famille.RRW, Famille.CRS):
@@ -53,6 +69,19 @@ class Forme(str, Enum):
     I_AILES_PARALLELES = "I à ailes parallèles"
     I_AILES_INCLINEES = "I à ailes inclinées"
     PROFIL_CREUX = "profil creux"
+    TUBE_ROND = "tube rond"
+    ROND_PLEIN = "rond plein"
+    RECTANGLE_PLEIN = "rectangle plein"
+
+    @property
+    def en_i(self) -> bool:
+        """Section ouverte en I ou en H — les seules à avoir des parties concaves."""
+        return self in (Forme.I_AILES_PARALLELES, Forme.I_AILES_INCLINEES)
+
+    @property
+    def pleine(self) -> bool:
+        """Barre pleine : pas de paroi mince, donc pas de voilement local."""
+        return self in (Forme.ROND_PLEIN, Forme.RECTANGLE_PLEIN)
 
 
 @dataclass(frozen=True, slots=True)

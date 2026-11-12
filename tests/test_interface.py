@@ -207,7 +207,7 @@ class TestRestitution:
 
     def test_la_note_de_calcul_est_telechargeable(self, app: AppTest) -> None:
         boutons = app.get("download_button")
-        assert len(boutons) == 2
+        assert len(boutons) == 3
         assert "note de calcul" in boutons[0].label.lower()
         assert "pdf" in boutons[0].label.lower()
 

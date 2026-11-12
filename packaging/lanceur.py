@@ -39,6 +39,13 @@ def _sortie_en_utf8() -> None:
             pass
 
 
+def _document_xml(flux) -> bytes:
+    import zipfile
+
+    with zipfile.ZipFile(flux) as archive:
+        return archive.read("word/document.xml")
+
+
 def autotest() -> int:
     """Vérifie que l'exécutable est complet, sans ouvrir de fenêtre.
 
@@ -125,12 +132,21 @@ def autotest() -> int:
         print("La note de calcul PDF n'est pas produite.", file=sys.stderr)
         return 1
 
+    # La note Word demande le gabarit de python-docx et la table de symboles
+    # de latex2mathml, deux fichiers de données que le paquet doit embarquer.
+    word = io.BytesIO()
+    soudee.note_de_calcul_word(word, section)
+    if not word.getvalue().startswith(b"PK") or b"oMath" not in _document_xml(word):
+        print("La note de calcul Word n'est pas produite.", file=sys.stderr)
+        return 1
+
     print(
         f"Autotest réussi — {len(differes)} modules différés présents, "
         f"{profils} profilés, {len(produits())} produits, "
         f"θ_cr = {resultat.theta_cr:.0f} °C, figures tracées, "
         f"section soudée {soudee.profil.nom} calculée et dessinée, "
-        f"note PDF de {len(tampon.getvalue()) // 1024} ko."
+        f"note PDF de {len(tampon.getvalue()) // 1024} ko, "
+        f"note Word de {len(word.getvalue()) // 1024} ko."
     )
     return 0
 

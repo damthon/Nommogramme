@@ -101,13 +101,13 @@ AIDES: dict[str, str] = {
     "l_fi": EC3_LONGUEUR_FLAMBEMENT.infobulle(
         "Longueur de flambement en situation d'incendie. Un poteau continu "
         "d'un contreventement est bridé par les étages froids adjacents : sa "
-        "longueur de flambement y est plus courte qu'à froid. Zéro reprend le "
-        "vide d'étage."
+        "longueur de flambement y est plus courte qu'à froid. Zéro reprend la "
+        "longueur de l'élément."
     ),
     "L": (
-        "Longueur d'épure de l'élément : le vide d'étage pour un poteau, la "
-        "portée entre appuis pour une poutre. Sert de longueur de flambement "
-        "par défaut."
+        "Longueur de l'élément, d'un appui à l'autre : hauteur du poteau, "
+        "portée de la poutre, longueur de la tige. Sert de longueur de "
+        "flambement par défaut."
     ),
     "maintien": EC3_INTERACTION_DEVERSEMENT.infobulle(
         "Semelle comprimée bloquée latéralement sur toute sa longueur, par "
@@ -152,7 +152,11 @@ AIDES: dict[str, str] = {
     ),
     "nuance": (
         "Nuance d'acier. La limite d'élasticité décroît avec l'épaisseur de "
-        "semelle, et cette décroissance est appliquée automatiquement."
+        "semelle, et cette décroissance est appliquée automatiquement. "
+        "Les classes de boulons 4.6, 5.6, 8.8 et 10.9 (f_yb de SIA 263 "
+        "tab. 2) servent à vérifier une tige, avec un rond RND : leur "
+        "résistance chute à chaud par k_b,θ (EN 1993-1-2 tab. D.1), et la "
+        "section filetée n'est pas vérifiée."
     ),
     "protection": EC3_ECHAUFFEMENT_PROTEGE.infobulle(
         "Produit de protection. Un isolant classique garde son épaisseur. Le "
@@ -252,7 +256,7 @@ class Saisie:
     """Moment autour de l'axe faible [kN·m]."""
 
     L: float = 4.0
-    """Vide d'étage — longueur d'épure de l'élément [m]."""
+    """Longueur de l'élément [m]."""
     l_fi: float = 2.0
     """Longueur de flambement en situation d'incendie [m]. 0 ⇒ prendre L."""
     maintien: bool = False

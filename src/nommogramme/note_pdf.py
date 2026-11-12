@@ -114,6 +114,8 @@ class Bloc:
     entetes: list[str] = field(default_factory=list)
     rangees: list[list[str]] = field(default_factory=list)
     figure: object = None
+    guide: str = ""
+    """Phrase de guidage d'un calcul : ce que l'on fait, et pourquoi."""
 
 
 def _titre(texte: str) -> Bloc:
@@ -124,12 +126,116 @@ def _para(texte: str) -> Bloc:
     return Bloc("texte", texte)
 
 
+# Intitulé de calcul (son début) → phrase de guidage. Le premier préfixe qui
+# correspond l'emporte : les plus spécifiques sont donc en tête.
+_GUIDES: tuple[tuple[str, str], ...] = (
+    ("Aire de la section",
+     "On somme les tôles pour obtenir l'aire d'acier, qui porte l'effort "
+     "normal et fixe la masse à échauffer."),
+    ("Coefficient ε à chaud",
+     "On réduit ε d'un facteur 0,85 : le module chute plus vite que la limite "
+     "d'élasticité à chaud, les parois voilent donc plus tôt."),
+    ("Élancements de parois et classe",
+     "On compare l'élancement c/t de chaque paroi aux limites en ε pour "
+     "savoir si la section peut plastifier (classes 1-2), seulement atteindre "
+     "f_y (classe 3) ou voile avant (classe 4)."),
+    ("Élancement de référence",
+     "λ₁ est l'élancement d'Euler qui amène la contrainte critique à f_y ; il "
+     "sert d'unité aux élancements réduits."),
+    ("Élancement réduit, axe",
+     "On rapporte l'élancement géométrique L_cr/i à λ₁ : c'est l'élancement "
+     "réduit à 20 °C, qui sera ensuite majoré à chaud."),
+    ("Moment critique de déversement",
+     "On calcule le moment qui fait déverser la poutre élastique : il "
+     "détermine l'élancement de déversement."),
+    ("Élancement réduit de déversement",
+     "On compare le moment plastique au moment critique pour savoir si le "
+     "déversement réduit la résistance en flexion."),
+    ("Flambement, axe",
+     "On applique la courbe de flambement unique à chaud : φ_θ, puis le "
+     "coefficient de réduction χ_fi."),
+    ("Déversement —",
+     "Même démarche pour le déversement : φ_θ, puis χ_LT,fi."),
+    ("Résistance au flambement",
+     "La résistance de l'élément comprimé est la résistance plastique réduite "
+     "par k_y,θ et par le flambement χ_fi."),
+    ("Résistance à la traction",
+     "En traction, pas d'instabilité : la résistance est la résistance "
+     "plastique de la section brute, réduite par k_y,θ (k_b,θ pour un boulon)."),
+    ("Moment résistant au déversement",
+     "Le moment résistant de l'élément tient compte du déversement par "
+     "χ_LT,fi."),
+    ("Moment résistant, axe",
+     "Moment plastique (ou élastique, selon la classe) réduit à chaud, et "
+     "corrigé des facteurs d'adaptation κ₁ et κ₂ de la répartition de "
+     "température."),
+    ("Facteur d'imperfection",
+     "Le facteur α remplace à chaud les courbes de flambement a à d ; il ne "
+     "dépend que de la nuance."),
+    ("Taux d'utilisation, traction et flexion",
+     "En traction, on additionne simplement les taux de l'effort normal et "
+     "des moments."),
+    ("Facteurs d'interaction",
+     "Les facteurs k amplifient les moments sous l'effet de l'effort de "
+     "compression, d'autant plus que l'élément est élancé."),
+    ("Flambement par flexion",
+     "Premier critère d'interaction : flambement par flexion, avec les "
+     "moments amplifiés."),
+    ("Degré d'utilisation à t = 0",
+     "Le degré d'utilisation μ₀ est le taux le plus élevé à 20 °C sous les "
+     "charges d'incendie : c'est l'entrée du nomogramme."),
+    ("Température critique, méthode du nomogramme",
+     "On lit la température critique sur le nomogramme : l'éq. (4.22) est "
+     "l'inverse de k_y,θ, la température à laquelle la résistance tombe à μ₀."),
+    ("Facteurs de réduction à",
+     "On recalcule l'élément à la température trouvée par dichotomie : "
+     "d'abord les facteurs de réduction du tableau."),
+    ("Élancements à",
+     "À chaud, l'élancement croît comme √(k_y,θ/k_E,θ), car le module chute "
+     "plus vite que f_y."),
+    ("Température critique retenue",
+     "On retient la plus basse des deux températures critiques : c'est la "
+     "valeur sûre."),
+    ("Facteur de massiveté",
+     "Le facteur de massiveté A_m/V compare la surface chauffée au volume "
+     "d'acier : plus il est grand, plus l'acier chauffe vite."),
+    ("Facteur d'ombre",
+     "Le facteur d'ombre corrige le flux reçu par les parties concaves d'une "
+     "section en I, qui se masquent entre elles."),
+    ("Chaleur spécifique de l'acier",
+     "La chaleur spécifique varie avec la température ; on en montre un pas "
+     "de calcul."),
+    ("Flux net",
+     "Le flux net est la chaleur que les gaz chauds transmettent à l'acier, "
+     "par convection et rayonnement."),
+    ("Incrément de température, acier nu",
+     "On avance l'échauffement d'un pas de temps ; le calcul est répété "
+     "jusqu'à la durée exigée."),
+    ("Épaisseur de bois sain",
+     "Le bois se carbonise : seule l'épaisseur saine restante protège "
+     "l'acier."),
+    ("Rapport des capacités thermiques",
+     "φ compare la chaleur stockée dans la protection à celle de l'acier."),
+    ("Incrément de température, acier protégé",
+     "On avance l'échauffement de l'acier protégé d'un pas de temps ; le "
+     "calcul est répété jusqu'à la durée exigée."),
+    ("Critère en température",
+     "Dernière étape : la température de l'acier à la durée exigée doit "
+     "rester sous la température critique."),
+)
+
+
+def _guide(intitule: str) -> str:
+    return next((g for prefixe, g in _GUIDES if intitule.startswith(prefixe)), "")
+
+
 def _calcul(intitule: str, reference: str, *lignes: str) -> Bloc:
     """Un calcul : la formule, puis l'application numérique et le résultat.
 
     Chaque ligne est une expression mathtext, sans les ``$`` qui l'encadrent.
     """
-    return Bloc("calcul", intitule, reference=reference, lignes=list(lignes))
+    return Bloc("calcul", intitule, reference=reference, lignes=list(lignes),
+                guide=_guide(intitule))
 
 
 def _tableau(entetes: list[str], rangees: list[list[str]]) -> Bloc:
@@ -224,7 +330,7 @@ def _donnees(r: ResultatVerification, section) -> list[Bloc]:
                 ["N_fi,Ed", f"{en_kN(cas.N_fi_Ed):.0f} kN ({signe})"],
                 ["M_y,fi,Ed ; M_z,fi,Ed",
                  f"{_txt(en_kNm(cas.My_fi_Ed), 1)} ; {_txt(en_kNm(cas.Mz_fi_Ed), 1)} kN·m"],
-                ["Longueur d'épure L", f"{_txt(cas.L, 2)} m"],
+                ["Longueur de l'élément L", f"{_txt(cas.L, 2)} m"],
                 ["l_fi,y ; l_fi,z", f"{_txt(cas.longueur_flambement_y(), 2)} ; "
                  f"{_txt(cas.longueur_flambement_z(), 2)} m"],
                 ["Longueur de déversement", f"{_txt(cas.longueur_deversement(), 2)} m"],
@@ -528,8 +634,9 @@ def _temperature_critique(r: ResultatVerification) -> list[Bloc]:
         ))
     else:
         blocs.append(_para(
-            "L'équation (4.22) ne s'applique pas ici (classe 4, ou μ₀ hors de son "
-            "domaine) : voir les avertissements."
+            "L'équation (4.22) ne s'applique pas ici (classe 4, classe de boulon "
+            "réduite par k_b,θ, ou μ₀ hors de son domaine) : voir les "
+            "avertissements."
         ))
 
     if r.theta_cr_exact is not None and r.mu_0 < 1.0:
@@ -550,8 +657,10 @@ def _temperature_critique(r: ResultatVerification) -> list[Bloc]:
         res = u.resistances
         lam0 = r.utilisation_initiale.resistances
         blocs.append(_calcul(
-            f"Facteurs de réduction à {_txt(theta, 1)} °C", EC3_TABLEAU_3_1.courte,
-            rf"k_{{y,\theta}} = {n(k_y(theta))} \qquad k_{{E,\theta}} = {n(k_E(theta))}"
+            f"Facteurs de réduction à {_txt(theta, 1)} °C",
+            "EN 1993-1-2 tab. D.1 (k_b,θ, boulons) et tab. 3.1 (k_E,θ)"
+            if r.nuance.est_boulon else EC3_TABLEAU_3_1.courte,
+            rf"k_{{y,\theta}} = {n(k_y(theta, r.nuance))} \qquad k_{{E,\theta}} = {n(k_E(theta))}"
             r"\qquad \mathrm{(interpolation\ lin\acute{e}aire\ du\ tableau)}",
         ))
         lignes = []
@@ -560,7 +669,7 @@ def _temperature_critique(r: ResultatVerification) -> list[Bloc]:
             lignes.append(
                 rf"\bar{{\lambda}}_{{{axe},\theta}} = \bar{{\lambda}}_{axe}\,"
                 rf"\sqrt{{k_{{y,\theta}}/k_{{E,\theta}}}} = {n(lam)} \cdot"
-                rf"\sqrt{{{n(k_y(theta))}/{n(k_E(theta))}}} = \mathbf{{{n(lam_t)}}}"
+                rf"\sqrt{{{n(k_y(theta, r.nuance))}/{n(k_E(theta))}}} = \mathbf{{{n(lam_t)}}}"
             )
         blocs.append(_calcul(
             f"Élancements à {_txt(theta, 1)} °C", EC3_ELANCEMENT_THETA.courte, *lignes
@@ -886,6 +995,8 @@ class _Composeur:
                 largeur, haut = self._mesure(f"${ligne}$", taille)
             tailles.append((taille, haut))
             hauteur += haut + 0.1
+        if bloc.guide:
+            self.paragraphe(bloc.guide)
         self._reserver(hauteur + 0.1)
         self._texte(_MARGE, bloc.texte, 9.2, weight="bold", color=_ENCRE)
         if bloc.reference:

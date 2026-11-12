@@ -130,4 +130,32 @@ class TestNuances:
     def test_toutes_les_nuances_definies(self) -> None:
         for nuance in Nuance:
             assert limite_elasticite(nuance, 0.010) > 0.0
-            assert limite_elasticite(nuance, 0.060) < limite_elasticite(nuance, 0.010)
+            if not nuance.est_boulon:
+                assert limite_elasticite(nuance, 0.060) < limite_elasticite(nuance, 0.010)
+
+
+class TestBoulons:
+    """Classes 4.6 à 10.9 : f_yb de SIA 263 tab. 2, k_b,θ de l'EN 1993-1-2 tab. D.1."""
+
+    @pytest.mark.parametrize("classe, f_yb", [
+        ("4.6", 240e6), ("5.6", 300e6), ("8.8", 640e6), ("10.9", 900e6),
+    ])
+    def test_f_yb_sans_reduction_d_epaisseur(self, classe, f_yb) -> None:
+        nuance = Nuance(classe)
+        assert nuance.est_boulon
+        assert limite_elasticite(nuance, 0.010) == f_yb
+        assert limite_elasticite(nuance, 0.080) == f_yb
+
+    def test_k_b_tableau_d_1(self) -> None:
+        from nommogramme.materiaux import k_b
+
+        assert k_b(20) == 1.0
+        assert k_b(400) == pytest.approx(0.775)
+        assert k_b(500) == pytest.approx(0.550)
+        assert k_b(550) == pytest.approx((0.550 + 0.220) / 2)
+        assert k_b(1000) == 0.0
+
+    def test_k_y_d_un_boulon_est_k_b(self) -> None:
+        from nommogramme.materiaux import k_b
+
+        assert k_y(500, Nuance.B8_8) == k_b(500) < k_y(500, Nuance.S355) == k_y(500)

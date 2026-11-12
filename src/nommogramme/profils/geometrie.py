@@ -99,6 +99,11 @@ def perimetre_contour_geometrique(profil: Profil) -> float:
     """
     h, b, tw, tf, r = profil.h, profil.b, profil.tw, profil.tf, profil.r
 
+    if profil.forme in (Forme.ROND_PLEIN, Forme.TUBE_ROND):
+        return math.pi * h
+    if profil.forme is Forme.RECTANGLE_PLEIN:
+        return 2.0 * (h + b)
+
     if profil.forme is Forme.PROFIL_CREUX:
         # Le rayon extérieur d'un profil creux formé à chaud vaut environ deux
         # fois l'épaisseur de paroi (EN 10210).
@@ -137,6 +142,7 @@ def perimetre_caisson(profil: Profil, trois_faces: bool = False) -> float:
     EN 1993-1-2 tableau 4.2 : le caisson est le rectangle circonscrit, à
     angles vifs. Pour un profil creux, il n'y a pas d'encaissement distinct
     du profilé lui-même : la valeur caisson est confondue avec le contour.
+    Un tube ou un rond s'encaisse, lui, dans le carré circonscrit D × D.
     """
     if profil.forme is Forme.PROFIL_CREUX:
         p = _perimetre_contour(profil)
@@ -196,10 +202,11 @@ def facteur_ombre(
     en I sous action de feu nominale ; tous les autres cas relèvent de
     l'équation (4.26b).
 
-    Un profil creux n'ayant aucune partie concave, son facteur d'ombre vaut 1.
-    Le facteur d'ombre ne s'applique qu'à l'acier non protégé.
+    Une section convexe (profil creux, tube, barre pleine) n'a aucune partie
+    concave : son facteur d'ombre vaut 1. Le facteur d'ombre ne s'applique
+    qu'à l'acier non protégé.
     """
-    if profil.forme is Forme.PROFIL_CREUX:
+    if not profil.forme.en_i:
         return 1.0
 
     rapport = facteur_massivete_caisson(profil, exposition) / facteur_massivete(
