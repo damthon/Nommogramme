@@ -156,6 +156,14 @@ def classifier(
 
     if profil.forme is Forme.PROFIL_CREUX:
         return _classifier_profil_creux(profil, eps, fy, N_Ed, My_Ed)
+    if profil.forme is Forme.TUBE_ROND:
+        return _classifier_tube_rond(profil, eps)
+    if profil.forme.pleine:
+        # Une barre pleine n'a pas de paroi mince : pas de voilement local.
+        return ClassificationSection(
+            classe=1, classe_ame=1, classe_semelle=1, epsilon=eps,
+            elancement_ame=0.0, elancement_semelle=0.0, alpha=1.0,
+        )
 
     # Semelle en console : c mesuré depuis le congé jusqu'au bord libre.
     c_semelle = (profil.b - profil.tw - 2.0 * profil.r) / 2.0
@@ -235,4 +243,18 @@ def _classifier_profil_creux(
         elancement_ame=elancement_ame,
         elancement_semelle=elancement_semelle,
         alpha=alpha,
+    )
+
+
+def _classifier_tube_rond(profil: Profil, eps: float) -> ClassificationSection:
+    """Tube rond : EN 1993-1-1 tableau 5.2 (feuille 3), d/t ≤ 50·ε², 70·ε², 90·ε².
+
+    ε est celui du feu (§4.2.2). Les limites ne dépendent pas du chargement.
+    """
+    d_sur_t = profil.h / profil.tw
+    rapport = d_sur_t / eps**2
+    classe = 1 if rapport <= 50.0 else 2 if rapport <= 70.0 else 3 if rapport <= 90.0 else 4
+    return ClassificationSection(
+        classe=classe, classe_ame=classe, classe_semelle=classe, epsilon=eps,
+        elancement_ame=d_sur_t, elancement_semelle=d_sur_t, alpha=1.0,
     )

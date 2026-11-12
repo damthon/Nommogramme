@@ -35,6 +35,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..materiaux.acier import k_b
 from ..materiaux.protection import Protection
 from ..profils.composes import (
     FaceCouverte,
@@ -608,20 +609,47 @@ def tracer_nomogramme(
     return _enregistrer(figure, chemin, p)
 
 
+def _theta_k_b(mu: float) -> float:
+    """Inverse de k_b,θ (EN 1993-1-2 tab. D.1), par dichotomie [°C]."""
+    bas, haut = 20.0, 1000.0
+    for _ in range(60):
+        milieu = 0.5 * (bas + haut)
+        bas, haut = (milieu, haut) if k_b(milieu) > mu else (bas, milieu)
+    return 0.5 * (bas + haut)
+
+
+def _lecture(resultat) -> float | None:
+    """Température lue sur la courbe du quadrant gauche pour μ₀ [°C]."""
+    if resultat.nuance.est_boulon:
+        return _theta_k_b(resultat.mu_0) if 0.0 < resultat.mu_0 < 1.0 else None
+    return resultat.theta_cr_nomogramme
+
+
 def _quadrant_gauche(axes, resultat, p: Palette, theta_max: float) -> None:
-    """μ₀ → θ_a,cr : la courbe de l'équation (4.22), lue de droite à gauche."""
+    """μ₀ → θ_a,cr : la courbe de l'équation (4.22), lue de droite à gauche.
+
+    Pour une classe de boulon, l'éq. (4.22) ne vaut pas : la courbe tracée
+    est k_b,θ du tableau D.1, la résistance de section d'un boulon.
+    """
     _habiller(axes, p)
 
     # μ₀ croît vers la gauche pour que l'axe des températures reste au centre.
     axes.set_xlim(0.95, 0.0)
     axes.set_ylim(0, theta_max)
 
-    courbe = [
-        (mu, temperature_critique(mu))
-        for i in range(301)
-        if (mu := MU_0_MINIMAL + i * (0.95 - MU_0_MINIMAL) / 300)
-        and temperature_critique(mu) <= theta_max
-    ]
+    boulon = resultat.nuance.est_boulon
+    if boulon:
+        courbe = [
+            (k_b(theta), theta) for theta in range(20, int(min(theta_max, 1000)), 2)
+            if 0.0 < k_b(theta) <= 0.95
+        ]
+    else:
+        courbe = [
+            (mu, temperature_critique(mu))
+            for i in range(301)
+            if (mu := MU_0_MINIMAL + i * (0.95 - MU_0_MINIMAL) / 300)
+            and temperature_critique(mu) <= theta_max
+        ]
     axes.plot(
         [c[0] for c in courbe], [c[1] for c in courbe],
         color=p.acier, linewidth=2.0, zorder=4,
@@ -641,7 +669,7 @@ def _quadrant_gauche(axes, resultat, p: Palette, theta_max: float) -> None:
     # importante, et doit céder le passage au chemin de lecture.
     ancre = courbe[len(courbe) // 3]
     placeur.poser(
-        EC3_THETA_CR.courte,
+        "EN 1993-1-2 tab. D.1, k_b,θ" if boulon else EC3_THETA_CR.courte,
         xy=ancre,
         candidats=(
             (12, -12, "left", "top"),
@@ -656,10 +684,10 @@ def _quadrant_gauche(axes, resultat, p: Palette, theta_max: float) -> None:
 
 
 def _chemin_gauche(axes, resultat, p: Palette, placeur: Placeur) -> None:
-    if resultat.theta_cr_nomogramme is None or resultat.mu_0 >= 1.0:
+    theta = _lecture(resultat)
+    if theta is None or resultat.mu_0 >= 1.0:
         return
     mu = resultat.mu_0
-    theta = resultat.theta_cr_nomogramme
 
     axes.plot(
         [mu, mu, 0.0], [0.0, theta, theta],
@@ -688,9 +716,9 @@ def _chemin_gauche(axes, resultat, p: Palette, placeur: Placeur) -> None:
     # décrochement est le fait marquant de la figure : sans le tracer, il
     # passerait pour une erreur de tracé.
     exact = resultat.theta_cr_exact
-    ecart = resultat.ecart_nomogramme
-    if exact is None or ecart is None or ecart <= 5.0:
+    if exact is None or theta - exact <= 5.0:
         return
+    ecart = theta - exact
 
     axes.axhline(
         exact, color=p.critique, linewidth=1.4,

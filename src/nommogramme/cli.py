@@ -223,7 +223,7 @@ def _construire_analyseur() -> argparse.ArgumentParser:
                        help="Effort normal [kN], négatif en compression (--N=-850)")
     p_ver.add_argument("--My", type=float, default=0.0, help="Moment axe fort [kN·m]")
     p_ver.add_argument("--Mz", type=float, default=0.0, help="Moment axe faible [kN·m]")
-    p_ver.add_argument("--L", type=float, default=0.0, help="Longueur d'épure [m]")
+    p_ver.add_argument("--L", type=float, default=0.0, help="Longueur de l'élément [m]")
     p_ver.add_argument("--lfi", type=float, help="Longueur de flambement en incendie [m]")
     p_ver.add_argument("--lfi-y", type=float, help="Idem, plan fort [m]")
     p_ver.add_argument("--lfi-z", type=float, help="Idem, plan faible [m]")
@@ -247,7 +247,7 @@ def _construire_analyseur() -> argparse.ArgumentParser:
     p_ver.add_argument("--dp", type=float, help="Épaisseur de protection [mm]")
     p_ver.add_argument("--contexte", choices=("sia", "eurocode"), default="sia")
     p_ver.add_argument("--rapport", help="Écrire la note de calcul dans ce fichier : PDF détaillé si le nom "
-                            "finit par .pdf, Markdown sinon")
+                            "finit par .pdf, Word si .docx, Markdown sinon")
     p_ver.add_argument("--tracer", help="Écrire le nomogramme dans ce fichier image")
     p_ver.add_argument(
         "--tracer-echauffement", help="Écrire la courbe θ_a(t) dans ce fichier image"
@@ -441,6 +441,8 @@ def _cmd_verifier(a: argparse.Namespace) -> int:
     if a.rapport:
         if a.rapport.lower().endswith(".pdf"):
             resultat.note_de_calcul_pdf(a.rapport, _section_depuis_arguments(a))
+        elif a.rapport.lower().endswith(".docx"):
+            resultat.note_de_calcul_word(a.rapport, _section_depuis_arguments(a))
         else:
             with open(a.rapport, "w", encoding="utf-8") as fichier:
                 fichier.write(resultat.note_de_calcul())

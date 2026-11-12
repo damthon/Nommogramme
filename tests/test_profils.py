@@ -22,10 +22,18 @@ def cat():
     return charger_csv()
 
 
+@pytest.fixture(scope="module")
+def szs():
+    """Les seuls profilés laminés du catalogue SZS C5, sans les barres."""
+    from nommogramme.profils.chargeur import _CSV_DEFAUT
+
+    return charger_csv(_CSV_DEFAUT)
+
+
 class TestCatalogue:
-    def test_effectif_et_familles(self, cat) -> None:
-        assert len(cat) == 277
-        effectifs = {famille: len(cat.famille(famille)) for famille in Famille}
+    def test_effectif_et_familles(self, szs) -> None:
+        assert len(szs) == 277
+        effectifs = {famille: len(szs.famille(famille)) for famille in Famille}
         assert effectifs == {
             Famille.IPE: 22,
             Famille.PEA: 16,
@@ -41,6 +49,12 @@ class TestCatalogue:
             # les fait disparaître des listes de profilés de l'interface.
             Famille.PRS: 0,
             Famille.CRS: 0,
+            # Barres et tubes : calculés depuis leurs cotes, hors du CSV.
+            Famille.RND: 0,
+            Famille.VKT: 0,
+            Famille.ROR: 0,
+            Famille.FLA: 0,
+            Famille.FLB: 0,
         }
 
     def test_recherche_insensible_a_la_forme_du_nom(self, cat) -> None:
@@ -84,9 +98,9 @@ class TestCatalogue:
 
 
 class TestPerimetres:
-    def test_concordance_avec_um_tabule(self, cat) -> None:
+    def test_concordance_avec_um_tabule(self, szs) -> None:
         """La formule géométrique doit retrouver la surface développée du SZS."""
-        ecarts = [abs(e) for p in cat if (e := ecart_relatif_um(p)) is not None]
+        ecarts = [abs(e) for p in szs if (e := ecart_relatif_um(p)) is not None]
         assert len(ecarts) == 277
         assert sum(ecarts) / len(ecarts) < 0.01, "écart moyen supérieur à 1 %"
         assert max(ecarts) < 0.04, "un profilé dévie de plus de 4 %"
@@ -109,7 +123,7 @@ class TestPerimetres:
     def test_caisson_toujours_inferieur_au_contour(self, cat) -> None:
         """Encaisser un profilé ouvert réduit toujours la surface exposée."""
         for profil in cat:
-            if profil.forme is Forme.PROFIL_CREUX:
+            if not profil.forme.en_i:
                 continue
             contour = perimetre_expose(profil, Exposition.CONTOUR_4_FACES)
             caisson = perimetre_expose(profil, Exposition.CAISSON_4_FACES)
@@ -152,10 +166,14 @@ class TestFacteurMassivete:
         lourd = facteur_massivete(cat["HHD 400.421"], Exposition.CONTOUR_4_FACES)
         assert lourd < leger / 4.0
 
-    def test_domaine_de_validite_du_catalogue(self, cat) -> None:
-        """Le catalogue reste au-dessus de la borne de 10 m⁻¹, mais de justesse."""
+    def test_domaine_de_validite_du_catalogue(self, szs) -> None:
+        """Le catalogue reste au-dessus de la borne de 10 m⁻¹, mais de justesse.
+
+        Les gros ronds et carrés pleins descendent, eux, sous la borne :
+        ``thermique.echauffement`` le signale alors par un avertissement.
+        """
         minimum = min(
-            facteur_massivete(p, Exposition.CAISSON_3_FACES) for p in cat
+            facteur_massivete(p, Exposition.CAISSON_3_FACES) for p in szs
         )
         assert minimum > AM_SUR_V_MINIMAL
         assert minimum < 15.0, "la marge attendue sur le cas le plus trapu a changé"

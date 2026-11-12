@@ -156,7 +156,7 @@ def note_de_calcul(r: ResultatVerification) -> str:
     lignes.append(f"| N_fi,Ed | {abs(en_kN(r.cas.N_fi_Ed)):.0f} kN ({signe}) |")
     lignes.append(f"| M_y,fi,Ed | {en_kNm(r.cas.My_fi_Ed):.1f} kN·m |")
     lignes.append(f"| M_z,fi,Ed | {en_kNm(r.cas.Mz_fi_Ed):.1f} kN·m |")
-    lignes.append(f"| Vide d'étage (longueur d'épure) | {r.cas.L:.2f} m |")
+    lignes.append(f"| Longueur de l'élément L | {r.cas.L:.2f} m |")
     lignes.append(f"| l_fi,y / l_fi,z | {r.cas.longueur_flambement_y():.2f} / "
                   f"{r.cas.longueur_flambement_z():.2f} m |")
     lignes.append(f"| Longueur de déversement | {r.cas.longueur_deversement():.2f} m |")

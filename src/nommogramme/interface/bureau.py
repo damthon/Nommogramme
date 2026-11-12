@@ -58,6 +58,7 @@ from nommogramme.interface.saisie import (
     noms_par_famille,
     produits,
 )
+from nommogramme.materiaux.acier import Nuance
 from nommogramme.nomogramme.verification import ResultatVerification
 from nommogramme.references import EC3_RESISTANCES, EC3_THETA_CR
 from nommogramme.thermique.courbes import COURBES
@@ -383,7 +384,7 @@ class Application(ttk.Frame):
         )
         self.etiquette_profil = self._champ(element, 2, "Profilé", self.liste_profils)
         self._champ(
-            element, 3, "Nuance", self._liste(element, "nuance", ("S235", "S355")),
+            element, 3, "Nuance", self._liste(element, "nuance", tuple(n.value for n in Nuance)),
             aide=AIDES["nuance"], cle="nuance",
         )
 
@@ -402,7 +403,7 @@ class Application(ttk.Frame):
 
         geometrie = self._bloc(parent, "Géométrie")
         self._champ(
-            geometrie, 0, "Vide d'étage L  [m]", self._nombre(geometrie, "L"),
+            geometrie, 0, "Longueur de l'élément L  [m]", self._nombre(geometrie, "L"),
             aide=AIDES["L"], cle="L",
         )
         self._champ(
@@ -951,12 +952,15 @@ class Application(ttk.Frame):
             title="Enregistrer la note de calcul",
             defaultextension=".pdf",
             initialfile=f"note-{nom}.pdf",
-            filetypes=[("PDF détaillé", "*.pdf"), ("Markdown", "*.md")],
+            filetypes=[("PDF détaillé", "*.pdf"), ("Word, équations éditables", "*.docx"),
+                       ("Markdown", "*.md")],
         )
         if not chemin:
             return
         if chemin.lower().endswith(".md"):
             Path(chemin).write_text(self.resultat.note_de_calcul(), encoding="utf-8")
+        elif chemin.lower().endswith(".docx"):
+            self.resultat.note_de_calcul_word(chemin, self.saisie().section())
         else:
             self.resultat.note_de_calcul_pdf(chemin, self.saisie().section())
         messagebox.showinfo(_TITRE, f"Note enregistrée :\n{chemin}")

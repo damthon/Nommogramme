@@ -135,6 +135,12 @@ class ResultatVerification:
 
         return note_pdf(self, chemin, section)
 
+    def note_de_calcul_word(self, chemin, section=None):
+        """Même note, en .docx à équations Word natives. Voir ``nommogramme.note_word``."""
+        from ..note_word import note_word
+
+        return note_word(self, chemin, section)
+
     @property
     def ecart_nomogramme(self) -> float | None:
         """θ_cr,nomogramme − θ_cr,exact [°C].
@@ -308,6 +314,14 @@ def verifier(
             "s'applique pas. Température conventionnelle de "
             f"{contexte.theta_cr_classe_4:.0f} °C retenue "
             f"({EC3_CLASSE_4.courte})."
+        )
+    elif nuance.est_boulon:
+        avertissements.append(
+            f"Classe de boulon {nuance.value} : l'{EC3_THETA_CR.courte} est "
+            "l'inverse de k_y,θ et ne vaut pas pour k_b,θ "
+            "(EN 1993-1-2 tab. D.1). La température critique vient de la "
+            "vérification croisée, sur la section brute : la section "
+            "filetée A_s n'est pas vérifiée."
         )
     elif MU_0_MINIMAL <= mu_0 < 1.0:
         theta_cr_nomogramme = temperature_critique(mu_0)

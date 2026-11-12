@@ -69,7 +69,9 @@ def elancement_reduit(longueur_flambement: float, rayon_giration: float, fy: flo
     return (longueur_flambement / rayon_giration) / lambda_1
 
 
-def elancement_reduit_theta(lambda_barre: float, theta: float) -> float:
+def elancement_reduit_theta(
+    lambda_barre: float, theta: float, nuance: Nuance | None = None
+) -> float:
     """Élancement réduit à la température θ [-].
 
     EN 1993-1-2 éq. (4.9) : λ̄_θ = λ̄ · √(k_y,θ / k_E,θ).
@@ -77,7 +79,7 @@ def elancement_reduit_theta(lambda_barre: float, theta: float) -> float:
     ke = k_E(theta)
     if ke <= 0.0:
         return float("inf")
-    return lambda_barre * math.sqrt(k_y(theta) / ke)
+    return lambda_barre * math.sqrt(k_y(theta, nuance) / ke)
 
 
 def chi_fi(lambda_barre_theta: float, fy: float) -> float:
@@ -122,9 +124,9 @@ def moment_critique_elastique(
     """
     if longueur <= 0.0:
         return float("inf")
-    if profil.forme is Forme.PROFIL_CREUX:
+    if profil.forme in (Forme.PROFIL_CREUX, Forme.TUBE_ROND, Forme.ROND_PLEIN):
         # La rigidité de torsion d'un profil creux rend le déversement
-        # inopérant en pratique.
+        # inopérant en pratique ; une section circulaire n'a pas d'axe faible.
         return float("inf")
 
     I_t = profil.It if profil.It is not None else 0.0
@@ -174,12 +176,15 @@ def chi_LT_fi(lambda_barre_LT: float, theta: float, fy: float) -> float:
 # --- résistances de section et d'élément -------------------------------------
 
 
-def N_fi_Rd_traction(profil: Profil, fy: float, theta: float, gamma_M_fi: float) -> float:
+def N_fi_Rd_traction(
+    profil: Profil, fy: float, theta: float, gamma_M_fi: float,
+    nuance: Nuance | None = None,
+) -> float:
     """Résistance à la traction [N].
 
     EN 1993-1-2 éq. (4.3) : N_fi,θ,Rd = k_y,θ · A · f_y / γ_M,fi.
     """
-    return k_y(theta) * profil.A * fy / gamma_M_fi
+    return k_y(theta, nuance) * profil.A * fy / gamma_M_fi
 
 
 def N_b_fi_Rd(
@@ -204,6 +209,7 @@ def M_fi_Rd(
     gamma_M_fi: float,
     kappa_1: float = 1.0,
     kappa_2: float = 1.0,
+    nuance: Nuance | None = None,
 ) -> float:
     """Moment résistant de section [N·m].
 
@@ -227,7 +233,7 @@ def M_fi_Rd(
     """
     if kappa_1 <= 0.0 or kappa_2 <= 0.0:
         raise ValueError("Les facteurs d'adaptation doivent être positifs.")
-    return module_plastique * k_y(theta) * fy / (gamma_M_fi * kappa_1 * kappa_2)
+    return module_plastique * k_y(theta, nuance) * fy / (gamma_M_fi * kappa_1 * kappa_2)
 
 
 def kappa_1_pour(trois_faces: bool, protege: bool) -> float:
@@ -268,7 +274,10 @@ def M_b_fi_Rd(
     )
 
 
-def V_fi_Rd(profil: Profil, fy: float, theta: float, gamma_M_fi: float) -> float | None:
+def V_fi_Rd(
+    profil: Profil, fy: float, theta: float, gamma_M_fi: float,
+    nuance: Nuance | None = None,
+) -> float | None:
     """Résistance à l'effort tranchant [N].
 
     EN 1993-1-2 §4.2.3.3(6) : V_fi,t,Rd = k_y,θ · A_v · f_y / (√3 · γ_M,fi).
@@ -278,7 +287,7 @@ def V_fi_Rd(profil: Profil, fy: float, theta: float, gamma_M_fi: float) -> float
     """
     if profil.Av is None:
         return None
-    return k_y(theta) * profil.Av * fy / (math.sqrt(3.0) * gamma_M_fi)
+    return k_y(theta, nuance) * profil.Av * fy / (math.sqrt(3.0) * gamma_M_fi)
 
 
 @dataclass(frozen=True, slots=True)
@@ -333,32 +342,33 @@ def resistances_a(
     Wy = module_y if module_y is not None else profil.Wply
     Wz = module_z if module_z is not None else profil.Wplz
 
-    l_y_theta = elancement_reduit_theta(lambda_y, theta)
-    l_z_theta = elancement_reduit_theta(lambda_z, theta)
-    l_LT_theta = elancement_reduit_theta(lambda_LT, theta)
+    l_y_theta = elancement_reduit_theta(lambda_y, theta, nuance)
+    l_z_theta = elancement_reduit_theta(lambda_z, theta, nuance)
+    l_LT_theta = elancement_reduit_theta(lambda_LT, theta, nuance)
+    ky = k_y(theta, nuance)
 
     chi_y = chi_fi(l_y_theta, fy)
     chi_z = chi_fi(l_z_theta, fy)
     chi_LT = chi_fi(l_LT_theta, fy) if lambda_LT > 0.0 else 1.0
 
-    resistance_plastique = profil.A * k_y(theta) * fy / gamma_M_fi
+    resistance_plastique = profil.A * ky * fy / gamma_M_fi
     if comprime:
         N_Rd = min(chi_y, chi_z) * resistance_plastique
     else:
-        N_Rd = N_fi_Rd_traction(profil, fy, theta, gamma_M_fi)
+        N_Rd = N_fi_Rd_traction(profil, fy, theta, gamma_M_fi, nuance)
 
     return Resistances(
         theta=theta,
         fy=fy,
         gamma_M_fi=gamma_M_fi,
-        k_y_theta=k_y(theta),
+        k_y_theta=ky,
         k_E_theta=k_E(theta),
         N_Rd=N_Rd,
         N_Rd_z=chi_z * resistance_plastique,
-        My_Rd=M_fi_Rd(Wy, fy, theta, gamma_M_fi, kappa_1, kappa_2),
-        Mz_Rd=M_fi_Rd(Wz, fy, theta, gamma_M_fi, kappa_1, kappa_2),
-        Mb_Rd=chi_LT * Wy * k_y(theta) * fy / gamma_M_fi,
-        V_Rd=V_fi_Rd(profil, fy, theta, gamma_M_fi),
+        My_Rd=M_fi_Rd(Wy, fy, theta, gamma_M_fi, kappa_1, kappa_2, nuance),
+        Mz_Rd=M_fi_Rd(Wz, fy, theta, gamma_M_fi, kappa_1, kappa_2, nuance),
+        Mb_Rd=chi_LT * Wy * ky * fy / gamma_M_fi,
+        V_Rd=V_fi_Rd(profil, fy, theta, gamma_M_fi, nuance),
         chi_y_fi=chi_y,
         chi_z_fi=chi_z,
         chi_LT_fi=chi_LT,

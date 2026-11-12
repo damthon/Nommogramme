@@ -22,6 +22,7 @@ TkAgg est utilisé, et il est déclaré en import caché parce que
 """
 
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_data_files
 
 _RACINE = Path(SPECPATH).parent
 
@@ -46,7 +47,11 @@ analyse = Analysis(
     # les fichiers ailleurs quand le paquet est vu depuis ``pathex`` sans être
     # installé. La panne est silencieuse à la compilation et ne se voit qu'au
     # lancement — d'où aussi le « --autotest » du lanceur.
-    datas=[(str(_RACINE / "src" / "nommogramme" / "data"), "nommogramme/data")],
+    # La note Word : python-docx a besoin de son gabarit, latex2mathml de sa
+    # table de symboles. Ces deux paquets sont installés : collect_data_files
+    # les trouve sans souci.
+    datas=[(str(_RACINE / "src" / "nommogramme" / "data"), "nommogramme/data")]
+    + collect_data_files("docx") + collect_data_files("latex2mathml"),
     # Imports que l'analyse statique ne voit pas, parce qu'ils sont différés
     # ou résolus par nom au moment de l'exécution.
     #
@@ -60,6 +65,10 @@ analyse = Analysis(
         "matplotlib.backends.backend_tkagg",
         "PIL.ImageTk",
         "PIL._tkinter_finder",
+        # Importés à la demande par nommogramme.note_word.
+        "docx",
+        "latex2mathml.converter",
+        "mathml2omml",
     ],
     hookspath=[],
     hooksconfig={},

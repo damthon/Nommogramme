@@ -7,7 +7,14 @@ protégés, par la méthode du nomogramme. Normes de référence : **SIA 263** e
 Deux familles de sections : les **277 profilés laminés** du catalogue SZS C5,
 et les **sections reconstituées soudées** — caisson rectangulaire ou profilé en
 H à semelles éventuellement inégales — dont vous donnez les cotes et que l'outil
-dessine à l'échelle.
+dessine à l'échelle. S'y ajoutent les **barres et tubes** des Stahlbau-Tabellen
+SZS — ronds RND, carrés VKT, tubes ronds ROR, plats FLA et larges plats FLB —
+calculés depuis leurs cotes. Une tige se vérifie avec un rond RND et une
+**classe de boulon** (4.6, 5.6, 8.8, 10.9) : la résistance chute alors par
+k_b,θ (EN 1993-1-2 tab. D.1), sur la section brute.
+
+La note de calcul s'exporte en **PDF** et en **Word** (.docx, équations Word
+éditables), chaque calcul précédé d'une phrase qui dit ce qu'il vérifie.
 
 Toutes les clauses citées portent leur norme et leur paragraphe —
 « EN 1993-1-2 §4.2.4, éq. (4.22) » — et sont rassemblées dans
@@ -47,6 +54,7 @@ calcule aussi bien en ligne de commande que dans un navigateur.
 | 11 | Sections reconstituées soudées, coupe cotée à l'échelle | fait |
 | 12 | Registre des références normatives, infobulles | fait |
 | 13 | Protection en bois lamellé-collé, compression négative | fait |
+| 14 | Barres et tubes (RND, VKT, ROR, FLA, FLB), classes de boulons 4.6 à 10.9 (k_b,θ), note Word à équations éditables | fait |
 
 **Convention de signe** : l'effort normal N_fi,Ed est **négatif en
 compression**, positif en traction, partout (interfaces, ligne de commande,
@@ -203,7 +211,7 @@ from nommogramme import (
 cas = CasDeCharge(
     N_fi_Ed=-850e3,     # N, négatif en compression
     My_fi_Ed=120e3,     # N·m
-    L=4.0,              # m, vide d'étage (longueur d'épure)
+    L=4.0,              # m, longueur de l'élément
     l_fi_y=2.0,         # m, poteau continu d'étage courant : 0,5·L
     l_fi_z=2.0,
     beta_M_y=1.4,
