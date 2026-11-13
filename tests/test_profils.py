@@ -25,9 +25,10 @@ def cat():
 @pytest.fixture(scope="module")
 def szs():
     """Les seuls profilés laminés du catalogue SZS C5, sans les barres."""
-    from nommogramme.profils.chargeur import _CSV_DEFAUT
+    from nommogramme.profils.chargeur import Catalogue
 
-    return charger_csv(_CSV_DEFAUT)
+    barres = {Famille.RND, Famille.VKT, Famille.ROR, Famille.FLA, Famille.FLB}
+    return Catalogue([p for p in charger_csv() if p.famille not in barres])
 
 
 class TestCatalogue:
