@@ -18,8 +18,17 @@ Les deux restent testés par ``tests/test_bureau.py`` et
 from __future__ import annotations
 
 import importlib.util
+import os
+import tempfile
 
 collect_ignore = []
+
+# Une suite reproductible : pas de modèle Word du poste, pas de PDF par Word
+# (lent, et absent du coureur Linux), et un dossier utilisateur temporaire —
+# les préférences réelles (nom de l'ingénieur…) ne sont jamais lues ni écrites.
+os.environ["NOMMOGRAMME_SANS_MODELE"] = "1"
+os.environ["NOMMOGRAMME_PDF_INTERNE"] = "1"
+os.environ["NOMMOGRAMME_DOSSIER"] = tempfile.mkdtemp(prefix="nommogramme-tests-")
 
 
 def _absent(module: str) -> bool:

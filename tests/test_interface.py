@@ -209,10 +209,18 @@ class TestRestitution:
         assert EC3_THETA_CR.courte == "EN 1993-1-2 §4.2.4, éq. (4.22)"
 
     def test_la_note_de_calcul_est_telechargeable(self, app: AppTest) -> None:
+        """Word et Markdown tout de suite ; le PDF, plus long, à la demande."""
         boutons = app.get("download_button")
-        assert len(boutons) == 3
-        assert "note de calcul" in boutons[0].label.lower()
-        assert "pdf" in boutons[0].label.lower()
+        assert len(boutons) == 2
+        assert "word" in boutons[0].label.lower()
+        preparer = next(b for b in app.button if "PDF" in b.label)
+        preparer.click().run()
+        assert any("pdf" in b.label.lower() for b in app.get("download_button"))
+
+    def test_les_champs_du_projet_sont_saisissables(self, app: AppTest) -> None:
+        for cle in ("projet_nom", "projet_numero", "projet_ingenieur", "projet_version"):
+            assert cle in app.session_state
+        assert app.session_state["projet_version"] == "1.0"
 
     def test_l_avertissement_de_validation_est_affiche(self, app: AppTest) -> None:
         """La validation est partielle : l'écran doit dire où elle s'arrête.

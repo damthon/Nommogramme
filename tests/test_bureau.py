@@ -259,6 +259,27 @@ class TestApplicationBureau:
         assert "k_sh" not in details
         assert "A_p/V" in details
 
+    def test_le_projet_se_saisit_sans_relancer_le_calcul(self, app, racine) -> None:
+        avant = app.resultat
+        app.var_projet["nom"].set("Pont du Lac")
+        app.var_projet["numero"].set("2417")
+        app.var_projet["ingenieur"].set("Ada Lovelace")
+        racine.update()
+        assert app.resultat is avant
+        projet = app.projet()
+        assert (projet.nom, projet.numero, projet.ingenieur, projet.version) == (
+            "Pont du Lac", "2417", "Ada Lovelace", "1.0")
+        app.var_projet["version"].set("")
+        assert app.projet().version == "1.0"
+        app.var_projet["version"].set("1.0")
+
+        # Le nom de l'ingénieur est retenu pour la prochaine session (dans le
+        # dossier utilisateur temporaire des tests).
+        from nommogramme.interface import bureau
+
+        assert bureau._preferences()["ingenieur"] == "Ada Lovelace"
+        assert "Pont du Lac" not in bureau._fichier_preferences().read_text(encoding="utf-8")
+
     def test_le_produit_personnalise_se_saisit(self, app, racine) -> None:
         from nommogramme.interface.saisie import PERSONNALISEE, SANS_PROTECTION
 

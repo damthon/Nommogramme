@@ -233,6 +233,38 @@ def _net_sur_ecran_haute_densite() -> None:
         pass
 
 
+def _fichier_preferences() -> Path:
+    from nommogramme.note_word import dossier_utilisateur
+
+    return dossier_utilisateur() / "preferences.json"
+
+
+def _preferences() -> dict:
+    """Les réglages retenus d'une session à l'autre ; vide si aucun ou illisible."""
+    import json
+
+    try:
+        valeur = json.loads(_fichier_preferences().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return valeur if isinstance(valeur, dict) else {}
+
+
+def _retenir(cle: str, valeur: str) -> None:
+    """Enregistre un réglage. Un échec d'écriture n'empêche pas de travailler."""
+    import json
+
+    preferences = _preferences()
+    preferences[cle] = valeur
+    fichier = _fichier_preferences()
+    try:
+        fichier.parent.mkdir(parents=True, exist_ok=True)
+        fichier.write_text(json.dumps(preferences, ensure_ascii=False, indent=2),
+                           encoding="utf-8")
+    except OSError:
+        pass
+
+
 def _famille_de(nom_profil: str) -> str:
     """La famille à laquelle appartient un profilé, par son nom."""
     for famille, noms in noms_par_famille().items():
@@ -381,6 +413,13 @@ class Application(ttk.Frame):
             kappa_2=lire("kappa_2"),
             C1=lire("C1"),
         )
+
+    def projet(self):
+        """Les informations de l'affaire, pour la note de calcul."""
+        from nommogramme.note_word import Projet
+
+        valeurs = {cle: v.get().strip() for cle, v in self.var_projet.items()}
+        return Projet(**{**valeurs, "version": valeurs["version"] or "1.0"})
 
     @staticmethod
     def _libelle_produit(cle: str) -> str:
@@ -539,6 +578,32 @@ class Application(ttk.Frame):
         )
 
     def _construire_parametres(self, parent: ttk.Frame) -> None:
+        # L'affaire, pour la note de calcul : ces champs ne relancent pas le
+        # calcul, qui ne dépend pas d'eux. La date est celle du jour.
+        import datetime
+
+        projet = self._bloc(parent, "Projet  ·  pour la note de calcul")
+        self.var_projet = {
+            "nom": tk.StringVar(), "numero": tk.StringVar(),
+            "ingenieur": tk.StringVar(value=_preferences().get("ingenieur", "")),
+            "version": tk.StringVar(value="1.0"),
+        }
+        # Le nom de l'ingénieur change rarement : il est retenu d'une session
+        # à l'autre. Le projet, lui, change à chaque note.
+        self.var_projet["ingenieur"].trace_add(
+            "write", lambda *_: _retenir("ingenieur", self.var_projet["ingenieur"].get().strip())
+        )
+        for ligne, (cle, libelle) in enumerate((
+            ("nom", "Nom du projet"), ("numero", "N° de projet"),
+            ("ingenieur", "Ingénieur (prénom nom)"), ("version", "Version de la note"),
+        )):
+            self._champ(projet, ligne, libelle,
+                        ttk.Entry(projet, textvariable=self.var_projet[cle], width=18))
+        ttk.Label(
+            projet, foreground=_GRIS,
+            text=f"Date : {datetime.date.today():%d.%m.%Y} (du jour)",
+        ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(3, 0))
+
         element = self._bloc(parent, "Élément")
         self._champ(
             element, 0, "Type de section",
@@ -1364,9 +1429,11 @@ class Application(ttk.Frame):
             if chemin.lower().endswith(".md"):
                 Path(chemin).write_text(self.resultat.note_de_calcul(), encoding="utf-8")
             elif chemin.lower().endswith(".docx"):
-                self.resultat.note_de_calcul_word(chemin, self.saisie().section())
+                self.resultat.note_de_calcul_word(chemin, self.saisie().section(),
+                                                  projet=self.projet())
             else:
-                self.resultat.note_de_calcul_pdf(chemin, self.saisie().section())
+                self.resultat.note_de_calcul_pdf(chemin, self.saisie().section(),
+                                                 projet=self.projet())
 
         if self._occupe(self.bouton_note, ecrire):
             self.annoncer(f"Note enregistrée : {Path(chemin).name}", Path(chemin))

@@ -382,22 +382,40 @@ def _figures(r: ResultatVerification, saisie: Saisie) -> None:
         )
 
 
-def _note(r: ResultatVerification, saisie: Saisie) -> None:
+def _projet():
+    """L'affaire, pour la note de calcul : ne relance pas le calcul."""
+    from nommogramme.note_word import Projet
+
+    with st.sidebar.expander("Projet — pour la note de calcul"):
+        nom = st.text_input("Nom du projet", key="projet_nom")
+        numero = st.text_input("N° de projet", key="projet_numero")
+        ingenieur = st.text_input("Ingénieur (prénom nom)", key="projet_ingenieur")
+        version = st.text_input("Version de la note", value="1.0", key="projet_version")
+        st.caption("La date est celle du jour.")
+    return Projet(nom=nom.strip(), numero=numero.strip(), ingenieur=ingenieur.strip(),
+                  version=version.strip() or "1.0")
+
+
+def _note(r: ResultatVerification, saisie: Saisie, projet) -> None:
     import io
 
     note = r.note_de_calcul()
     base = f"note-{r.profil.nom.replace(' ', '').replace('/', '-')}-R" \
            f"{en_minutes(r.duree_requise):.0f}"
-    pdf = io.BytesIO()
-    r.note_de_calcul_pdf(pdf, saisie.section())
-    st.download_button(
-        "Télécharger la note de calcul (PDF détaillé)",
-        data=pdf.getvalue(),
-        file_name=f"{base}.pdf",
-        mime="application/pdf",
-    )
+    # Le PDF passe par Word quand il est installé — une dizaine de secondes :
+    # préparé à la demande, pas à chaque interaction de la page.
+    if st.button("Préparer la note de calcul (PDF détaillé)"):
+        pdf = io.BytesIO()
+        with st.spinner("Mise en page de la note…"):
+            r.note_de_calcul_pdf(pdf, saisie.section(), projet=projet)
+        st.download_button(
+            "Télécharger la note de calcul (PDF détaillé)",
+            data=pdf.getvalue(),
+            file_name=f"{base}.pdf",
+            mime="application/pdf",
+        )
     docx = io.BytesIO()
-    r.note_de_calcul_word(docx, saisie.section())
+    r.note_de_calcul_word(docx, saisie.section(), projet=projet)
     st.download_button(
         "Télécharger la note de calcul (Word, équations éditables)",
         data=docx.getvalue(),
@@ -427,6 +445,7 @@ def principal() -> None:
     )
 
     saisie = _saisie()
+    projet = _projet()
 
     try:
         resultat = _verifier(saisie)
@@ -444,7 +463,7 @@ def principal() -> None:
         st.warning(reserve)
 
     _figures(resultat, saisie)
-    _note(resultat, saisie)
+    _note(resultat, saisie, projet)
 
     st.divider()
     st.caption(

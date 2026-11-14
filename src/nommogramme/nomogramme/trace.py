@@ -348,11 +348,15 @@ class Placeur:
                     repli.remove()
                 self._occupe.append(boite.padded(self.marge))
                 return annotation
-            if repli is None:
-                # La première position essayée est la plus proche du point
-                # désigné : on la garde en réserve au cas où aucune ne
-                # conviendrait.
-                repli = annotation
+            # En réserve, la première position qui reste **dans le cadre** :
+            # un texte un peu serré se lit, un texte coupé au bord de la
+            # figure non — « t_fi,d = 105 min » perdait son « min ». À défaut,
+            # la première essayée, la plus proche du point désigné.
+            dedans = not confiner or _dedans(boite, cadre)
+            if repli is None or (dedans and not repli_dedans):
+                if repli is not None:
+                    repli.remove()
+                repli, repli_dedans = annotation, dedans
             else:
                 annotation.remove()
 

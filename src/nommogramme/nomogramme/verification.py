@@ -125,21 +125,30 @@ class ResultatVerification:
 
         return note_de_calcul(self)
 
-    def note_de_calcul_pdf(self, chemin, section=None):
+    def note_de_calcul_pdf(self, chemin, section=None, projet=None):
         """Note de calcul en PDF, avec l'application numérique de chaque formule.
 
         ``section`` : la section soudée d'origine, pour le détail des tôles et
-        la coupe. Voir ``nommogramme.note_pdf``.
+        la coupe.
+
+        Quand Word est installé, le PDF est la note Word convertie par Word :
+        identique à la note .docx, page pour page. Sinon, il est composé par
+        ``nommogramme.note_pdf``, même contenu dans une mise en page propre.
+        ``projet`` : un ``note_word.Projet`` (nom, numéro, ingénieur, version).
         """
+        from ..note_word import note_pdf_par_word
+
+        if note_pdf_par_word(self, chemin, section, projet):
+            return chemin
         from ..note_pdf import note_pdf
 
         return note_pdf(self, chemin, section)
 
-    def note_de_calcul_word(self, chemin, section=None):
+    def note_de_calcul_word(self, chemin, section=None, projet=None):
         """Même note, en .docx à équations Word natives. Voir ``nommogramme.note_word``."""
         from ..note_word import note_word
 
-        return note_word(self, chemin, section)
+        return note_word(self, chemin, section, projet=projet)
 
     @property
     def ecart_nomogramme(self) -> float | None:

@@ -16,6 +16,14 @@ k_b,θ (EN 1993-1-2 tab. D.1), sur la section brute.
 La note de calcul s'exporte en **PDF** et en **Word** (.docx, équations Word
 éditables), chaque calcul précédé d'une phrase qui dit ce qu'il vérifie.
 
+**Modèle du bureau.** Copier le modèle Word du bureau (.dotx) sous
+`%APPDATA%\Nommogramme\modele-note.dotx` : la note en reprend alors la page de
+garde, le cartouche, les en-têtes, les styles et la signature. Le modèle n'est
+pas dans ce dépôt. Le nom du projet, son numéro, l'ingénieur et la version de
+la note se saisissent dans le bloc « Projet » ; la date est celle du jour.
+Quand Word est installé, le PDF est la note Word convertie par Word,
+identique page pour page ; sinon il est composé par le programme.
+
 Toutes les clauses citées portent leur norme et leur paragraphe —
 « EN 1993-1-2 §4.2.4, éq. (4.22) » — et sont rassemblées dans
 [`docs/references.md`](docs/references.md), qui dit aussi lesquelles restent à

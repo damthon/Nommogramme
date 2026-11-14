@@ -579,8 +579,11 @@ def _taux(r: ResultatVerification, u, theta_txt: str) -> list[Bloc]:
     A_ky_fy = r.profil.A * res.k_y_theta * res.fy / res.gamma_M_fi
     blocs.append(_calcul(
         f"Facteurs d'interaction — {theta_txt}", EC3_FACTEURS_INTERACTION.courte,
+        # Formule, puis application numérique : sur une seule ligne, elle
+        # dépassait la largeur de la page.
         rf"\mu_y = (1{{,}}2\,\beta_{{M,y}} - 3)\,\bar{{\lambda}}_{{y,\theta}}"
-        rf" + 0{{,}}44\,\beta_{{M,y}} - 0{{,}}29 = (1{{,}}2 \cdot {n(cas.beta_M_y, 2)} - 3)"
+        rf" + 0{{,}}44\,\beta_{{M,y}} - 0{{,}}29",
+        rf"\mu_y = (1{{,}}2 \cdot {n(cas.beta_M_y, 2)} - 3)"
         rf"\cdot {n(res.lambda_y_theta)} + 0{{,}}44 \cdot {n(cas.beta_M_y, 2)} - 0{{,}}29"
         rf" = {n(f.mu_y)} \ \ (\leq 0{{,}}8)",
         rf"k_y = 1 - \dfrac{{\mu_y\,N_{{fi,Ed}}}}{{\chi_{{y,fi}}\,A\,k_{{y,\theta}}\,f_y"
