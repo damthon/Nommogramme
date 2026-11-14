@@ -313,6 +313,26 @@ class TestInteraction:
         assert "hors §4.2.3.5" in t.critere
         assert t.facteurs is None
 
+    def test_traction_ne_dispense_pas_du_deversement(self, cat) -> None:
+        """Faible traction, fort moment, semelle libre : le déversement gouverne."""
+        profil = cat["HEB 300"]
+        fy = limite_elasticite(Nuance.S355, profil.tf)
+        res = resistances_a(
+            profil=profil, nuance=Nuance.S355, theta=20.0,
+            lambda_y=elancement_reduit(6.0, profil.iy, fy),
+            lambda_z=elancement_reduit(6.0, profil.iz, fy),
+            lambda_LT=elancement_reduit_LT(profil, fy, 6.0),
+            gamma_M_fi=1.0, comprime=False,
+        )
+        assert res.Mb_Rd < res.My_Rd
+        My = 0.95 * res.Mb_Rd
+        libre = taux(-50e3, My, 0.0, res, profil.A)
+        assert libre.valeur == pytest.approx(My / res.Mb_Rd)
+        assert "déversement" in libre.critere
+        maintenue = taux(-50e3, My, 0.0, res, profil.A, deversement_possible=False)
+        assert maintenue.valeur == pytest.approx(50e3 / res.N_Rd + My / res.My_Rd)
+        assert maintenue.taux_deversement == 0.0
+
 
 class TestKappa1DeduitDeLExposition:
     """EN 1993-1-2 §4.2.3.3(7) : κ₁ suit l'exposition et la protection."""

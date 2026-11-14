@@ -32,6 +32,7 @@ qui le détache de ce qui passe dessous quand aucune position n'est libre.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -44,7 +45,7 @@ from ..profils.composes import (
     caracteristiques,
 )
 from ..profils.geometrie import Exposition, facteur_massivete, perimetre_expose
-from ..profils.modele import Profil
+from ..profils.modele import Forme, Profil
 from ..references import EC3_MASSIVETE, EC3_THETA_CR
 from ..thermique.courbes import ISO834, CourbeFeu
 from ..thermique.evolution import echauffement
@@ -72,11 +73,17 @@ _MESSAGE_MATPLOTLIB = (
 class Palette:
     """Jeu de couleurs d'une figure.
 
-    Les deux teintes de série proviennent des emplacements 1 et 2 d'une
-    palette catégorielle validée pour la déficience de vision des couleurs :
-    séparation ΔE 24,7 en mode clair et 26,8 en mode sombre, bien au-delà du
-    seuil de 8. L'acier occupe l'emplacement 1 parce qu'il est le sujet ; les
-    gaz suivent.
+    Couleurs conventionnelles d'un graphique d'ingénierie incendie : l'acier
+    en bleu, le feu en orange brûlé, la courbe normative en encre presque
+    noire — elle n'est plus du même bleu que l'acier, ce qui prêtait à
+    confusion. Les trois séries sont séparées d'au moins ΔE 21,9 (OKLab ×100)
+    sous les trois daltonismes, en clair comme en sombre, et chacune tient
+    4,5:1 de contraste sur son fond : leurs étiquettes sont écrites dans leur
+    couleur.
+
+    Le vert et le rouge du verdict ne se distinguent pas pour un deutéranope,
+    ni le rouge de l'orange du feu : le verdict n'est jamais porté par la
+    couleur seule, l'étiquette de lecture reçoit ✓ ou ✗.
     """
 
     fond: str
@@ -91,20 +98,23 @@ class Palette:
     critique: str
     matiere: str = "#c9d8ec"
     """Remplissage d'une tôle, sur la coupe de section."""
+    norme: str = "#1e2430"
+    """Courbe normative du quadrant gauche (éq. (4.22) ou k_b,θ)."""
 
 
 CLAIR = Palette(
-    fond="#fcfcfb",
-    encre="#0b0b0b",
-    encre_secondaire="#52514e",
-    encre_attenuee="#898781",
-    grille="#e1e0d9",
-    axe="#c3c2b7",
-    acier="#2a78d6",
-    gaz="#eb6834",
-    favorable="#0ca30c",
-    critique="#d03b3b",
-    matiere="#cfe0f5",
+    fond="#ffffff",
+    encre="#0f172a",
+    encre_secondaire="#475569",
+    encre_attenuee="#64748b",
+    grille="#e5e7eb",
+    axe="#94a3b8",
+    acier="#1f5fa8",
+    gaz="#c2410c",
+    favorable="#1b7f3a",
+    critique="#be123c",
+    matiere="#d6e4f5",
+    norme="#1e2430",
 )
 
 SOMBRE = Palette(
@@ -113,12 +123,13 @@ SOMBRE = Palette(
     encre_secondaire="#c3c2b7",
     encre_attenuee="#898781",
     grille="#2c2c2a",
-    axe="#383835",
-    acier="#3987e5",
-    gaz="#d95926",
-    favorable="#0ca30c",
-    critique="#d03b3b",
+    axe="#4a4a46",
+    acier="#5b9be6",
+    gaz="#f0884a",
+    favorable="#3fb950",
+    critique="#f47067",
     matiere="#26364a",
+    norme="#e2e8f0",
 )
 
 _THEMES = {"clair": CLAIR, "sombre": SOMBRE}
@@ -163,13 +174,17 @@ def _rendu(figure):
 
 
 def _habiller(axes, p: Palette) -> None:
-    """Chrome commun : grille en filet, axes discrets, pas de cadre."""
+    """Chrome commun : grille en filet, cadre fermé discret.
+
+    Un graphique technique se lit dans un cadre fermé, sur ses quatre côtés :
+    la zone de tracé est délimitée, et les courbes qui touchent le bord haut
+    ne semblent pas sortir de la figure.
+    """
     axes.set_facecolor(p.fond)
     axes.grid(True, color=p.grille, linewidth=0.6, zorder=0)
     axes.set_axisbelow(True)
-    for bord in ("top", "right"):
-        axes.spines[bord].set_visible(False)
-    for bord in ("left", "bottom"):
+    for bord in ("left", "bottom", "top", "right"):
+        axes.spines[bord].set_visible(True)
         axes.spines[bord].set_color(p.axe)
         axes.spines[bord].set_linewidth(0.8)
     axes.tick_params(colors=p.encre_attenuee, labelsize=8, length=3, width=0.8)
@@ -297,6 +312,7 @@ class Placeur:
         *,
         halo: bool = True,
         confiner: bool = True,
+        forcer: bool = True,
         **style,
     ):
         """Pose un texte à la première position libre, et le renvoie.
@@ -304,7 +320,9 @@ class Placeur:
         ``candidats`` est une suite de ``(dx, dy, ha, va)`` en points
         typographiques, du placement préféré au plus lointain. Si aucun ne
         convient, le premier est retenu malgré tout : mieux vaut un texte un
-        peu serré que pas de texte, et le liseré le garde lisible.
+        peu serré que pas de texte, et le liseré le garde lisible. Avec
+        ``forcer=False``, rien n'est posé et ``None`` est renvoyé : l'appelant
+        peut alors essayer un autre point d'ancrage.
         """
         import matplotlib.patheffects as effets
 
@@ -338,6 +356,9 @@ class Placeur:
             else:
                 annotation.remove()
 
+        if not forcer:
+            repli.remove()
+            return None
         self._occupe.append(repli.get_window_extent(rendu).padded(self.marge))
         return repli
 
@@ -374,10 +395,12 @@ def tracer_echauffement(
     chemin: Path | str | None = None,
     theme: str | Palette = "clair",
     titre: str | None = None,
+    hauteur: float = 4.6,
 ):
     """Trace θ_a(t) et θ_g(t), avec la température critique et l'échéance.
 
     Renvoie le chemin écrit, ou la figure si ``chemin`` vaut ``None``.
+    ``hauteur`` [pouces] suit le cadre d'affichage, la largeur reste 8,2.
     """
     plt = _pyplot()
     p = _palette(theme)
@@ -392,7 +415,7 @@ def tracer_echauffement(
     acier = list(thermique.temperatures[: len(instants)])
     gaz = list(thermique.temperatures_gaz[: len(instants)])
 
-    figure, axes = plt.subplots(figsize=(8.2, 4.6), facecolor=p.fond)
+    figure, axes = plt.subplots(figsize=(8.2, hauteur), facecolor=p.fond)
     _habiller(axes, p)
 
     axes.plot(instants, gaz, color=p.gaz, linewidth=2.0, label="Gaz du foyer", zorder=3)
@@ -483,6 +506,7 @@ def tracer_echauffement(
     # resterait sans repère.
     if visible:
         placeur.poser(
+            f"{'✓' if resultat.verdict else '✗'} "
             f"{resultat.theta_a_a_echeance:.0f} °C à R{echeance:.0f}"
             f"  ·  marge {resultat.marge_temperature:+.0f} °C",
             xy=(echeance, resultat.theta_a_a_echeance),
@@ -540,6 +564,7 @@ def tracer_nomogramme(
     resultat: ResultatVerification,
     chemin: Path | str | None = None,
     theme: str | Palette = "clair",
+    hauteur: float = 5.4,
 ):
     """Trace le nomogramme à deux quadrants, avec le chemin de lecture.
 
@@ -556,6 +581,11 @@ def tracer_nomogramme(
     en fond de carte a été essayée puis retirée : elle n'aurait de sens que
     pour un élément nu, et juxtaposer des courbes d'acier nu à un cas protégé
     invite à une comparaison fausse.
+
+    ``hauteur`` [pouces] : la largeur reste de 11 pouces, la hauteur s'adapte
+    au cadre d'affichage pour que le graphique le remplisse au lieu d'y
+    flotter entre deux bandes vides. Titre et légende gardent des marges
+    fixes en pouces : c'est la zone de tracé qui grandit.
     """
     plt = _pyplot()
     p = _palette(theme)
@@ -564,7 +594,7 @@ def tracer_nomogramme(
     theta_max = 1000.0
 
     figure, (gauche, droite) = plt.subplots(
-        1, 2, figsize=(11.0, 5.4), facecolor=p.fond, sharey=True,
+        1, 2, figsize=(11.0, hauteur), facecolor=p.fond, sharey=True,
         gridspec_kw={"width_ratios": [1.0, 1.3], "wspace": 0.0},
     )
 
@@ -580,7 +610,11 @@ def tracer_nomogramme(
     #
     # Cet ajustement vient **avant** le tracé des quadrants : il déplace les
     # axes, et le placement des annotations mesure des positions à l'écran.
-    figure.subplots_adjust(top=0.855, bottom=0.155, left=0.06, right=0.985)
+    # Bandes fixes en pouces : 0,78 en haut (titre, sous-titre), 0,84 en bas
+    # (graduations, nom des axes, légende) — les valeurs d'origine à 5,4 po.
+    figure.subplots_adjust(
+        top=1.0 - 0.78 / hauteur, bottom=0.84 / hauteur, left=0.06, right=0.985
+    )
 
     _quadrant_gauche(gauche, resultat, p, theta_max)
     _quadrant_droit(droite, resultat, p, theta_max, duree_max)
@@ -600,10 +634,11 @@ def tracer_nomogramme(
     )
 
     figure.suptitle(
-        _titre(resultat), fontsize=11.5, color=p.encre, x=0.02, ha="left", y=0.975
+        _titre(resultat), fontsize=11.5, color=p.encre, x=0.02, ha="left",
+        y=1.0 - 0.135 / hauteur,
     )
     figure.text(
-        0.02, 0.925, _sous_titre(resultat),
+        0.02, 1.0 - 0.405 / hauteur, _sous_titre(resultat),
         fontsize=8.5, color=p.encre_attenuee, ha="left",
     )
     return _enregistrer(figure, chemin, p)
@@ -652,7 +687,7 @@ def _quadrant_gauche(axes, resultat, p: Palette, theta_max: float) -> None:
         ]
     axes.plot(
         [c[0] for c in courbe], [c[1] for c in courbe],
-        color=p.acier, linewidth=2.0, zorder=4,
+        color=p.norme, linewidth=2.0, zorder=4,
     )
 
     # Le zéro du quadrant gauche tomberait sur celui du quadrant droit.
@@ -679,7 +714,7 @@ def _quadrant_gauche(axes, resultat, p: Palette, theta_max: float) -> None:
             (12, -34, "left", "top"),
             (-12, 34, "right", "bottom"),
         ),
-        fontsize=8.5, color=p.acier,
+        fontsize=8.5, color=p.norme,
     )
 
 
@@ -810,21 +845,30 @@ def _quadrant_droit(
         ),
         fontsize=8.5, color=p.gaz,
     )
+    # Point d'ancrage préféré : là où l'acier s'écarte le plus des gaz. S'il
+    # est pris — par l'étiquette t_fi,d, qui passe avant — on remonte la
+    # courbe ; en dernier recours, le premier placement est forcé.
     indice_acier = max(
         range(len(acier)), key=lambda i: gaz[i] - acier[i]
     )
-    placeur.poser(
-        "acier", xy=(instants[indice_acier], acier[indice_acier]),
-        candidats=(
-            (4, -6, "left", "top"),
-            (4, 8, "left", "bottom"),
-            (-4, -6, "right", "top"),
-            (-4, 8, "right", "bottom"),
-            (8, -24, "left", "top"),
-            (-8, 24, "right", "bottom"),
-        ),
-        fontsize=8.5, color=p.acier,
-    )
+    ancres = [indice_acier] + [
+        int(len(acier) * f) for f in (0.12, 0.2, 0.3, 0.45)
+        if int(len(acier) * f) != indice_acier
+    ]
+    for rang, indice in enumerate(ancres):
+        if placeur.poser(
+            "acier", xy=(instants[indice], acier[indice]),
+            candidats=(
+                (4, -6, "left", "top"),
+                (4, 8, "left", "bottom"),
+                (-4, -6, "right", "top"),
+                (-4, 8, "right", "bottom"),
+                (8, -24, "left", "top"),
+                (-8, 24, "right", "bottom"),
+            ),
+            fontsize=8.5, color=p.acier, forcer=rang == len(ancres) - 1,
+        ) is not None:
+            break
 
 
 def _echeance(axes, resultat, p: Palette, placeur: Placeur) -> None:
@@ -882,7 +926,7 @@ def _chemin_droit(axes, resultat, p: Palette, placeur: Placeur) -> None:
     # le placeur y bascule le texte vers la gauche plutôt que de le laisser
     # sortir du cadre, où il serait tronqué à l'affichage.
     placeur.poser(
-        f"t_fi,d = {instant:.0f} min", xy=(instant, 0.0),
+        f"{'✓' if resultat.verdict else '✗'} t_fi,d = {instant:.0f} min", xy=(instant, 0.0),
         candidats=(
             (6, 10, "left", "bottom"),
             (-6, 10, "right", "bottom"),
@@ -1009,13 +1053,19 @@ def _renvoi(axes, p: Palette, cible, texte: str) -> None:
 
 
 def tracer_section(
-    section: SectionSoudee,
+    section: SectionSoudee | Profil,
     chemin: Path | str | None = None,
     theme: str | Palette = "clair",
     exposition: Exposition | None = None,
     titre: str | None = None,
 ):
-    """Dessine une section soudée **à l'échelle**, cotée, avec sa face couverte.
+    """Dessine une section **à l'échelle**, cotée, avec sa face couverte.
+
+    ``section`` est une section soudée, dessinée tôle par tôle, ou n'importe
+    quel ``Profil`` — catalogue SZS, barre, boulon — dessiné d'après sa forme
+    et ses cotes : I ou H avec ses congés, profil creux arrondi, tube, rond,
+    rectangle plein. Les ailes inclinées d'un INP sont dessinées à leur
+    épaisseur moyenne, celle du catalogue.
 
     L'échelle est respectée — ``set_aspect("equal")`` — et c'est tout
     l'intérêt du dessin : une saisie fautive d'un facteur dix se voit d'un
@@ -1037,13 +1087,16 @@ def tracer_section(
     plt = _pyplot()
     p = _palette(theme)
 
-    profil = section.profil()
-    plaques = section.plaques()
-    carac = caracteristiques(plaques)
-
-    h = section.h * 1e3
-    b = section.b * 1e3
-    z_g = carac.z_g * 1e3
+    soudee = not isinstance(section, Profil)
+    profil = section.profil() if soudee else section
+    if soudee:
+        plaques = section.plaques()
+        h, b = section.h * 1e3, section.b * 1e3
+        z_g = caracteristiques(plaques).z_g * 1e3
+    else:
+        h, b = profil.h * 1e3, profil.b * 1e3
+        z_g = h / 2.0  # profilés laminés et barres : doublement symétriques
+    rond = profil.forme in (Forme.ROND_PLEIN, Forme.TUBE_ROND)
 
     figure, axes = plt.subplots(figsize=(6.6, 5.8), facecolor=p.fond)
     axes.set_facecolor(p.fond)
@@ -1075,26 +1128,33 @@ def tracer_section(
             bbox={"facecolor": p.fond, "edgecolor": "none", "pad": 2.0},
         )
 
-    # --- les tôles ---------------------------------------------------------
-    for plaque in plaques:
-        axes.add_patch(
-            Rectangle(
-                ((plaque.y - plaque.largeur / 2.0) * 1e3,
-                 (plaque.z - plaque.hauteur / 2.0) * 1e3),
-                plaque.largeur * 1e3, plaque.hauteur * 1e3,
-                facecolor=p.matiere, edgecolor=p.acier, linewidth=1.2, zorder=4,
+    # --- la matière : tôles d'une section soudée, ou contour d'un profilé ----
+    if soudee:
+        for plaque in plaques:
+            axes.add_patch(
+                Rectangle(
+                    ((plaque.y - plaque.largeur / 2.0) * 1e3,
+                     (plaque.z - plaque.hauteur / 2.0) * 1e3),
+                    plaque.largeur * 1e3, plaque.hauteur * 1e3,
+                    facecolor=p.matiere, edgecolor=p.acier, linewidth=1.2, zorder=4,
+                )
             )
-        )
+    else:
+        _dessiner_profil(axes, p, profil)
+
+    # Échelle de mise en page : un plat debout de 100 × 10 est cent fois plus
+    # haut que large ; caler les cotes sur sa seule largeur les entasserait.
+    bb = max(b, 0.5 * h)
 
     # --- axes principaux et centre de gravité -------------------------------
-    axes.plot([-0.62 * b, 0.62 * b], [z_g, z_g], color=p.encre_attenuee,
+    axes.plot([-0.62 * bb, 0.62 * bb], [z_g, z_g], color=p.encre_attenuee,
               linewidth=0.8, linestyle=(0, (7, 3, 1, 3)), zorder=5)
     axes.plot([0.0, 0.0], [-0.08 * h, 1.08 * h], color=p.encre_attenuee,
               linewidth=0.8, linestyle=(0, (7, 3, 1, 3)), zorder=5)
     axes.plot([0.0], [z_g], marker="+", markersize=10, color=p.encre,
               markeredgewidth=1.4, zorder=8)
     axes.text(
-        0.035 * b, z_g + 0.012 * h, "G", ha="left", va="bottom",
+        0.035 * bb, z_g + 0.012 * h, "G", ha="left", va="bottom",
         fontsize=_CORPS_COTE, color=p.encre, zorder=8,
         bbox={"facecolor": p.fond, "edgecolor": "none", "pad": 1.0},
     )
@@ -1103,13 +1163,19 @@ def tracer_section(
     #
     # Les dimensions hors tout à gauche, les épaisseurs à droite : les unes ne
     # peuvent alors plus croiser les autres, quelles que soient les
-    # proportions de la section.
-    _cote_verticale(axes, p, -0.82 * b, 0.0, h, f"h = {h:.0f}")
+    # proportions de la section. Un cercle n'a qu'un diamètre.
     ligne_b = -0.22 * h - decalage_bas
-    _cote_horizontale(axes, p, -b / 2.0, b / 2.0, ligne_b, f"b = {b:.0f}")
-    _coter_les_toles(axes, p, section, h, b, decalage_haut, decalage_bas)
+    if rond:
+        _cote_horizontale(axes, p, -b / 2.0, b / 2.0, ligne_b, f"Ø {_mm(b)}")
+    else:
+        _cote_verticale(axes, p, -b / 2.0 - 0.32 * bb, 0.0, h, f"h = {_mm(h)}")
+        _cote_horizontale(axes, p, -b / 2.0, b / 2.0, ligne_b, f"b = {_mm(b)}")
+    if soudee:
+        _coter_les_toles(axes, p, section, h, b, decalage_haut, decalage_bas)
+    else:
+        _coter_le_profil(axes, p, profil, h, b)
 
-    axes.set_xlim(-1.05 * b, 1.35 * b)
+    axes.set_xlim(-b / 2.0 - 0.55 * bb, b / 2.0 + 0.85 * bb)
     axes.set_ylim(ligne_b - 0.10 * h, h + decalage_haut + 0.18 * h)
 
     # Le sous-titre fait trois lignes et monte depuis le haut de l'axe : la
@@ -1125,6 +1191,81 @@ def tracer_section(
     )
     figure.tight_layout()
     return _enregistrer(figure, chemin, p)
+
+
+def _mm(valeur: float) -> str:
+    """114.3 → « 114.3 », 400.0 → « 400 » : la cote telle qu'on l'écrit."""
+    return f"{round(valeur, 1):g}"
+
+
+def _arc(cx: float, cz: float, r: float, debut: float, fin: float, n: int = 10):
+    """Points d'un arc de cercle, angles en degrés, de ``debut`` à ``fin``."""
+    return [
+        (cx + r * math.cos(math.radians(a)), cz + r * math.sin(math.radians(a)))
+        for a in (debut + (fin - debut) * i / n for i in range(n + 1))
+    ]
+
+
+def _rectangle_arrondi(l: float, h: float, r: float, z0: float = 0.0):
+    """Contour d'un rectangle centré en y, posé à z0, angles de rayon r."""
+    r = max(0.0, min(r, l / 2.0, h / 2.0))
+    y, z = l / 2.0 - r, h / 2.0 - r
+    zc = z0 + h / 2.0
+    return (_arc(y, zc - z, r, -90, 0) + _arc(y, zc + z, r, 0, 90)
+            + _arc(-y, zc + z, r, 90, 180) + _arc(-y, zc - z, r, 180, 270))
+
+
+def _contour_i(h: float, b: float, tw: float, tf: float, r: float):
+    """Contour d'un I ou d'un H, avec ses quatre congés âme–semelle."""
+    B, W = b / 2.0, tw / 2.0
+    r = max(0.0, min(r, B - W, h / 2.0 - tf))
+    return (
+        [(-B, 0.0), (B, 0.0), (B, tf)]
+        + _arc(W + r, tf + r, r, 270, 180)
+        + _arc(W + r, h - tf - r, r, 180, 90)
+        + [(B, h - tf), (B, h), (-B, h), (-B, h - tf)]
+        + _arc(-W - r, h - tf - r, r, 90, 0)
+        + _arc(-W - r, tf + r, r, 0, -90)
+        + [(-B, tf)]
+    )
+
+
+def _dessiner_profil(axes, p: Palette, profil: Profil) -> None:
+    """La matière d'un profilé d'après sa forme, en millimètres."""
+    from matplotlib.patches import Circle, Polygon
+
+    h, b = profil.h * 1e3, profil.b * 1e3
+    tw, tf, r = profil.tw * 1e3, profil.tf * 1e3, profil.r * 1e3
+    plein = {"facecolor": p.matiere, "edgecolor": p.acier, "linewidth": 1.2, "zorder": 4}
+    vide = {"facecolor": p.fond, "edgecolor": p.acier, "linewidth": 1.2, "zorder": 4}
+    forme = profil.forme
+
+    if forme in (Forme.ROND_PLEIN, Forme.TUBE_ROND):
+        axes.add_patch(Circle((0.0, h / 2.0), b / 2.0, **plein))
+        if forme is Forme.TUBE_ROND:
+            axes.add_patch(Circle((0.0, h / 2.0), b / 2.0 - tw, **vide))
+    elif forme is Forme.PROFIL_CREUX:
+        axes.add_patch(Polygon(_rectangle_arrondi(b, h, r), **plein))
+        axes.add_patch(Polygon(
+            _rectangle_arrondi(b - 2.0 * tw, h - 2.0 * tf, r - tw, z0=tf), **vide
+        ))
+    elif forme is Forme.RECTANGLE_PLEIN:
+        axes.add_patch(Polygon(_rectangle_arrondi(b, h, 0.0), **plein))
+    else:
+        axes.add_patch(Polygon(_contour_i(h, b, tw, tf, r), **plein))
+
+
+def _coter_le_profil(axes, p: Palette, profil: Profil, h: float, b: float) -> None:
+    """Épaisseurs d'un profilé : âme et semelle d'un I, paroi d'un creux."""
+    tw, tf = profil.tw * 1e3, profil.tf * 1e3
+    forme = profil.forme
+    if forme.en_i:
+        _renvoi(axes, p, (0.0, h - tf / 2.0), f"t_f = {_mm(tf)}")
+        _renvoi(axes, p, (tw / 2.0, h / 2.0), f"t_w = {_mm(tw)}")
+    elif forme is Forme.PROFIL_CREUX:
+        _renvoi(axes, p, (b / 2.0 - tw / 2.0, h / 2.0), f"t = {_mm(tw)}")
+    elif forme is Forme.TUBE_ROND:
+        _renvoi(axes, p, (b / 2.0 - tw / 2.0, h / 2.0), f"t = {_mm(tw)}")
 
 
 def _coter_les_toles(

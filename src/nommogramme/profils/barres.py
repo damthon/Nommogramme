@@ -19,11 +19,15 @@ Conventions, pour entrer dans le modèle des profilés en I :
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 
 from ..unites import mm
 from .modele import Famille, Profil
 
-__all__ = ["barres", "rond", "carre", "tube", "plat"]
+__all__ = ["BOULON", "barres", "boulon", "rond", "carre", "tube", "plat"]
+
+BOULON = "Boulon Ø"
+"""Préfixe du nom d'une tige de boulon, pour la distinguer d'un rond du catalogue."""
 
 _RHO = 7850.0
 
@@ -97,6 +101,20 @@ def rond(D_mm: float) -> Profil:
         Welz=I / (D / 2.0), Wplz=D**3 / 6.0, iy=D / 4.0, iz=D / 4.0,
         Um=math.pi * D, It=2.0 * I, Iw=0.0,
     )
+
+
+def boulon(d_mm: float) -> Profil:
+    """Tige de boulon de diamètre d, quelconque : un rond plein, renommé.
+
+    Même calcul que ``rond`` — un boulon de 20 mm et le RND 20 ont exactement
+    les mêmes caractéristiques. Seul le nom change, pour que la note ne le
+    présente pas comme un produit du catalogue. C'est la section **lisse**
+    (diamètre nominal) : la section résistante A_s du filetage n'est pas
+    prise en compte.
+    """
+    if d_mm <= 0.0:
+        raise ValueError(f"Le diamètre du boulon doit être positif, reçu {d_mm} mm.")
+    return replace(rond(d_mm), nom=f"{BOULON}{_cote(d_mm)}")
 
 
 def carre(b_mm: float) -> Profil:

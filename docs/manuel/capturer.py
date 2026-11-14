@@ -24,7 +24,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageGrab
 
-from nommogramme.interface.bureau import Application
+from nommogramme.interface.bureau import Application, _appliquer_theme
 from nommogramme.interface.saisie import CAISSON_SOUDE
 
 ICI = Path(__file__).resolve().parent
@@ -97,8 +97,9 @@ def _photo(racine: tk.Tk, app, nom: str, cibles=(), numero: str | None = None) -
 def main() -> int:
     IMAGES.mkdir(parents=True, exist_ok=True)
     racine = tk.Tk()
-    _polices_unicode(racine)
     racine.geometry("1500x1180+0+0")
+    _appliquer_theme(racine)
+    _polices_unicode(racine)  # après le thème, qui pose Segoe UI sous Windows
     app = Application(racine)
     racine.update()
     app.dessiner_figures()
@@ -127,6 +128,7 @@ def main() -> int:
     v["protection"].set(app._libelle_produit("plaques_silicate"))
     racine.update()
     v["epaisseur"].set(15.0)
+    app._basculer_avances()  # replié par défaut, ouvert pour le montrer
     racine.update()
     _photo(racine, app, "04-feu-protection", (_bloc(racine, "Exposition au feu"),
                                         _bloc(racine, "Protection"),

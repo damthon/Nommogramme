@@ -308,6 +308,30 @@ class TestCoupeDeSection:
         ).axes[0]
         assert not [forme for forme in axes.patches if forme.get_hatch()]
 
+    @pytest.mark.parametrize("nom, cote", [
+        ("HEB300", "t_w = 11"), ("INP200", "t_f = 11.3"), ("RRW 200/200/10", "t = 10"),
+        ("ROR 114.3/10", "Ø 114.3"), ("RND 40", "Ø 40"), ("VKT 50", "h = 50"),
+        ("FLA 100/10", "b = 10"),
+    ])
+    def test_tout_profile_du_catalogue_a_sa_coupe(self, cat, nom: str, cote: str) -> None:
+        """Pas seulement le soudé : chaque forme du catalogue se dessine, cotée."""
+        import matplotlib.pyplot as plt
+
+        figure = tracer_section(cat[nom], exposition=Exposition.CONTOUR_4_FACES)
+        textes = [t.get_text() for t in figure.axes[0].texts]
+        assert any(cote in t for t in textes), textes
+        assert figure.axes[0].patches, "aucune matière dessinée"
+        plt.close(figure)
+
+    def test_le_boulon_a_sa_coupe(self) -> None:
+        import matplotlib.pyplot as plt
+
+        from nommogramme.profils.barres import boulon
+
+        figure = tracer_section(boulon(27.0))
+        assert any("Ø 27" in t.get_text() for t in figure.axes[0].texts)
+        plt.close(figure)
+
     @pytest.mark.parametrize("theme", ["clair", "sombre"])
     def test_ecrit_un_fichier(self, tmp_path, theme: str) -> None:
         destination = tmp_path / f"section_{theme}.png"
@@ -336,10 +360,23 @@ class TestPalette:
         assert CLAIR.fond != SOMBRE.fond
         assert CLAIR.encre != SOMBRE.encre
 
-    def test_couleurs_de_serie_de_la_palette_validee(self) -> None:
-        """Emplacements 1 et 2, validés pour la déficience de vision des couleurs."""
-        assert (CLAIR.acier, CLAIR.gaz) == ("#2a78d6", "#eb6834")
-        assert (SOMBRE.acier, SOMBRE.gaz) == ("#3987e5", "#d95926")
+    @pytest.mark.parametrize("palette", [CLAIR, SOMBRE], ids=["clair", "sombre"])
+    def test_les_series_se_lisent_sur_leur_fond(self, palette) -> None:
+        """Leurs étiquettes sont écrites dans leur couleur : 4,5:1 au moins (WCAG)."""
+
+        def luminance(couleur: str) -> float:
+            canaux = [int(couleur[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+            lin = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+                   for c in canaux]
+            return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+        fond = luminance(palette.fond)
+        for serie in (palette.acier, palette.gaz, palette.norme):
+            claire, sombre = sorted((luminance(serie), fond), reverse=True)
+            assert (claire + 0.05) / (sombre + 0.05) >= 4.5, serie
+
+    def test_la_courbe_normative_n_a_pas_la_couleur_de_l_acier(self) -> None:
+        assert len({CLAIR.acier, CLAIR.gaz, CLAIR.norme}) == 3
 
     def test_theme_inconnu_refuse(self, nu) -> None:
         with pytest.raises(ValueError, match="Thème"):

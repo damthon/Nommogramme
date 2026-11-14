@@ -34,6 +34,7 @@ from nommogramme.mecanique.actions import CasDeCharge
 from nommogramme.mecanique.resistances import kappa_1_pour
 from nommogramme.nomogramme.verification import ResultatVerification, verifier
 from nommogramme.profils import Catalogue, Exposition, Famille, Profil, charger_csv
+from nommogramme.profils.barres import boulon
 from nommogramme.profils.composes import (
     SectionCaisson,
     SectionH,
@@ -56,18 +57,24 @@ from nommogramme.unites import kN, kNm, mm
 
 __all__ = [
     "AIDES",
+    "BOULON",
     "CAISSON_SOUDE",
     "CATALOGUE",
     "CONTEXTES",
     "DUREES",
     "EXPOSITIONS",
     "H_SOUDE",
+    "NUANCES_ACIER",
+    "NUANCES_BOULON",
+    "PERSONNALISEE",
     "SANS_PROTECTION",
     "TYPES_SECTION",
     "Saisie",
     "catalogue",
     "executer",
     "noms_par_famille",
+    "nuance_par_defaut",
+    "nuances_pour",
     "produits",
 ]
 
@@ -89,12 +96,28 @@ DUREES: tuple[int, ...] = (15, 30, 60, 90, 120, 180)
 SANS_PROTECTION = "Aucune"
 """Libellé de l'absence de protection, dans les listes déroulantes."""
 
+PERSONNALISEE = "Produit personnalisé…"
+"""Libellé d'un produit dont l'utilisateur saisit lui-même les propriétés."""
+
 CATALOGUE = "Profilé laminé (catalogue SZS)"
 CAISSON_SOUDE = "Caisson rectangulaire soudé"
 H_SOUDE = "Profilé en H soudé (PRS)"
+BOULON = "Boulon (tige ronde)"
 
-TYPES_SECTION: tuple[str, ...] = (CATALOGUE, CAISSON_SOUDE, H_SOUDE)
+TYPES_SECTION: tuple[str, ...] = (CATALOGUE, CAISSON_SOUDE, H_SOUDE, BOULON)
 """Origines possibles de la section, dans l'ordre des listes déroulantes."""
+
+NUANCES_ACIER: tuple[str, ...] = tuple(n.value for n in Nuance if not n.est_boulon)
+NUANCES_BOULON: tuple[str, ...] = tuple(n.value for n in Nuance if n.est_boulon)
+
+
+def nuances_pour(type_section: str) -> tuple[str, ...]:
+    """Les nuances proposées : classes de boulon pour un boulon, aciers sinon."""
+    return NUANCES_BOULON if type_section == BOULON else NUANCES_ACIER
+
+
+def nuance_par_defaut(type_section: str) -> str:
+    return "8.8" if type_section == BOULON else "S355"
 
 
 AIDES: dict[str, str] = {
@@ -153,10 +176,9 @@ AIDES: dict[str, str] = {
     "nuance": (
         "Nuance d'acier. La limite d'élasticité décroît avec l'épaisseur de "
         "semelle, et cette décroissance est appliquée automatiquement. "
-        "Les classes de boulons 4.6, 5.6, 8.8 et 10.9 (f_yb de SIA 263 "
-        "tab. 2) servent à vérifier une tige, avec un rond RND : leur "
-        "résistance chute à chaud par k_b,θ (EN 1993-1-2 tab. D.1), et la "
-        "section filetée n'est pas vérifiée."
+        "Pour un boulon, ce sont les classes 4.6, 5.6, 8.8 et 10.9 (f_yb de "
+        "SIA 263 tab. 2) : leur résistance chute à chaud par k_b,θ "
+        "(EN 1993-1-2 tab. D.1), et la section filetée n'est pas vérifiée."
     ),
     "protection": EC3_ECHAUFFEMENT_PROTEGE.infobulle(
         "Produit de protection. Un isolant classique garde son épaisseur. Le "
@@ -178,7 +200,23 @@ AIDES: dict[str, str] = {
         "Profilé du catalogue SZS, ou section reconstituée soudée dont vous "
         "donnez les dimensions. Une section soudée n'a ni congé de "
         "raccordement ni valeur tabulée : toutes ses caractéristiques sont "
-        "calculées depuis les tôles, gorges de soudure négligées."
+        "calculées depuis les tôles, gorges de soudure négligées. Un boulon "
+        "est une tige ronde pleine de diamètre libre, vérifiée avec les "
+        "classes de boulons."
+    ),
+    "perso": EC3_ECHAUFFEMENT_PROTEGE.infobulle(
+        "Produit personnalisé : reprendre les valeurs de la fiche technique ou "
+        "de l'agrément (ETE, reconnaissance AEAI) du produit retenu. λ_p est la "
+        "conductivité à chaud, à prendre sur la plage d'échauffement de l'essai, "
+        "pas la valeur à 20 °C. L'humidité retarde l'échauffement "
+        "(EN 1993-1-2 §4.2.5.2(6)) : la laisser à zéro est sécuritaire. Le "
+        "produit est traité comme incombustible, à conductivité constante — "
+        "pas pour une peinture intumescente."
+    ),
+    "d_boulon": (
+        "Diamètre nominal de la tige [mm]. La section est celle du cercle "
+        "plein, identique au rond RND de même diamètre : la section "
+        "résistante A_s du filetage, plus petite, n'est pas prise en compte."
     ),
 }
 """Textes d'aide des paramètres, partagés par les deux interfaces graphiques.
@@ -246,7 +284,8 @@ class Saisie:
     """Largeur de la semelle inférieure du H [mm]. Ignorée pour un caisson."""
     tf_inf_soudee: float = 20.0
     """Épaisseur de la semelle inférieure du H [mm]. Ignorée pour un caisson."""
-    """Semelle masquée par la dalle, en exposition sur trois faces."""
+    d_boulon: float = 20.0
+    """Diamètre de la tige d'un boulon [mm]. Ne sert que pour un boulon."""
 
     N: float = -850.0
     """Effort normal [kN], **négatif en compression**."""
@@ -273,6 +312,20 @@ class Saisie:
     epaisseur: float | None = None
     """Épaisseur de protection [mm]. Ignorée sans protection."""
 
+    # Produit personnalisé (``protection == PERSONNALISEE``) : les données
+    # de la fiche technique ou de l'agrément du produit trouvé. Les valeurs
+    # par défaut sont celles d'une plaque silico-calcaire courante.
+    nom_perso: str = ""
+    """Nom du produit, repris dans la note de calcul."""
+    lambda_p_perso: float = 0.15
+    """Conductivité thermique λ_p [W/m·K]."""
+    rho_p_perso: float = 600.0
+    """Masse volumique ρ_p [kg/m³]."""
+    c_p_perso: float = 1200.0
+    """Chaleur spécifique c_p [J/kg·K]."""
+    humidite_perso: float = 0.0
+    """Teneur en eau [% de la masse] ; zéro, sécuritaire, si on l'ignore."""
+
     contexte: str = "Suisse — SIA 263 / SIA 260"
     kappa_2: float = 1.0
     C1: float = 1.0
@@ -285,12 +338,46 @@ class Saisie:
     def protegee(self) -> bool:
         return self.protection != SANS_PROTECTION
 
+    @property
+    def personnalisee(self) -> bool:
+        return self.protection == PERSONNALISEE
+
     def fiche_protection(self) -> dict | None:
-        """La fiche du produit retenu, ou ``None`` sans protection."""
-        return produits()[self.protection] if self.protegee else None
+        """La fiche du catalogue, ou ``None`` sans protection ou pour un produit perso."""
+        if not self.protegee or self.personnalisee:
+            return None
+        return produits()[self.protection]
+
+    def protection_retenue(self) -> Protection | None:
+        """La couche de protection décrite, en SI, ou ``None`` sans protection."""
+        if not self.protegee:
+            return None
+        epaisseur = self.epaisseur
+        if epaisseur is None:
+            epaisseur = self.epaisseur_par_defaut()
+        if not self.personnalisee:
+            return Protection.depuis_catalogue(self.protection, d_p=float(epaisseur) * 1e-3)
+        for nom, valeur in (("λ_p", self.lambda_p_perso), ("ρ_p", self.rho_p_perso),
+                            ("c_p", self.c_p_perso), ("d_p", epaisseur)):
+            if valeur <= 0.0:
+                raise ValueError(f"Produit personnalisé : {nom} doit être positif, reçu {valeur}.")
+        if not 0.0 <= self.humidite_perso < 100.0:
+            raise ValueError(
+                f"Produit personnalisé : humidité entre 0 et 100 %, reçu {self.humidite_perso}."
+            )
+        nom = self.nom_perso.strip()
+        return Protection(
+            nom="personnalisee",
+            libelle=f"{nom} (produit personnalisé)" if nom else "Produit personnalisé",
+            lambda_p=self.lambda_p_perso, rho_p=self.rho_p_perso, c_p=self.c_p_perso,
+            d_p=float(epaisseur) * 1e-3, humidite=self.humidite_perso,
+            pose="caisson" if self.exposition.startswith("Caisson") else "contour",
+        )
 
     def epaisseur_par_defaut(self) -> float | None:
-        """Épaisseur minimale usuelle du produit retenu [mm]."""
+        """Épaisseur minimale usuelle du produit retenu [mm] (20 mm pour un produit perso)."""
+        if self.personnalisee:
+            return 20.0
         fiche = self.fiche_protection()
         return float(fiche["dp_min"] * 1e3) if fiche else None
 
@@ -298,8 +385,8 @@ class Saisie:
 
     @property
     def soudee(self) -> bool:
-        """La section est-elle reconstituée plutôt que tirée du catalogue ?"""
-        return self.type_section != CATALOGUE
+        """La section est-elle une section soudée reconstituée ?"""
+        return self.type_section in (CAISSON_SOUDE, H_SOUDE)
 
     @property
     def kappa_1(self) -> float:
@@ -324,7 +411,7 @@ class Saisie:
                 b_sup=mm(self.b_soudee), tf_sup=mm(self.tf_soudee),
                 b_inf=mm(self.b_inf_soudee), tf_inf=mm(self.tf_inf_soudee),
             )
-        if self.type_section != CATALOGUE:
+        if self.type_section not in (CATALOGUE, BOULON):
             raise ValueError(
                 f"Type de section inconnu : {self.type_section!r}. "
                 f"Attendu : {', '.join(TYPES_SECTION)}."
@@ -337,6 +424,8 @@ class Saisie:
         Catalogue ou section soudée, le reste de la chaîne reçoit un
         ``Profil`` et ne fait pas la différence.
         """
+        if self.type_section == BOULON:
+            return boulon(self.d_boulon)
         section = self.section()
         return section.profil() if section is not None else catalogue()[self.profil]
 
@@ -354,14 +443,16 @@ def executer(saisie: Saisie) -> ResultatVerification:
     sont déjà en mètres et les minutes déjà en minutes, ``verifier()`` les
     prenant sous cette forme.
     """
-    protection = None
-    if saisie.protegee:
-        epaisseur = saisie.epaisseur
-        if epaisseur is None:
-            epaisseur = saisie.epaisseur_par_defaut()
-        protection = Protection.depuis_catalogue(
-            saisie.protection, d_p=float(epaisseur) * 1e-3
+    if saisie.nuance not in nuances_pour(saisie.type_section):
+        raise ValueError(
+            f"La nuance {saisie.nuance} ne convient pas : "
+            + ("un boulon se vérifie avec une classe de boulon "
+               if saisie.type_section == BOULON
+               else "les classes de boulon sont réservées au type « Boulon » ")
+            + f"({', '.join(nuances_pour(saisie.type_section))})."
         )
+
+    protection = saisie.protection_retenue()
 
     cas = CasDeCharge(
         N_fi_Ed=kN(saisie.N),

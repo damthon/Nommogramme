@@ -259,6 +259,139 @@ class TestApplicationBureau:
         assert "k_sh" not in details
         assert "A_p/V" in details
 
+    def test_le_produit_personnalise_se_saisit(self, app, racine) -> None:
+        from nommogramme.interface.saisie import PERSONNALISEE, SANS_PROTECTION
+
+        assert not app.champs["lambda_p_perso"].winfo_manager()
+        app.var["protection"].set(PERSONNALISEE)
+        racine.update()
+        assert app.champs["lambda_p_perso"].winfo_manager()
+        assert str(app.champ_epaisseur.cget("state")) == "normal"
+        app.var["nom_perso"].set("Plaque X")
+        app.var["lambda_p_perso"].set(0.10)
+        racine.update()
+        assert app.resultat.protection.libelle == "Plaque X (produit personnalisé)"
+        assert app.resultat.protection.lambda_p == pytest.approx(0.10)
+
+        app.var["lambda_p_perso"].set(0.0)
+        racine.update()
+        assert "doit être positif" in app.sous_banniere.cget("text")
+
+        app.var["lambda_p_perso"].set(0.15)
+        app.var["protection"].set(SANS_PROTECTION)
+        racine.update()
+        assert not app.champs["lambda_p_perso"].winfo_manager()
+
+    def test_le_bandeau_nomme_la_vraie_cause(self, app, racine) -> None:
+        """μ₀ ≥ 1 et efforts nuls : la sous-ligne dit pourquoi, pas « θ_cr = 20 °C »."""
+        app.var["N"].set(-25000.0)
+        racine.update()
+        assert "ne résiste pas, déjà à 20 °C" in app.sous_banniere.cget("text")
+
+        for cle in ("N", "My", "Mz"):
+            app.var[cle].set(0.0)
+        racine.update()
+        assert "Aucun effort" in app.sous_banniere.cget("text")
+
+        app.var["N"].set(-850.0)
+        app.var["My"].set(120.0)
+        racine.update()
+        assert "marge" in app.sous_banniere.cget("text")
+
+    def test_un_diametre_nul_est_signale_sur_son_champ(self, app, racine) -> None:
+        from nommogramme.interface.saisie import BOULON, CATALOGUE
+
+        app.var["type_section"].set(BOULON)
+        app.var["d_boulon"].set(0.0)
+        racine.update()
+        assert app.erreur is not None
+        assert app.champs["d_boulon"].instate(["invalid"])
+        app.dessiner_figures()
+        racine.update()  # un redimensionnement ne doit pas la repeindre
+        assert all(not str(e.cget("image")) for e in app._etiquettes.values()), \
+            "la figure du calcul précédent reste affichée"
+        app.var["d_boulon"].set(20.0)
+        racine.update()
+        assert not app.champs["d_boulon"].instate(["invalid"])
+        app.var["type_section"].set(CATALOGUE)
+        racine.update()
+
+    def test_un_enregistrement_reussi_s_annonce_sans_fenetre(self, app, racine, tmp_path) -> None:
+        fichier = tmp_path / "note.pdf"
+        app.annoncer("Note enregistrée : note.pdf", fichier)
+        racine.update()
+        assert app.statut.winfo_manager() and "note.pdf" in app.statut.cget("text")
+        assert app.lien_ouvrir.winfo_manager() and app.lien_dossier.winfo_manager()
+        app._effacer_statut()
+        assert not app.statut.winfo_manager()
+
+    def test_un_enregistrement_impossible_est_dit_et_rend_la_main(
+        self, app, racine, monkeypatch
+    ) -> None:
+        from nommogramme.interface import bureau
+
+        messages = []
+        monkeypatch.setattr(bureau.messagebox, "showerror", lambda *a: messages.append(a))
+
+        def echoue() -> None:
+            raise PermissionError("fichier verrouillé")
+
+        assert app._occupe(app.bouton_note, echoue) is False
+        assert messages and "verrouillé" in messages[0][1]
+        assert app.bouton_note.cget("text") == "Enregistrer la note de calcul…"
+        assert not app.bouton_note.instate(["disabled"])
+
+    def test_la_mise_a_jour_des_figures_se_voit(self, app, racine) -> None:
+        app.var["My"].set(110.0)
+        racine.update_idletasks()
+        assert app.etat_figures.winfo_manager() == "place"
+        app.dessiner_figures()
+        assert not app.etat_figures.winfo_manager()
+
+    def test_le_boulon_n_offre_que_les_classes_de_boulon(self, app, racine) -> None:
+        from nommogramme.interface.saisie import BOULON, CATALOGUE
+
+        app.var["type_section"].set(BOULON)
+        racine.update()
+        assert app.var["nuance"].get() == "8.8"
+        assert "S355" not in app.liste_nuances.cget("values")
+        assert app.bloc_boulon.winfo_manager() and not app.bloc_soudee.winfo_manager()
+        app.var["d_boulon"].set(27.0)
+        racine.update()
+        assert app.resultat.profil.nom == "Boulon Ø27"
+        assert "A = 573 mm²" in app.note_boulon.cget("text")
+
+        app.var["type_section"].set(CATALOGUE)
+        racine.update()
+        assert app.var["nuance"].get() == "S355"
+        assert "8.8" not in app.liste_nuances.cget("values")
+        assert not app.bloc_boulon.winfo_manager()
+
+    def test_parametres_avances_replies_mais_jamais_caches(self, app, racine) -> None:
+        """Repliés par défaut ; un réglage modifié reste signalé une fois repliés."""
+        assert not app.bloc_avances.winfo_manager()
+        assert "(modifiés)" not in app.bouton_avances.cget("text")
+
+        app._basculer_avances()
+        assert app.bloc_avances.winfo_manager()
+        app.var["kappa_2"].set(1.2)
+        app._basculer_avances()
+        racine.update()
+        assert "(modifiés)" in app.bouton_avances.cget("text")
+        app.var["kappa_2"].set(1.0)
+
+    def test_un_champ_illisible_est_signale(self, app, racine) -> None:
+        """Le calcul continue sur la valeur par défaut, mais l'écran le dit."""
+        app.var["My"].set("12a")
+        racine.update()
+        assert app.champs["My"].instate(["invalid"])
+        assert "Valeur illisible : M_y,fi,Ed" in app.sous_banniere.cget("text")
+
+        app.var["My"].set(100.0)
+        racine.update()
+        assert not app.champs["My"].instate(["invalid"])
+        assert "illisible" not in app.sous_banniere.cget("text")
+
     def test_une_saisie_a_moitie_tapee_ne_casse_rien(self, app, racine) -> None:
         """Un champ vidé au clavier ne doit ni planter ni figer l'écran."""
         app.var["N"].set("")
@@ -565,14 +698,28 @@ class TestSectionSoudee:
         app.dessiner_figures()
         racine.update()
 
-    def test_l_onglet_de_coupe_ne_s_ouvre_que_pour_une_section_soudee(
-        self, app, racine
-    ) -> None:
+    @pytest.mark.parametrize("reglage", [
+        {}, {"famille": "RRW"}, {"famille": "ROR"}, {"famille": "FLA"},
+        {"type_section": "Boulon (tige ronde)"},
+    ], ids=["HEB", "RRW", "ROR", "FLA", "boulon"])
+    def test_la_coupe_se_dessine_pour_toute_section(self, app, racine, reglage) -> None:
+        """Catalogue, barres et boulons ont leur coupe, plus seulement le soudé."""
+        from nommogramme.interface.saisie import CATALOGUE
+
+        for cle, valeur in reglage.items():
+            app.var[cle].set(valeur)
+            racine.update()
         cadre = app.cadre_figure["section"]
-        assert str(app.onglets.tab(cadre, "state")) == "hidden"
-        app.var["type_section"].set(H_SOUDE)
-        racine.update()
         assert str(app.onglets.tab(cadre, "state")) == "normal"
+        app.onglets.select(cadre)
+        racine.update()
+        app.dessiner_figures()
+        assert "section" in app._figures
+        assert app._etiquettes["section"].cget("image")
+        app.var["type_section"].set(CATALOGUE)
+        app.var["famille"].set("HEB")
+        app.onglets.select(app.cadre_figure["nomogramme"])
+        racine.update()
 
     def test_la_coupe_se_dessine(self, app, racine) -> None:
         app.var["type_section"].set(H_SOUDE)

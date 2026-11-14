@@ -39,6 +39,7 @@ from .profils.geometrie import (
     perimetre_expose,
 )
 from .profils.modele import Forme
+from .rapport import origine_profil
 from .references import (
     EC1_COURBES,
     EC3_1_1_CLASSES,
@@ -67,7 +68,6 @@ from .references import (
     EC5_BETA_N,
     EC5_CARBONISATION,
     MCR_C1,
-    SZS_C5,
     a_recouper,
 )
 from .thermique.evolution import EPAISSEUR_SAINE_MIN
@@ -175,6 +175,10 @@ _GUIDES: tuple[tuple[str, str], ...] = (
     ("Taux d'utilisation, traction et flexion",
      "En traction, on additionne simplement les taux de l'effort normal et "
      "des moments."),
+    ("Traction et flexion, déversement",
+     "La traction ne supprime pas le déversement d'une semelle comprimée non "
+     "maintenue : on le contrôle sous les seuls moments, sans compter l'effet "
+     "favorable de la traction."),
     ("Facteurs d'interaction",
      "Les facteurs k amplifient les moments sous l'effet de l'effort de "
      "compression, d'autant plus que l'élément est élancé."),
@@ -265,7 +269,7 @@ def etapes_de_calcul(r: ResultatVerification, section=None) -> list[Bloc]:
 
 def _donnees(r: ResultatVerification, section) -> list[Bloc]:
     p, cas = r.profil, r.cas
-    origine = "section reconstituée soudée" if p.soudee else SZS_C5.courte
+    origine = origine_profil(p)
     blocs = [
         _titre("1. Données"),
         _tableau(
@@ -556,8 +560,17 @@ def _taux(r: ResultatVerification, u, theta_txt: str) -> list[Bloc]:
             rf"= \dfrac{{{n(en_kN(N), 0)}}}{{{n(en_kN(res.N_Rd), 0)}}} + "
             rf"\dfrac{{{n(en_kNm(My), 1)}}}{{{n(en_kNm(res.My_Rd), 1)}}} + "
             rf"\dfrac{{{n(en_kNm(Mz), 1)}}}{{{n(en_kNm(res.Mz_Rd), 1)}}}"
-            rf" = \mathbf{{{n(u.valeur)}}}",
+            rf" = \mathbf{{{n(u.taux_flambement)}}}",
         ))
+        if u.taux_deversement > 0.0:
+            blocs.append(_calcul(
+                f"Traction et flexion, déversement — {theta_txt}",
+                "traction favorable négligée, hors §4.2.3.5",
+                r"\dfrac{M_{y,fi,Ed}}{M_{b,fi,Rd}} + \dfrac{M_{z,fi,Ed}}{M_{z,fi,Rd}}",
+                rf"= \dfrac{{{n(en_kNm(My), 1)}}}{{{n(en_kNm(res.Mb_Rd), 1)}}} + "
+                rf"\dfrac{{{n(en_kNm(Mz), 1)}}}{{{n(en_kNm(res.Mz_Rd), 1)}}}"
+                rf" = \mathbf{{{n(u.taux_deversement)}}}",
+            ))
         return blocs
 
     f = u.facteurs
@@ -1113,10 +1126,9 @@ def note_pdf(r: ResultatVerification, chemin, section=None):
             figure = tracer(r)
             page.figure(figure, legende)
             _fermer_figure(figure)
-        if section is not None:
-            figure = tracer_section(section, exposition=r.exposition)
-            page.figure(figure, "Coupe de la section soudée, à l'échelle.")
-            _fermer_figure(figure)
+        figure = tracer_section(section or r.profil, exposition=r.exposition)
+        page.figure(figure, "Coupe de la section, à l'échelle.")
+        _fermer_figure(figure)
         page.terminer()
     return chemin
 

@@ -160,9 +160,8 @@ def note_word(r, chemin, section=None):
         (tracer_nomogramme(r), "Nomogramme : μ₀ → θ_cr (gauche), échauffement (droite)."),
         (tracer_echauffement(r), "Échauffement de l'acier et des gaz."),
     ]
-    if section is not None:
-        figures.append((tracer_section(section, exposition=r.exposition),
-                        "Coupe de la section soudée, à l'échelle."))
+    figures.append((tracer_section(section or r.profil, exposition=r.exposition),
+                    "Coupe de la section, à l'échelle."))
     for figure, legende in figures:
         d.figure(figure, legende)
         _fermer_figure(figure)
