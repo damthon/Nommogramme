@@ -189,8 +189,11 @@ class TestReactions:
 
 
 class TestRestitution:
-    def test_les_deux_figures_sont_presentes(self, app: AppTest) -> None:
-        assert len(app.tabs) == 2
+    def test_les_trois_figures_sont_presentes(self, app: AppTest) -> None:
+        """Nomogramme, échauffement, et la coupe — même d'un profilé du catalogue."""
+        assert [t.label for t in app.tabs] == [
+            "Nomogramme", "Échauffement", "Coupe de la section",
+        ]
 
     def test_les_deux_temperatures_critiques_sont_affichees(self, app: AppTest) -> None:
         """Les deux voies, chacune sous sa référence normative complète.

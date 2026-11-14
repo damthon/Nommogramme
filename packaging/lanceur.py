@@ -165,11 +165,14 @@ def autotest_fenetre() -> int:
 
     matplotlib.use("Agg")
 
-    from nommogramme.interface.bureau import Application
+    from nommogramme.interface.bureau import Application, _appliquer_theme
     from nommogramme.interface.saisie import H_SOUDE
 
+    # Même thème que la fenêtre réelle : un style mal déclaré ne se voit
+    # qu'au chargement, et c'est ce chemin-là que l'exécutable emprunte.
     racine = tk.Tk()
     racine.geometry("1200x800")
+    _appliquer_theme(racine)
     application = Application(racine)
     racine.update()
     application.dessiner_figures()

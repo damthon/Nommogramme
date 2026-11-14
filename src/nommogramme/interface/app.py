@@ -37,16 +37,19 @@ from nommogramme.interface.saisie import (
 )
 from nommogramme.interface.saisie import (
     AIDES,
+    BOULON,
     CATALOGUE,
     H_SOUDE,
+    PERSONNALISEE,
     SANS_PROTECTION,
     TYPES_SECTION,
     Saisie,
     executer,
     noms_par_famille,
+    nuance_par_defaut,
+    nuances_pour,
     produits,
 )
-from nommogramme.materiaux.acier import Nuance
 from nommogramme.mecanique.resistances import kappa_1_pour
 from nommogramme.nomogramme.trace import (
     tracer_echauffement,
@@ -140,13 +143,21 @@ def _saisie() -> Saisie:
             "Profilé", liste, key="profil",
             index=liste.index("HEB300") if "HEB300" in liste else len(liste) // 2,
         )
+    elif type_section == BOULON:
+        dimensions = {"d_boulon": st.sidebar.number_input(
+            "Diamètre d  [mm]", value=defaut.d_boulon, min_value=1.0, step=1.0,
+            key="d_boulon", help=AIDES["d_boulon"],
+        )}
     else:
         dimensions = _section_soudee(defaut, type_section)
 
+    # Classes de boulon pour un boulon, aciers sinon : une nuance qui ne
+    # figure plus dans la liste est remplacée avant d'afficher le widget.
+    nuances = list(nuances_pour(type_section))
+    if st.session_state.get("nuance") not in nuances:
+        st.session_state["nuance"] = nuance_par_defaut(type_section)
     nuance = st.sidebar.selectbox(
-        "Nuance", [n.value for n in Nuance], key="nuance",
-        index=[n.value for n in Nuance].index("S355"),
-        help=AIDES["nuance"],
+        "Nuance", nuances, key="nuance", help=AIDES["nuance"],
     )
 
     st.sidebar.header("Sollicitations en incendie")
@@ -197,15 +208,37 @@ def _saisie() -> Saisie:
     st.sidebar.header("Protection")
     fiches = produits()
     choix = st.sidebar.selectbox(
-        "Produit", [SANS_PROTECTION] + sorted(fiches), key="produit",
+        "Produit", [SANS_PROTECTION] + sorted(fiches) + [PERSONNALISEE], key="produit",
         help=AIDES["protection"],
         format_func=lambda cle: (
-            SANS_PROTECTION if cle == SANS_PROTECTION
+            cle if cle in (SANS_PROTECTION, PERSONNALISEE)
             else fiches[cle].get("libelle", cle)
         ),
     )
     epaisseur = None
-    if choix != SANS_PROTECTION:
+    perso: dict[str, float | str] = {}
+    if choix == PERSONNALISEE:
+        defaut_perso = Saisie()
+        epaisseur = st.sidebar.number_input(
+            "Épaisseur d_p  [mm]", key="dp_perso", value=20.0, min_value=0.1,
+            step=1.0, help=AIDES["epaisseur"],
+        )
+        perso = {
+            "nom_perso": st.sidebar.text_input("Nom du produit", key="nom_perso"),
+            "lambda_p_perso": st.sidebar.number_input(
+                "λ_p  [W/m·K]", key="lambda_p_perso", value=defaut_perso.lambda_p_perso,
+                min_value=0.001, step=0.01, format="%.3f", help=AIDES["perso"]),
+            "rho_p_perso": st.sidebar.number_input(
+                "ρ_p  [kg/m³]", key="rho_p_perso", value=defaut_perso.rho_p_perso,
+                min_value=1.0, step=10.0, help=AIDES["perso"]),
+            "c_p_perso": st.sidebar.number_input(
+                "c_p  [J/kg·K]", key="c_p_perso", value=defaut_perso.c_p_perso,
+                min_value=1.0, step=50.0, help=AIDES["perso"]),
+            "humidite_perso": st.sidebar.number_input(
+                "Humidité  [%]", key="humidite_perso", value=0.0, min_value=0.0,
+                max_value=99.0, step=1.0, help=AIDES["perso"]),
+        }
+    elif choix != SANS_PROTECTION:
         fiche = fiches[choix]
         epaisseur = st.sidebar.number_input(
             "Épaisseur d_p  [mm]", key="dp",
@@ -251,7 +284,7 @@ def _saisie() -> Saisie:
         maintien=maintien, beta_M=beta_M, exposition=exposition, feu=feu,
         duree=duree, protection=choix, epaisseur=epaisseur,
         contexte=contexte, kappa_2=kappa_2, C1=C1,
-        **dimensions,
+        **dimensions, **perso,
     )
 
 
@@ -326,11 +359,9 @@ def _temperatures_critiques(r: ResultatVerification) -> None:
 
 def _figures(r: ResultatVerification, saisie: Saisie) -> None:
     theme = _theme_figures()
-    section = saisie.section()
-    titres = ["Nomogramme", "Échauffement"]
-    if section is not None:
-        titres.append("Coupe de la section")
-    onglets = st.tabs(titres)
+    # La section soudée tôle par tôle, sinon le profilé : catalogue, barre, boulon.
+    section = saisie.section() or r.profil
+    onglets = st.tabs(["Nomogramme", "Échauffement", "Coupe de la section"])
 
     with onglets[0]:
         st.pyplot(tracer_nomogramme(r, theme=theme))
@@ -341,15 +372,14 @@ def _figures(r: ResultatVerification, saisie: Saisie) -> None:
         )
     with onglets[1]:
         st.pyplot(tracer_echauffement(r, theme=theme))
-    if section is not None:
-        with onglets[2]:
-            st.pyplot(
-                tracer_section(section, theme=theme, exposition=r.exposition)
-            )
-            st.caption(
-                "Coupe à l'échelle. Une saisie fautive d'un facteur dix se voit "
-                "ici, et pas dans un tableau de nombres."
-            )
+    with onglets[2]:
+        st.pyplot(
+            tracer_section(section, theme=theme, exposition=r.exposition)
+        )
+        st.caption(
+            "Coupe à l'échelle. Une saisie fautive d'un facteur dix se voit "
+            "ici, et pas dans un tableau de nombres."
+        )
 
 
 def _note(r: ResultatVerification, saisie: Saisie) -> None:

@@ -46,19 +46,23 @@ from tkinter import filedialog, messagebox, ttk
 from nommogramme.interface.infobulle import Infobulle, infobuller, marquer_aide
 from nommogramme.interface.saisie import (
     AIDES,
+    BOULON,
+    CAISSON_SOUDE,
     CATALOGUE,
     CONTEXTES,
     DUREES,
     EXPOSITIONS,
     H_SOUDE,
+    PERSONNALISEE,
     SANS_PROTECTION,
     TYPES_SECTION,
     Saisie,
     executer,
     noms_par_famille,
+    nuance_par_defaut,
+    nuances_pour,
     produits,
 )
-from nommogramme.materiaux.acier import Nuance
 from nommogramme.nomogramme.verification import ResultatVerification
 from nommogramme.references import EC3_RESISTANCES, EC3_THETA_CR
 from nommogramme.thermique.courbes import COURBES
@@ -72,12 +76,27 @@ _TITRE = "Nommogramme — résistance au feu des profilés métalliques"
 _DELAI_FIGURES_MS = 400
 """Pause de saisie avant de redessiner les figures [ms]."""
 
+_FORMATS_FIGURE = {"nomogramme": (11.0, (5.4, 7.6)), "echauffement": (8.2, (4.6, 6.4))}
+"""Largeur fixe et bornes de hauteur des figures affichées [po]."""
+
 _DPI_MINIMAL = 52.0
 """En deçà, la figure cesse de rétrécir : elle ne serait plus lisible."""
 
-_VERT = "#1a7f37"
-_ROUGE = "#c1121f"
-_GRIS = "#57606a"
+# Palette « Minimalism & Swiss » (UI/UX Pro Max) : fond clair, bleu marine,
+# vert et rouge réservés au verdict. Chaque texte tient 4,5:1 sur son fond.
+_FOND = "#F8FAFC"
+_CARTE = "#FFFFFF"
+_TEXTE = "#0F172A"
+_GRIS = "#475569"
+_BORDURE = "#CBD5E1"
+_PRIMAIRE = "#1E3A5F"
+_PRIMAIRE_ACTIF = "#16304F"
+_VERT = "#065F46"
+_FOND_VERT = "#ECFDF5"
+_ROUGE = "#B91C1C"
+_FOND_ROUGE = "#FEF2F2"
+_ORANGE = "#9A3412"
+_FOND_ORANGE = "#FFF7ED"
 
 _AVERTISSEMENT_COURT = (
     "Outil en développement — le déversement et l'interaction N + M ne sont pas "
@@ -100,6 +119,120 @@ _AVERTISSEMENT = (
 )
 
 
+def _echelle(widget: tk.Misc) -> float:
+    """Rapport entre la densité de l'écran et les 96 dpi d'un écran standard.
+
+    Les tailles fixes en pixels (largeur du panneau, retours à la ligne) sont
+    multipliées par ce facteur : sur un écran à 150 %, les polices grossissent
+    d'elles-mêmes, et des largeurs restées à leur valeur nominale couperaient
+    les libellés.
+    """
+    return max(widget.winfo_fpixels("1i") / 96.0, 1.0)
+
+
+def _police(widget: tk.Misc, taille: int, gras: bool = False) -> tuple:
+    """La police de l'interface, à une autre taille.
+
+    Écrire ``("TkDefaultFont", 11)`` ne fait pas ce qu'on croit : Tk y lit un
+    nom de famille inconnu et retombe sur une police quelconque, à chasse fixe
+    sous Linux. On reprend donc la famille réelle de la police par défaut.
+    """
+    from tkinter import font
+
+    famille = font.nametofont("TkDefaultFont", widget).actual("family")
+    return (famille, taille, "bold") if gras else (famille, taille)
+
+
+def _appliquer_theme(racine: tk.Misc) -> None:
+    """Thème clair et sobre, posé sur « clam », le seul thème ttk recoloriable.
+
+    Les thèmes natifs de Windows (« vista ») ignorent les couleurs de fond et
+    de bordure : impossible d'y signaler un champ en erreur.
+    """
+    from tkinter import font
+
+    style = ttk.Style(racine)
+    style.theme_use("clam")
+    if racine.tk.call("tk", "windowingsystem") == "win32":
+        for nom in ("TkDefaultFont", "TkTextFont", "TkMenuFont", "TkHeadingFont",
+                    "TkCaptionFont", "TkTooltipFont"):
+            font.nametofont(nom, racine).configure(family="Segoe UI", size=10)
+    racine.configure(background=_FOND)
+
+    style.configure(".", background=_FOND, foreground=_TEXTE, bordercolor=_BORDURE,
+                    lightcolor=_FOND, darkcolor=_FOND, troughcolor=_FOND)
+    style.configure("TLabelframe", background=_FOND, bordercolor=_BORDURE)
+    style.configure("TLabelframe.Label", background=_FOND, foreground=_PRIMAIRE,
+                    font=_police(racine, 10, gras=True))
+    style.configure("TEntry", fieldbackground=_CARTE, padding=(4, 2))
+    style.map("TEntry",
+              bordercolor=[("invalid", _ROUGE), ("focus", _PRIMAIRE)],
+              lightcolor=[("invalid", _ROUGE), ("focus", _PRIMAIRE)],
+              fieldbackground=[("invalid", _FOND_ROUGE), ("disabled", "#E2E8F0")],
+              foreground=[("disabled", _GRIS)])
+    style.configure("TCombobox", fieldbackground=_CARTE, padding=(4, 2),
+                    arrowcolor=_PRIMAIRE)
+    style.map("TCombobox",
+              fieldbackground=[("disabled", "#E2E8F0"), ("readonly", _CARTE)],
+              selectbackground=[("readonly", _CARTE)],
+              selectforeground=[("readonly", _TEXTE)],
+              foreground=[("disabled", _GRIS)],
+              bordercolor=[("focus", _PRIMAIRE)])
+    style.configure("TButton", padding=(12, 5), background=_CARTE)
+    style.map("TButton", background=[("active", "#EEF2F6")],
+              bordercolor=[("focus", _PRIMAIRE)])
+    style.configure("Primaire.TButton", background=_PRIMAIRE, foreground=_CARTE,
+                    font=_police(racine, 10, gras=True))
+    style.map("Primaire.TButton",
+              background=[("active", _PRIMAIRE_ACTIF), ("pressed", _PRIMAIRE_ACTIF)],
+              foreground=[("active", _CARTE)])
+    style.configure("Lien.TButton", padding=(0, 2), background=_FOND, borderwidth=0,
+                    foreground=_PRIMAIRE)
+    style.map("Lien.TButton", background=[("active", _FOND)])
+    # Liens d'action (ouvrir un fichier) : soulignés, pour se lire comme tels.
+    souligne = _police(racine, 10) + ("underline",)
+    style.configure("Action.TButton", padding=(0, 2), background=_FOND, borderwidth=0,
+                    foreground="#1D4ED8", font=souligne)
+    style.map("Action.TButton", background=[("active", _FOND)],
+              foreground=[("active", _PRIMAIRE)])
+    style.configure("TCheckbutton", background=_FOND)
+    style.map("TCheckbutton", background=[("active", _FOND)])
+    style.configure("TNotebook", background=_FOND, bordercolor=_BORDURE)
+    style.configure("TNotebook.Tab", padding=(14, 5), background=_FOND,
+                    foreground=_GRIS)
+    style.map("TNotebook.Tab", background=[("selected", _CARTE)],
+              foreground=[("selected", _PRIMAIRE)])
+    # Le fond des figures de ``trace`` (partagé avec la note PDF), pour que le
+    # graphique ne se détache pas en rectangle dans son onglet. Importé au
+    # besoin : ``trace`` ne charge pas matplotlib à l'import.
+    from nommogramme.nomogramme.trace import CLAIR
+
+    style.configure("Figure.TLabel", background=CLAIR.fond)
+    style.configure("Figure.TFrame", background=CLAIR.fond)
+
+    # Les indicateurs et les flèches de « clam » sont en pixels fixes : sur un
+    # écran à 150 % ils restent minuscules à côté du texte.
+    e = _echelle(racine)
+    style.configure("TCheckbutton", indicatorsize=int(13 * e))
+    style.configure("TCombobox", arrowsize=int(13 * e))
+    style.configure("TScrollbar", arrowsize=int(13 * e))
+
+
+def _net_sur_ecran_haute_densite() -> None:
+    """Déclare à Windows que la fenêtre gère elle-même la mise à l'échelle.
+
+    Sans cette déclaration, sur un écran réglé à 125 % ou 150 %, Windows dessine
+    la fenêtre à 100 % puis l'agrandit comme une image : textes et figures
+    sortent flous. À appeler avant de créer la fenêtre.
+    """
+    try:
+        import ctypes
+
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except (AttributeError, OSError):  # autre système, ou Windows trop ancien
+        pass
+
+
 def _famille_de(nom_profil: str) -> str:
     """La famille à laquelle appartient un profilé, par son nom."""
     for famille, noms in noms_par_famille().items():
@@ -118,8 +251,16 @@ class Application(ttk.Frame):
     """
 
     def __init__(self, maitre: tk.Misc) -> None:
-        super().__init__(maitre, padding=8)
+        super().__init__(maitre, padding=10)
         self.pack(fill="both", expand=True)
+        self._x = _echelle(maitre)
+        self.champs: dict[str, ttk.Entry] = {}
+        """Les champs numériques, par nom de paramètre."""
+        self._noms_champs: dict[str, str] = {}
+        self.illisibles: list[str] = []
+        """Les champs dont la valeur n'a pas pu être lue au dernier calcul."""
+        self.hors_domaine: list[str] = []
+        """Les champs lisibles mais refusés par le calcul (diamètre nul…)."""
 
         self.resultat: ResultatVerification | None = None
         self.erreur: str | None = None
@@ -157,6 +298,7 @@ class Application(ttk.Frame):
             "tw_soudee": tk.DoubleVar(value=defaut.tw_soudee),
             "b_inf_soudee": tk.DoubleVar(value=defaut.b_inf_soudee),
             "tf_inf_soudee": tk.DoubleVar(value=defaut.tf_inf_soudee),
+            "d_boulon": tk.DoubleVar(value=defaut.d_boulon),
             "N": tk.DoubleVar(value=defaut.N),
             "My": tk.DoubleVar(value=defaut.My),
             "Mz": tk.DoubleVar(value=defaut.Mz),
@@ -169,6 +311,11 @@ class Application(ttk.Frame):
             "duree": tk.IntVar(value=defaut.duree),
             "protection": tk.StringVar(value=SANS_PROTECTION),
             "epaisseur": tk.DoubleVar(value=10.0),
+            "nom_perso": tk.StringVar(value=defaut.nom_perso),
+            "lambda_p_perso": tk.DoubleVar(value=defaut.lambda_p_perso),
+            "rho_p_perso": tk.DoubleVar(value=defaut.rho_p_perso),
+            "c_p_perso": tk.DoubleVar(value=defaut.c_p_perso),
+            "humidite_perso": tk.DoubleVar(value=defaut.humidite_perso),
             "contexte": tk.StringVar(value=defaut.contexte),
             "kappa_2": tk.DoubleVar(value=defaut.kappa_2),
             "C1": tk.DoubleVar(value=defaut.C1),
@@ -182,14 +329,18 @@ class Application(ttk.Frame):
         Un champ numérique vide ou à moitié tapé — « 8 », « -», « 1,2e » —
         fait lever ``TclError`` à la lecture. On retombe alors sur la valeur
         par défaut du champ plutôt que d'interrompre : l'utilisateur est en
-        train de taper, ce n'est pas une erreur.
+        train de taper, ce n'est pas une erreur. Le champ est noté dans
+        ``illisibles`` : l'écran le signale, pour qu'on ne lise pas un résultat
+        calculé sur une autre valeur que celle qu'on croit avoir saisie.
         """
         defaut = Saisie()
+        self.illisibles = []
 
         def lire(nom: str):
             try:
                 return self.var[nom].get()
             except tk.TclError:
+                self.illisibles.append(nom)
                 return getattr(defaut, nom, 0.0)
 
         produit = self._cle_produit(self.var["protection"].get())
@@ -208,6 +359,7 @@ class Application(ttk.Frame):
             tw_soudee=lire("tw_soudee"),
             b_inf_soudee=lire("b_inf_soudee"),
             tf_inf_soudee=lire("tf_inf_soudee"),
+            d_boulon=lire("d_boulon"),
             N=lire("N"),
             My=lire("My"),
             Mz=lire("Mz"),
@@ -220,6 +372,11 @@ class Application(ttk.Frame):
             duree=lire("duree"),
             protection=produit,
             epaisseur=lire("epaisseur") if produit != SANS_PROTECTION else None,
+            nom_perso=self.var["nom_perso"].get(),
+            lambda_p_perso=lire("lambda_p_perso"),
+            rho_p_perso=lire("rho_p_perso"),
+            c_p_perso=lire("c_p_perso"),
+            humidite_perso=lire("humidite_perso"),
             contexte=self.var["contexte"].get(),
             kappa_2=lire("kappa_2"),
             C1=lire("C1"),
@@ -227,14 +384,14 @@ class Application(ttk.Frame):
 
     @staticmethod
     def _libelle_produit(cle: str) -> str:
-        if cle == SANS_PROTECTION:
-            return SANS_PROTECTION
+        if cle in (SANS_PROTECTION, PERSONNALISEE):
+            return cle
         return produits()[cle].get("libelle", cle)
 
     @staticmethod
     def _cle_produit(libelle: str) -> str:
-        if libelle == SANS_PROTECTION:
-            return SANS_PROTECTION
+        if libelle in (SANS_PROTECTION, PERSONNALISEE):
+            return libelle
         for cle, fiche in produits().items():
             if fiche.get("libelle", cle) == libelle:
                 return cle
@@ -246,22 +403,23 @@ class Application(ttk.Frame):
         self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
 
-        gauche = self._panneau_defilant(self)
-        gauche.master.master.grid(row=0, column=0, sticky="ns", padx=(0, 10))
+        gauche = self._panneau_defilant(self, largeur=int(340 * self._x))
+        gauche.master.master.grid(row=0, column=0, sticky="ns", padx=(0, 14))
         self._construire_parametres(gauche)
 
         droite = ttk.Frame(self)
         droite.grid(row=0, column=1, sticky="nsew")
         droite.columnconfigure(0, weight=1)
-        droite.rowconfigure(3, weight=1)
+        droite.rowconfigure(5, weight=1)
         self._construire_resultats(droite)
+        droite.bind("<Configure>", self._ajuster_retours, add="+")
 
         pied = ttk.Frame(self)
         pied.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         pied.columnconfigure(0, weight=1)
         ttk.Label(
             pied, text=_AVERTISSEMENT_COURT, foreground=_GRIS,
-            wraplength=900, justify="left",
+            wraplength=int(900 * self._x), justify="left",
         ).grid(row=0, column=0, sticky="w")
         ttk.Button(pied, text="À propos…", command=self.a_propos).grid(
             row=0, column=1, sticky="e"
@@ -280,7 +438,8 @@ class Application(ttk.Frame):
         conteneur.rowconfigure(0, weight=1)
 
         canevas = tk.Canvas(
-            conteneur, borderwidth=0, highlightthickness=0, width=largeur
+            conteneur, borderwidth=0, highlightthickness=0, width=largeur,
+            background=_FOND,
         )
         barre = ttk.Scrollbar(conteneur, orient="vertical", command=canevas.yview)
         interieur = ttk.Frame(canevas)
@@ -327,8 +486,8 @@ class Application(ttk.Frame):
         return False
 
     def _bloc(self, parent: tk.Misc, titre: str) -> ttk.Frame:
-        cadre = ttk.LabelFrame(parent, text=titre, padding=6)
-        cadre.pack(fill="x", pady=(0, 6))
+        cadre = ttk.LabelFrame(parent, text=titre, padding=(8, 6))
+        cadre.pack(fill="x", pady=(0, 8), padx=(0, 4))
         cadre.columnconfigure(1, weight=1)
         return cadre
 
@@ -348,9 +507,12 @@ class Application(ttk.Frame):
         ``self.infobulles`` — sans référence, rien ne la retiendrait, et un
         test ne pourrait pas lire ce que l'écran dirait.
         """
+        for nom, champ in self.champs.items():
+            if champ is widget:  # nom lisible, pour signaler un champ illisible
+                self._noms_champs[nom] = etiquette.split("[")[0].strip()
         libelle = ttk.Label(parent, text=etiquette)
-        libelle.grid(row=ligne, column=0, sticky="w", pady=1)
-        widget.grid(row=ligne, column=1, sticky="ew", padx=(6, 0), pady=1)
+        libelle.grid(row=ligne, column=0, sticky="w", pady=2)
+        widget.grid(row=ligne, column=1, sticky="ew", padx=(8, 0), pady=2)
         if aide:
             marquer_aide(libelle)
             self.infobulles[cle or etiquette] = infobuller(
@@ -359,7 +521,14 @@ class Application(ttk.Frame):
         return libelle
 
     def _nombre(self, parent: ttk.Frame, cle: str, largeur: int = 10) -> ttk.Entry:
-        return ttk.Entry(parent, textvariable=self.var[cle], width=largeur)
+        champ = ttk.Entry(parent, textvariable=self.var[cle], width=largeur)
+        self.champs[cle] = champ
+        return champ
+
+    @property
+    def _l_texte(self) -> int:
+        """Largeur de retour à la ligne des notes du panneau de gauche [px]."""
+        return int(290 * self._x)
 
     def _liste(
         self, parent: ttk.Frame, cle: str, valeurs, largeur: int = 22
@@ -383,13 +552,27 @@ class Application(ttk.Frame):
             element, "profil", noms_par_famille()[self.var["famille"].get()]
         )
         self.etiquette_profil = self._champ(element, 2, "Profilé", self.liste_profils)
+        self.liste_nuances = self._liste(
+            element, "nuance", nuances_pour(self.var["type_section"].get())
+        )
         self._champ(
-            element, 3, "Nuance", self._liste(element, "nuance", tuple(n.value for n in Nuance)),
+            element, 3, "Nuance", self.liste_nuances,
             aide=AIDES["nuance"], cle="nuance",
         )
 
         self.bloc_soudee = self._bloc(parent, "Section soudée  ·  cotes en mm")
         self._construire_section_soudee(self.bloc_soudee)
+
+        self.bloc_boulon = self._bloc(parent, "Boulon  ·  tige ronde")
+        self._champ(
+            self.bloc_boulon, 0, "Diamètre d  [mm]", self._nombre(self.bloc_boulon, "d_boulon"),
+            aide=AIDES["d_boulon"], cle="d_boulon",
+        )
+        self.note_boulon = ttk.Label(
+            self.bloc_boulon, text="", foreground=_GRIS, wraplength=self._l_texte,
+            justify="left",
+        )
+        self.note_boulon.grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 0))
 
         self.bloc_efforts = self._bloc(parent, "Sollicitations en incendie")
         efforts = self.bloc_efforts
@@ -398,7 +581,7 @@ class Application(ttk.Frame):
         self._champ(efforts, 2, "M_z,fi,Ed  [kN·m]", self._nombre(efforts, "Mz"))
         ttk.Label(
             efforts, text="Combinaison accidentelle. N négatif en compression.",
-            foreground=_GRIS, wraplength=250,
+            foreground=_GRIS, wraplength=self._l_texte,
         ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(3, 0))
 
         geometrie = self._bloc(parent, "Géométrie")
@@ -423,7 +606,7 @@ class Application(ttk.Frame):
         ttk.Label(
             geometrie, text="Poteau continu d'un contreventement : "
                             "l_fi = 0,5·L en étage courant, 0,7·L au dernier.",
-            foreground=_GRIS, wraplength=250,
+            foreground=_GRIS, wraplength=self._l_texte,
         ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(3, 0))
 
         feu = self._bloc(parent, "Exposition au feu")
@@ -444,7 +627,7 @@ class Application(ttk.Frame):
         protection = self._bloc(parent, "Protection")
         libelles = [SANS_PROTECTION] + [
             self._libelle_produit(cle) for cle in sorted(produits())
-        ]
+        ] + [PERSONNALISEE]
         self._champ(
             protection, 0, "Produit", self._liste(protection, "protection", libelles),
             aide=AIDES["protection"], cle="protection",
@@ -455,11 +638,34 @@ class Application(ttk.Frame):
             aide=AIDES["epaisseur"], cle="epaisseur",
         )
         self.note_produit = ttk.Label(
-            protection, text="", foreground=_GRIS, wraplength=250, justify="left"
+            protection, text="", foreground=_GRIS, wraplength=self._l_texte, justify="left"
         )
         self.note_produit.grid(row=2, column=0, columnspan=2, sticky="w", pady=(3, 0))
 
+        # Produit personnalisé : ses propriétés, visibles seulement quand on
+        # le choisit — sinon cinq champs sans effet encombreraient le bloc.
+        self.lignes_perso: list[tk.Widget] = []
+        nom = ttk.Entry(protection, textvariable=self.var["nom_perso"], width=10)
+        for ligne, (cle, libelle, widget) in enumerate((
+            ("nom_perso", "Nom du produit", nom),
+            ("lambda_p_perso", "λ_p  [W/m·K]", None),
+            ("rho_p_perso", "ρ_p  [kg/m³]", None),
+            ("c_p_perso", "c_p  [J/kg·K]", None),
+            ("humidite_perso", "Humidité  [%]", None),
+        ), start=3):
+            widget = widget or self._nombre(protection, cle)
+            etiquette = self._champ(protection, ligne, libelle, widget,
+                                    aide=AIDES["perso"], cle=cle)
+            self.lignes_perso += [etiquette, widget]
+
+        # Replié par défaut : rarement modifié, et cinq lignes de moins à
+        # parcourir. Le bloc garde son titre, que le script du manuel cherche.
+        self.bouton_avances = ttk.Button(
+            parent, style="Lien.TButton", command=self._basculer_avances
+        )
+        self.bouton_avances.pack(anchor="w", pady=(0, 4))
         avances = self._bloc(parent, "Paramètres avancés")
+        self.bloc_avances = avances
         self._champ(
             avances, 0, "Référentiel", self._liste(avances, "contexte", CONTEXTES),
             aide=AIDES["contexte"], cle="contexte",
@@ -480,6 +686,38 @@ class Application(ttk.Frame):
         )
 
         self._mettre_a_jour_protection()
+        self._avances_ouverts = True
+        self._basculer_avances()
+
+    def _basculer_avances(self) -> None:
+        """Ouvre ou replie le bloc des paramètres avancés."""
+        self._avances_ouverts = not self._avances_ouverts
+        if self._avances_ouverts:
+            self.bloc_avances.pack(fill="x", pady=(0, 8), padx=(0, 4),
+                                   after=self.bouton_avances)
+        else:
+            self.bloc_avances.pack_forget()
+        self._libeller_avances()
+
+    def _libeller_avances(self) -> None:
+        """Le titre du bouton, qui signale des réglages modifiés même replié.
+
+        Un référentiel ou un κ₂ changé puis replié ne doit pas disparaître de
+        la vue : le résultat en dépend.
+        """
+        defaut = Saisie()
+        modifies = False
+        try:
+            modifies = (
+                self.var["contexte"].get() != defaut.contexte
+                or float(self.var["kappa_2"].get()) != defaut.kappa_2
+                or float(self.var["C1"].get()) != defaut.C1
+            )
+        except (tk.TclError, ValueError):
+            modifies = True
+        fleche = "▾" if self._avances_ouverts else "▸"
+        suffixe = "  (modifiés)" if modifies and not self._avances_ouverts else ""
+        self.bouton_avances.configure(text=f"{fleche}  Paramètres avancés{suffixe}")
 
     def _construire_section_soudee(self, cadre: ttk.Frame) -> None:
         """Les dimensions d'une section reconstituée.
@@ -510,37 +748,65 @@ class Application(ttk.Frame):
             self.lignes_h.append(cadre.grid_slaves(row=ligne, column=1)[0])
 
         self.note_soudee = ttk.Label(
-            cadre, text="", foreground=_GRIS, wraplength=250, justify="left"
+            cadre, text="", foreground=_GRIS, wraplength=self._l_texte, justify="left"
         )
         self.note_soudee.grid(row=7, column=0, columnspan=2, sticky="w", pady=(4, 0))
 
     def _construire_resultats(self, parent: ttk.Frame) -> None:
+        # Le verdict d'abord, en gros : c'est la réponse à la question posée.
+        # Le symbole double la couleur, qui ne doit pas porter le sens seule.
+        cadre_verdict = tk.Frame(parent, padx=14, pady=10)
+        cadre_verdict.grid(row=0, column=0, sticky="ew")
         self.banniere = tk.Label(
-            parent, text="", font=("TkDefaultFont", 11, "bold"),
-            anchor="w", padx=10, pady=8, justify="left",
+            cadre_verdict, text="", font=_police(parent, 16, gras=True),
+            anchor="w", justify="left",
         )
-        self.banniere.grid(row=0, column=0, sticky="ew")
+        self.banniere.pack(anchor="w")
+        self.sous_banniere = tk.Label(
+            cadre_verdict, text="", font=_police(parent, 10), anchor="w",
+            justify="left", wraplength=int(760 * self._x),
+        )
+        self.sous_banniere.pack(anchor="w")
+        self._fonds_verdict = (cadre_verdict, self.banniere, self.sous_banniere)
 
-        indicateurs = ttk.Frame(parent, padding=(0, 8))
+        # Quatre tuiles : grande valeur, petit libellé.
+        indicateurs = ttk.Frame(parent, padding=(0, 10, 0, 6))
         indicateurs.grid(row=1, column=0, sticky="ew")
-        self.indicateur: dict[str, ttk.Label] = {}
+        self.indicateur: dict[str, tk.Label] = {}
         for colonne, (cle, titre) in enumerate(
-            (("mu_0", "μ₀"), ("theta_cr", "θ_cr retenue"),
-             ("theta_a", "θ_a à l'échéance"), ("t_fi_d", "t_fi,d"))
+            (("mu_0", "Degré d'utilisation μ₀"), ("theta_cr", "θ_cr retenue"),
+             ("theta_a", "θ_a à l'échéance"), ("t_fi_d", "Résistance t_fi,d"))
         ):
-            indicateurs.columnconfigure(colonne, weight=1)
-            case = ttk.Frame(indicateurs)
-            case.grid(row=0, column=colonne, sticky="ew", padx=2)
-            ttk.Label(case, text=titre, foreground=_GRIS).pack(anchor="w")
-            valeur = ttk.Label(case, text="—", font=("TkDefaultFont", 14, "bold"))
+            indicateurs.columnconfigure(colonne, weight=1, uniform="tuiles")
+            case = tk.Frame(
+                indicateurs, background=_CARTE, padx=12, pady=8,
+                highlightthickness=1, highlightbackground=_BORDURE,
+            )
+            case.grid(row=0, column=colonne, sticky="ew",
+                      padx=(0 if colonne == 0 else 8, 0))
+            tk.Label(case, text=titre, background=_CARTE, foreground=_GRIS,
+                     font=_police(parent, 9)).pack(anchor="w")
+            valeur = tk.Label(case, text="—", background=_CARTE, foreground=_TEXTE,
+                              font=_police(parent, 18, gras=True))
             valeur.pack(anchor="w")
             self.indicateur[cle] = valeur
 
-        self.details = ttk.Label(parent, text="", wraplength=680, justify="left")
-        self.details.grid(row=2, column=0, sticky="ew", pady=(0, 6))
+        # Les alertes restent toujours visibles ; le détail normatif se replie.
+        self.alertes = ttk.Label(parent, text="", foreground=_ORANGE,
+                                 wraplength=int(760 * self._x), justify="left")
+        self.alertes.grid(row=2, column=0, sticky="ew")
+        self.bouton_details = ttk.Button(
+            parent, style="Lien.TButton", command=self._basculer_details,
+        )
+        self.bouton_details.grid(row=3, column=0, sticky="w")
+        self.details = ttk.Label(parent, text="", foreground=_GRIS,
+                                 wraplength=int(760 * self._x), justify="left")
+        self.details.grid(row=4, column=0, sticky="ew", pady=(0, 6))
+        self._details_ouverts = True
+        self._basculer_details()
 
         self.onglets = ttk.Notebook(parent)
-        self.onglets.grid(row=3, column=0, sticky="nsew")
+        self.onglets.grid(row=5, column=0, sticky="nsew", pady=(4, 0))
         self.onglets.bind("<<NotebookTabChanged>>", lambda _: self._planifier_figures())
         self.cadre_figure: dict[str, ttk.Frame] = {}
         for cle, titre in (
@@ -548,18 +814,55 @@ class Application(ttk.Frame):
             ("echauffement", "Échauffement"),
             ("section", "Coupe de la section"),
         ):
-            cadre = ttk.Frame(self.onglets)
+            cadre = ttk.Frame(self.onglets, style="Figure.TFrame")
             self.onglets.add(cadre, text=titre)
             self.cadre_figure[cle] = cadre
 
-        boutons = ttk.Frame(parent, padding=(0, 8, 0, 0))
-        boutons.grid(row=4, column=0, sticky="ew")
-        ttk.Button(
-            boutons, text="Enregistrer la note de calcul…", command=self.enregistrer_note
-        ).pack(side="left")
-        ttk.Button(
+        # Discret, en haut à droite des onglets : la figure suit la saisie
+        # avec un temps de retard, et sans ce signe elle paraît figée.
+        self.etat_figures = ttk.Label(parent, text="Mise à jour des figures…",
+                                      foreground=_GRIS)
+
+        boutons = ttk.Frame(parent, padding=(0, 10, 0, 0))
+        boutons.grid(row=6, column=0, sticky="ew")
+        self.bouton_note = ttk.Button(
+            boutons, text="Enregistrer la note de calcul…", style="Primaire.TButton",
+            command=self.enregistrer_note,
+        )
+        self.bouton_note.pack(side="left")
+        self.bouton_figures = ttk.Button(
             boutons, text="Enregistrer les figures…", command=self.enregistrer_figures
-        ).pack(side="left", padx=6)
+        )
+        self.bouton_figures.pack(side="left", padx=8)
+
+        # Le compte rendu d'un enregistrement réussi : un message qui s'efface
+        # seul, pas une fenêtre modale qu'il faudrait fermer.
+        self.statut = ttk.Label(boutons, text="", foreground=_VERT)
+        self.lien_ouvrir = ttk.Button(boutons, text="Ouvrir", style="Action.TButton",
+                                      cursor="hand2")
+        self.lien_dossier = ttk.Button(boutons, text="Ouvrir le dossier",
+                                       style="Action.TButton", cursor="hand2")
+        self._tache_statut: str | None = None
+
+    def _ajuster_retours(self, evenement) -> None:
+        """Les textes de la colonne de droite reviennent à la ligne à sa largeur.
+
+        Une largeur fixe coupait les alertes dans une fenêtre étroite, et les
+        laissait sur une seule ligne trop longue dans une fenêtre large.
+        """
+        largeur = max(evenement.width - int(30 * self._x), 200)
+        for etiquette in (self.sous_banniere, self.alertes, self.details):
+            etiquette.configure(wraplength=largeur)
+
+    def _basculer_details(self) -> None:
+        """Ouvre ou referme le détail normatif sous les tuiles."""
+        self._details_ouverts = not self._details_ouverts
+        if self._details_ouverts:
+            self.details.grid()
+            self.bouton_details.configure(text="▾  Masquer le détail du calcul")
+        else:
+            self.details.grid_remove()
+            self.bouton_details.configure(text="▸  Détail du calcul")
 
     # -- réactions -------------------------------------------------------
 
@@ -585,11 +888,23 @@ class Application(ttk.Frame):
         """
         type_section = self.var["type_section"].get()
         du_catalogue = type_section == CATALOGUE
+        soudee = type_section in (CAISSON_SOUDE, H_SOUDE)
 
-        if du_catalogue:
-            self.bloc_soudee.pack_forget()
-        else:
-            self.bloc_soudee.pack(fill="x", pady=(0, 6), before=self.bloc_efforts)
+        for bloc, visible in ((self.bloc_soudee, soudee),
+                              (self.bloc_boulon, type_section == BOULON)):
+            if visible:
+                bloc.pack(fill="x", pady=(0, 8), padx=(0, 4), before=self.bloc_efforts)
+            else:
+                bloc.pack_forget()
+
+        # Classes de boulon pour un boulon, aciers de construction sinon : la
+        # nuance courante est remplacée si elle n'appartient plus à la liste.
+        nuances = nuances_pour(type_section)
+        self.liste_nuances.configure(values=list(nuances))
+        if self.var["nuance"].get() not in nuances:
+            self._silence = True
+            self.var["nuance"].set(nuance_par_defaut(type_section))
+            self._silence = False
 
         etat = "readonly" if du_catalogue else "disabled"
         self.liste_familles.configure(state=etat)
@@ -614,7 +929,6 @@ class Application(ttk.Frame):
         for cle, libelle in libelles.items():
             self.etiquettes_soudee[cle].configure(text=libelle)
 
-        self._mettre_a_jour_onglet_section(not du_catalogue)
 
     def _sur_changement_famille(self) -> None:
         """Recharge la liste des profilés, et en choisit un valide."""
@@ -629,9 +943,21 @@ class Application(ttk.Frame):
     def _mettre_a_jour_protection(self) -> None:
         """Active le champ d'épaisseur et affiche la fiche du produit."""
         cle = self._cle_produit(self.var["protection"].get())
+        for widget in self.lignes_perso:
+            if cle == PERSONNALISEE:
+                widget.grid()
+            else:
+                widget.grid_remove()
         if cle == SANS_PROTECTION:
             self.champ_epaisseur.configure(state="disabled")
             self.note_produit.configure(text="")
+            return
+        if cle == PERSONNALISEE:
+            self.champ_epaisseur.configure(state="normal")
+            self.note_produit.configure(
+                text="Valeurs de la fiche technique ou de l'agrément du produit. "
+                     "Produit incombustible, conductivité constante."
+            )
             return
 
         fiche = produits()[cle]
@@ -641,6 +967,8 @@ class Application(ttk.Frame):
         self._silence = False
         self.note_produit.configure(
             text=(
+                # Le nom complet : la liste déroulante le tronque.
+                f"{fiche.get('libelle', cle)}\n"
                 f"λ_p = {fiche['lambda_p']} W/m·K · ρ_p = {fiche['rho_p']:.0f} kg/m³\n"
                 f"c_p = {fiche['c_p']:.0f} J/kg·K · pose {fiche['pose']}\n"
                 f"épaisseurs usuelles {fiche['dp_min'] * 1e3:.0f} à "
@@ -656,6 +984,9 @@ class Application(ttk.Frame):
     def rafraichir(self) -> None:
         """Recalcule les chiffres, et programme le redessin des figures."""
         saisie = self.saisie()
+        self.hors_domaine = (
+            ["d_boulon"] if saisie.type_section == BOULON and saisie.d_boulon <= 0 else []
+        )
         try:
             self.resultat = executer(saisie)
             self.erreur = None
@@ -668,6 +999,8 @@ class Application(ttk.Frame):
             text=f"{saisie.kappa_1:.2f}  (déduit de l'exposition)".replace(".", ",")
         )
         self._afficher()
+        if hasattr(self, "bouton_avances"):
+            self._libeller_avances()
         self._figures_a_jour = False
         self._planifier_figures()
 
@@ -679,6 +1012,17 @@ class Application(ttk.Frame):
         section vaut mieux que le silence, et il est plus précis que celui de
         la vérification qui échouera ensuite.
         """
+        if hasattr(self, "note_boulon") and saisie.type_section == BOULON:
+            try:
+                p = saisie.profil_retenu()
+            except ValueError as souci:
+                self.note_boulon.configure(text=f"⚠ {souci}", foreground=_ROUGE)
+            else:
+                self.note_boulon.configure(
+                    text=f"{p.nom} · A = {p.A * 1e6:.0f} mm² · {p.masse:.2f} kg/m\n"
+                         "Section lisse : le filetage (A_s) n'est pas pris en compte.",
+                    foreground=_GRIS,
+                )
         if not hasattr(self, "note_soudee") or not saisie.soudee:
             return
         try:
@@ -695,29 +1039,59 @@ class Application(ttk.Frame):
         lignes.extend(f"⚠ {message}" for message in section.controles())
         self.note_soudee.configure(text="\n".join(lignes), foreground=_GRIS)
 
+    def _colorer_verdict(self, fond: str, encre: str) -> None:
+        for widget in self._fonds_verdict:
+            widget.configure(background=fond)
+        self.banniere.configure(foreground=encre)
+        self.sous_banniere.configure(foreground=_TEXTE)
+
+    def _signaler_illisibles(self) -> str:
+        """Encadre en rouge les champs fautifs, et renvoie la phrase des illisibles.
+
+        Fautifs : illisibles, ou lisibles mais hors domaine (un diamètre nul),
+        dont le message d'erreur est déjà dans le bandeau.
+        """
+        fautifs = set(self.illisibles) | set(self.hors_domaine)
+        for cle, champ in self.champs.items():
+            champ.state(["invalid"] if cle in fautifs else ["!invalid"])
+        if not self.illisibles:
+            return ""
+        noms = ", ".join(self._noms_champs.get(c, c) for c in self.illisibles)
+        return f"\nValeur illisible : {noms} — calcul fait avec la valeur par défaut."
+
     def _afficher(self) -> None:
+        illisibles = self._signaler_illisibles()
         if self.erreur is not None or self.resultat is None:
-            self.banniere.configure(
-                text=f"Saisie inexploitable — {self.erreur}", background="#fff4e5",
-                foreground=_GRIS,
-            )
+            self.banniere.configure(text="Saisie inexploitable")
+            self.sous_banniere.configure(text=f"{self.erreur}{illisibles}")
+            self._colorer_verdict(_FOND_ORANGE, _ORANGE)
             for valeur in self.indicateur.values():
                 valeur.configure(text="—")
             self.details.configure(text="")
+            self.alertes.configure(text="")
             return
 
         r = self.resultat
         duree = en_minutes(r.duree_requise)
         satisfait = bool(r.verdict)
         self.banniere.configure(
-            text=(
-                f"R{duree:.0f} {r.verdict.value} — θ_a = {r.theta_a_a_echeance:.0f} °C "
-                f"à l'échéance contre θ_cr = {r.theta_cr:.0f} °C, "
-                f"marge {r.marge_temperature:+.0f} °C"
-            ),
-            background="#e6f4ea" if satisfait else "#fdecea",
-            foreground=_VERT if satisfait else _ROUGE,
+            text=f"{'✓' if satisfait else '✗'}  R{duree:.0f} {r.verdict.value}"
         )
+        # La sous-ligne nomme la vraie cause. Hors des deux cas limites,
+        # c'est la comparaison θ_a / θ_cr qui fait le verdict.
+        if r.mu_0 >= 1.0:
+            cause = (f"μ₀ = {r.mu_0:.3f} ≥ 1 : l'élément ne résiste pas, déjà à "
+                     "20 °C, aux charges d'incendie.")
+        elif r.mu_0 == 0.0:
+            cause = "Aucun effort : rien à vérifier."
+        else:
+            cause = (f"θ_a = {r.theta_a_a_echeance:.0f} °C à l'échéance, "
+                     f"θ_cr = {r.theta_cr:.0f} °C · marge {r.marge_temperature:+.0f} °C")
+        self.sous_banniere.configure(text=f"{cause}{illisibles}")
+        if satisfait:
+            self._colorer_verdict(_FOND_VERT, _VERT)
+        else:
+            self._colorer_verdict(_FOND_ROUGE, _ROUGE)
 
         self.indicateur["mu_0"].configure(text=f"{r.mu_0:.3f}")
         self.indicateur["theta_cr"].configure(text=f"{r.theta_cr:.0f} °C")
@@ -738,14 +1112,20 @@ class Application(ttk.Frame):
             f"Critère gouvernant : {r.gouverne_par} · {r.classification}",
             self._ligne_massivete(r),
         ]
+        alertes = []
         if r.ecart_nomogramme is not None and r.ecart_nomogramme > 10.0:
-            lignes.append(
+            alertes.append(
                 f"⚠ L'{EC3_THETA_CR.courte} donne {r.ecart_nomogramme:.0f} °C de "
                 "plus que la vérification complète : l'instabilité gouverne. "
                 "C'est la valeur basse qui est retenue."
             )
-        lignes.extend(f"⚠ {a}" for a in r.avertissements)
+        alertes.extend(f"⚠ {a}" for a in r.avertissements)
         self.details.configure(text="\n".join(lignes))
+        self.alertes.configure(text="\n".join(alertes))
+        if alertes:
+            self.alertes.grid()
+        else:
+            self.alertes.grid_remove()
 
     @staticmethod
     def _ligne_massivete(r: ResultatVerification) -> str:
@@ -768,20 +1148,6 @@ class Application(ttk.Frame):
         return ligne
 
     # -- figures ---------------------------------------------------------
-
-    def _mettre_a_jour_onglet_section(self, visible: bool) -> None:
-        """Masque l'onglet de coupe tant qu'il n'y a pas de section à dessiner.
-
-        Un profilé du catalogue n'a rien à y montrer. Un onglet vide se
-        remarque plus qu'un onglet absent, et laisse croire à une panne.
-        """
-        cadre = getattr(self, "cadre_figure", {}).get("section")
-        if cadre is None:
-            return
-        try:
-            self.onglets.tab(cadre, state="normal" if visible else "hidden")
-        except tk.TclError:  # pragma: no cover - Tk trop ancien
-            pass
 
     def _onglet_courant(self) -> str:
         """La clé de l'onglet visible.
@@ -806,11 +1172,25 @@ class Application(ttk.Frame):
             except tk.TclError:
                 pass
         self._tache_figures = self.after(_DELAI_FIGURES_MS, self.dessiner_figures)
+        if self.resultat is not None:
+            self.etat_figures.place(in_=self.onglets, relx=1.0, x=-6, y=4, anchor="ne")
 
     def dessiner_figures(self) -> None:
         """Trace la figure de l'onglet visible, et elle seule."""
         self._tache_figures = None
+        # Retiré avant le rendu, mais l'écran ne se repeint qu'après : la
+        # mention reste visible exactement le temps du tracé.
+        self.etat_figures.place_forget()
         if self.resultat is None:
+            # Pas de résultat : effacer les figures plutôt que de laisser
+            # celles du calcul précédent, qui se liraient comme valides.
+            for etiquette in self._etiquettes.values():
+                etiquette.configure(image="")
+            # Et défaire le redessin au redimensionnement, qui repeindrait
+            # l'ancienne figure au premier mouvement de la fenêtre.
+            for cadre in self.cadre_figure.values():
+                cadre.unbind("<Configure>")
+            self._rendu.clear()
             return
 
         import matplotlib.pyplot as plt
@@ -828,13 +1208,13 @@ class Application(ttk.Frame):
         # ne doit pas remonter jusqu'à la boucle d'événements de Tk : le
         # message est déjà affiché sous les champs de saisie, il n'y a rien à
         # dessiner et c'est tout.
+        # La coupe : la section soudée tôle par tôle quand il y en a une,
+        # sinon le profilé calculé lui-même — catalogue, barre ou boulon.
         section = None
         if cle == "section":
             try:
-                section = self.saisie().section()
+                section = self.saisie().section() or self.resultat.profil
             except ValueError:
-                return
-            if section is None:
                 return
 
         # Refermer la figure précédente, et pas seulement son widget. Les
@@ -851,7 +1231,7 @@ class Application(ttk.Frame):
             )
         else:
             tracer = tracer_nomogramme if cle == "nomogramme" else tracer_echauffement
-            figure = tracer(self.resultat)
+            figure = tracer(self.resultat, hauteur=self._hauteur_figure(cle, cadre))
         self._figures[cle] = figure
         compose = tuple(figure.get_size_inches())
 
@@ -862,7 +1242,7 @@ class Application(ttk.Frame):
         # restait — cadre blanc jusqu'au prochain redimensionnement.
         etiquette = self._etiquettes.get(cle)
         if etiquette is None or not etiquette.winfo_exists():
-            etiquette = ttk.Label(cadre, anchor="center")
+            etiquette = ttk.Label(cadre, anchor="center", style="Figure.TLabel")
             etiquette.pack(fill="both", expand=True)
             self._etiquettes[cle] = etiquette
 
@@ -873,6 +1253,20 @@ class Application(ttk.Frame):
                 self._peindre(k, f, c, d, l),
         )
         self._figures_a_jour = True
+
+    @staticmethod
+    def _hauteur_figure(cle: str, cadre: tk.Misc) -> float:
+        """Hauteur de figure [po] qui donne au graphique les proportions du cadre.
+
+        Avec une figure de proportions fixes, l'onglet laissait deux larges
+        bandes vides. Bornée : trop basse, le nomogramme s'écrase ; trop
+        haute, il s'étire sans rien montrer de plus.
+        """
+        largeur, (bas, haut) = _FORMATS_FIGURE[cle]
+        l, h = cadre.winfo_width(), cadre.winfo_height()
+        if l < 50 or h < 50:  # cadre pas encore affiché
+            return bas
+        return min(max(largeur * h / l, bas), haut)
 
     def _peindre(self, cle, figure, compose, cadre: tk.Misc, etiquette: ttk.Label) -> None:
         """Rend la figure en image, à la densité qui la fait tenir dans le cadre.
@@ -902,6 +1296,14 @@ class Application(ttk.Frame):
         """
         from matplotlib.backends.backend_agg import FigureCanvasAgg
         from PIL import Image, ImageTk
+
+        # Le cadre a nettement changé de proportions (fenêtre redimensionnée) :
+        # on peint tout de suite à l'ancienne, et l'on refait la figure aux
+        # nouvelles proportions après la pause habituelle.
+        if cle in _FORMATS_FIGURE and cle == self._onglet_courant():
+            voulue = self._hauteur_figure(cle, cadre)
+            if abs(voulue - compose[1]) > 0.08 * compose[1]:
+                self._planifier_figures()
 
         dispo_l = max(cadre.winfo_width() - 10, 1)
         dispo_h = max(cadre.winfo_height() - 10, 1)
@@ -957,13 +1359,17 @@ class Application(ttk.Frame):
         )
         if not chemin:
             return
-        if chemin.lower().endswith(".md"):
-            Path(chemin).write_text(self.resultat.note_de_calcul(), encoding="utf-8")
-        elif chemin.lower().endswith(".docx"):
-            self.resultat.note_de_calcul_word(chemin, self.saisie().section())
-        else:
-            self.resultat.note_de_calcul_pdf(chemin, self.saisie().section())
-        messagebox.showinfo(_TITRE, f"Note enregistrée :\n{chemin}")
+
+        def ecrire() -> None:
+            if chemin.lower().endswith(".md"):
+                Path(chemin).write_text(self.resultat.note_de_calcul(), encoding="utf-8")
+            elif chemin.lower().endswith(".docx"):
+                self.resultat.note_de_calcul_word(chemin, self.saisie().section())
+            else:
+                self.resultat.note_de_calcul_pdf(chemin, self.saisie().section())
+
+        if self._occupe(self.bouton_note, ecrire):
+            self.annoncer(f"Note enregistrée : {Path(chemin).name}", Path(chemin))
 
     def enregistrer_figures(self) -> None:
         if self.resultat is None:
@@ -981,23 +1387,83 @@ class Application(ttk.Frame):
 
         base = self.resultat.profil.nom.replace(" ", "").replace("/", "-")
         cible = Path(dossier)
-        tracer_nomogramme(self.resultat, cible / f"nomogramme-{base}.png")
-        tracer_echauffement(self.resultat, cible / f"echauffement-{base}.png")
-        nombre = 2
+        section = self.saisie().section() or self.resultat.profil
 
-        try:
-            section = self.saisie().section()
-        except ValueError:
-            section = None
-        if section is not None:
+        def ecrire() -> None:
+            tracer_nomogramme(self.resultat, cible / f"nomogramme-{base}.png")
+            tracer_echauffement(self.resultat, cible / f"echauffement-{base}.png")
             tracer_section(
                 section, cible / f"section-{base}.png",
                 exposition=self.resultat.exposition,
             )
-            nombre = 3
-        messagebox.showinfo(
-            _TITRE, f"{nombre} figures enregistrées dans :\n{dossier}"
-        )
+
+        if self._occupe(self.bouton_figures, ecrire):
+            self.annoncer(f"3 figures enregistrées dans {cible.name}", None, cible)
+
+    # -- retour d'action ---------------------------------------------------
+
+    def _occupe(self, bouton: ttk.Button, travail) -> bool:
+        """Exécute un enregistrement en montrant qu'il est en cours.
+
+        Une à deux secondes sans signe, et l'on clique une seconde fois. Une
+        erreur d'écriture — fichier ouvert dans Word, dossier protégé — est
+        dite en clair au lieu de remonter dans la boucle de Tk.
+        """
+        texte = bouton.cget("text")
+        fenetre = self.winfo_toplevel()
+        bouton.configure(text="Enregistrement…")
+        bouton.state(["disabled"])
+        fenetre.configure(cursor="watch")
+        self.update_idletasks()
+        try:
+            travail()
+            return True
+        except OSError as souci:
+            messagebox.showerror(
+                _TITRE, f"Enregistrement impossible :\n{souci}\n\n"
+                "Le fichier est peut-être ouvert dans une autre application."
+            )
+            return False
+        finally:
+            bouton.configure(text=texte)
+            bouton.state(["!disabled"])
+            fenetre.configure(cursor="")
+
+    def annoncer(self, message: str, fichier: Path | None, dossier: Path | None = None) -> None:
+        """Compte rendu discret d'un succès, avec de quoi ouvrir le résultat."""
+        dossier = dossier or (fichier.parent if fichier else None)
+        self.statut.configure(text=f"✓  {message}")
+        self.statut.pack(side="left", padx=(12, 6))
+        for lien, cible in ((self.lien_ouvrir, fichier), (self.lien_dossier, dossier)):
+            if cible is None:
+                lien.pack_forget()
+            else:
+                lien.configure(command=lambda c=cible: _ouvrir(c))
+                lien.pack(side="left", padx=(0, 6))
+        if self._tache_statut is not None:
+            self.after_cancel(self._tache_statut)
+        self._tache_statut = self.after(_DUREE_STATUT_MS, self._effacer_statut)
+
+    def _effacer_statut(self) -> None:
+        self._tache_statut = None
+        for widget in (self.statut, self.lien_ouvrir, self.lien_dossier):
+            widget.pack_forget()
+
+
+_DUREE_STATUT_MS = 12_000
+"""Durée d'affichage du compte rendu d'enregistrement [ms]."""
+
+
+def _ouvrir(chemin: Path) -> None:
+    """Ouvre un fichier ou un dossier avec l'application par défaut du système."""
+    import os
+    import subprocess
+    import sys
+
+    if sys.platform == "win32":
+        os.startfile(chemin)  # noqa: S606 - chemin choisi par l'utilisateur
+    else:
+        subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", str(chemin)])
 
 
 _TAILLE_CONFORTABLE = (1280, 880)
@@ -1016,7 +1482,7 @@ def _dimensionner(racine: tk.Tk) -> None:
     La marge réservée tient compte de la barre des tâches et des décorations
     de fenêtre, dont Tk ne connaît pas la hauteur avant l'affichage.
     """
-    voulue_l, voulue_h = _TAILLE_CONFORTABLE
+    voulue_l, voulue_h = (int(v * _echelle(racine)) for v in _TAILLE_CONFORTABLE)
     largeur = min(voulue_l, racine.winfo_screenwidth() - 60)
     hauteur = min(voulue_h, racine.winfo_screenheight() - 120)
     x = max(0, (racine.winfo_screenwidth() - largeur) // 2)
@@ -1026,14 +1492,13 @@ def _dimensionner(racine: tk.Tk) -> None:
 
 def lancer() -> None:
     """Ouvre la fenêtre et rend la main à sa fermeture."""
+    _net_sur_ecran_haute_densite()
     racine = tk.Tk()
     racine.title(_TITRE)
     _dimensionner(racine)
-    racine.minsize(900, 560)
-    try:
-        ttk.Style().theme_use("vista" if racine.tk.call("tk", "windowingsystem") == "win32" else "clam")
-    except tk.TclError:
-        pass
+    echelle = _echelle(racine)
+    racine.minsize(int(900 * echelle), int(560 * echelle))
+    _appliquer_theme(racine)
     Application(racine)
     racine.mainloop()
 

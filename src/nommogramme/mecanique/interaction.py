@@ -8,7 +8,8 @@ défavorable des deux.
 
 Le cas de la traction combinée à la flexion n'est pas couvert par le §4.2.3.5,
 qui traite les éléments comprimés et fléchis. Il est traité ici par la somme
-linéaire des taux, conservative et d'usage courant.
+linéaire des taux en section, complétée d'un contrôle de déversement sous le
+seul moment, la traction favorable étant négligée.
 """
 
 from __future__ import annotations
@@ -134,7 +135,7 @@ def taux(
     """
     if N_Ed < 0.0:
         return _taux_traction_flexion(
-            abs(N_Ed), My_Ed, Mz_Ed, resistances
+            abs(N_Ed), My_Ed, Mz_Ed, resistances, deversement_possible
         )
 
     facteurs = facteurs_interaction(
@@ -181,13 +182,24 @@ def taux(
 
 
 def _taux_traction_flexion(
-    N_traction: float, My_Ed: float, Mz_Ed: float, resistances: Resistances
+    N_traction: float,
+    My_Ed: float,
+    Mz_Ed: float,
+    resistances: Resistances,
+    deversement_possible: bool = True,
 ) -> TauxUtilisation:
     """Traction combinée à la flexion.
 
-    Le §4.2.3.5 ne couvre que la compression. La somme linéaire des taux
-    retenue ici est conservative : la traction stabilise l'élément vis-à-vis
-    du déversement, effet favorable qui n'est pas exploité.
+    Le §4.2.3.5 ne couvre que la compression. Deux contrôles :
+
+    * section : somme linéaire N/N_Rd + M_y/M_y,Rd + M_z/M_z,Rd ;
+    * déversement, si la semelle comprimée n'est pas maintenue :
+      M_y/M_b,fi,Rd + M_z/M_z,Rd. La traction réduit la compression de la
+      semelle et stabilise l'élément ; cet effet favorable est négligé, ce qui
+      va dans le sens de la sécurité.
+
+    ``taux_flambement`` porte le contrôle de section, ``taux_deversement``
+    celui de déversement (0 s'il est écarté).
     """
 
     def _part(effort: float, resistance: float) -> float:
@@ -195,16 +207,25 @@ def _taux_traction_flexion(
             return float("inf") if effort > 0.0 else 0.0
         return effort / resistance
 
-    valeur = (
+    section = (
         _part(N_traction, resistances.N_Rd)
         + _part(My_Ed, resistances.My_Rd)
         + _part(Mz_Ed, resistances.Mz_Rd)
     )
+    deversement = (
+        _part(My_Ed, resistances.Mb_Rd) + _part(Mz_Ed, resistances.Mz_Rd)
+        if deversement_possible and My_Ed
+        else 0.0  # sans M_y, rien ne comprime la semelle : pas de déversement
+    )
+    if section >= deversement:
+        valeur, critere = section, "traction et flexion — section (hors §4.2.3.5)"
+    else:
+        valeur, critere = deversement, "traction et flexion — déversement (hors §4.2.3.5)"
     return TauxUtilisation(
         valeur=valeur,
-        critere="traction et flexion — somme linéaire (hors §4.2.3.5)",
-        taux_flambement=valeur,
-        taux_deversement=valeur,
+        critere=critere,
+        taux_flambement=section,
+        taux_deversement=deversement,
         facteurs=None,
         resistances=resistances,
     )
