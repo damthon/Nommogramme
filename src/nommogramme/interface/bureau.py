@@ -79,8 +79,13 @@ _DELAI_FIGURES_MS = 400
 _FORMATS_FIGURE = {"nomogramme": (11.0, (5.4, 7.6)), "echauffement": (8.2, (4.6, 6.4))}
 """Largeur fixe et bornes de hauteur des figures affichées [po]."""
 
-_DPI_MINIMAL = 52.0
-"""En deçà, la figure cesse de rétrécir : elle ne serait plus lisible."""
+_DPI_MINIMAL = 48.0
+"""En deçà, la figure cesse de rétrécir : elle ne serait plus lisible.
+
+Abaissé de 52 à 48 avec le panneau de gauche élargi : sur un petit écran (le
+coureur Windows de GitHub), le cadre du nomogramme ne fait plus que 569 px, et
+11 po × 52 dpi = 572 px débordait. À 48 dpi, 528 px tiennent.
+"""
 
 # Palette « Minimalism & Swiss » (UI/UX Pro Max) : fond clair, bleu marine,
 # vert et rouge réservés au verdict. Chaque texte tient 4,5:1 sur son fond.
