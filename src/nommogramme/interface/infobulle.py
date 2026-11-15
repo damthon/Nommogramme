@@ -15,9 +15,11 @@ Trois détails qui n'en sont pas
 * **Le délai.** Sans lui, l'infobulle clignote au moindre passage de souris
   vers un autre champ. Un demi-battement suffit à distinguer « je passe » de
   « je m'arrête ».
-* **Le clavier.** L'infobulle apparaît aussi à la prise de focus : un
-  utilisateur qui tabule d'un champ à l'autre a droit à la même information
-  que celui qui survole.
+* **Le clavier.** L'infobulle apparaît aussi quand on arrive sur le champ
+  par Tab : celui qui tabule a droit à la même information que celui qui
+  survole. Mais sans alourdir la saisie : pas de bulle après un clic (on sait
+  déjà où l'on va), un délai plus long qu'au survol (tabuler vite d'un champ
+  à l'autre ne fait rien clignoter), et la bulle s'efface dès qu'on tape.
 * **Le placement.** La bulle est décalée sous le pointeur, et ramenée dans
   l'écran si elle en sortait — sur un champ situé en bas de fenêtre, elle
   s'afficherait sinon hors de vue.
@@ -25,6 +27,7 @@ Trois détails qui n'en sont pas
 
 from __future__ import annotations
 
+import time
 import tkinter as tk
 from tkinter import ttk
 
@@ -33,6 +36,16 @@ __all__ = ["Infobulle", "infobuller"]
 
 _DELAI_MS = 450
 """Temps de survol avant apparition [ms]."""
+
+_DELAI_FOCUS_MS = 900
+"""Temps d'arrêt sur un champ atteint au clavier avant apparition [ms]."""
+
+_ENCHAINEMENT_S = 0.6
+"""Après la fermeture d'une bulle, fenêtre pendant laquelle la suivante
+s'ouvre sans délai au survol [s] : qui lit les aides l'une après l'autre ne
+doit pas attendre à chaque champ, et le délai initial garde son rôle."""
+
+_derniere_fermeture = float("-inf")
 
 _DECALAGE = (14, 22)
 """Décalage de la bulle par rapport au pointeur [px]."""
@@ -66,14 +79,17 @@ class Infobulle:
         self._fenetre: tk.Toplevel | None = None
         self._tache: str | None = None
         self._pointeur = (0, 0)
+        self._clic = False
+        """Le prochain focus vient d'un clic, pas du clavier."""
 
         for widget in widgets:
             widget.bind("<Enter>", self._sur_entree, add="+")
             widget.bind("<Motion>", self._suivre, add="+")
             widget.bind("<Leave>", self._sur_sortie, add="+")
-            widget.bind("<ButtonPress>", self._sur_sortie, add="+")
-            widget.bind("<FocusIn>", self._sur_entree, add="+")
-            widget.bind("<FocusOut>", self._sur_sortie, add="+")
+            widget.bind("<ButtonPress>", self._sur_clic, add="+")
+            widget.bind("<FocusIn>", self._sur_focus, add="+")
+            widget.bind("<FocusOut>", self._sur_perte_focus, add="+")
+            widget.bind("<KeyPress>", self._sur_frappe, add="+")
 
     # -- réactions --------------------------------------------------------
 
@@ -84,11 +100,45 @@ class Infobulle:
         if evenement is not None and hasattr(evenement, "x_root"):
             self._pointeur = (evenement.x_root, evenement.y_root)
         self._annuler()
-        self._tache = self.widgets[0].after(self.delai_ms, self.montrer)
+        enchaine = time.monotonic() - _derniere_fermeture < _ENCHAINEMENT_S
+        self._tache = self.widgets[0].after(0 if enchaine else self.delai_ms, self.montrer)
 
     def _sur_sortie(self, _evenement=None) -> None:
         self._annuler()
         self.cacher()
+
+    def _sur_perte_focus(self, _evenement=None) -> None:
+        # Un clic dans un champ qui avait déjà le focus n'est suivi d'aucun
+        # FocusIn : sans cette remise à zéro, la prochaine arrivée au clavier
+        # serait prise pour un clic.
+        self._clic = False
+        self._sur_sortie()
+
+    def _sur_clic(self, _evenement=None) -> None:
+        self._clic = True
+        self._sur_sortie()
+
+    def _sur_focus(self, evenement=None) -> None:
+        """Focus reçu : bulle seulement s'il vient du clavier."""
+        if self._clic:
+            self._clic = False
+            return
+        widget = getattr(evenement, "widget", None) or self.widgets[0]
+        try:  # sous le champ, puisqu'aucun pointeur ne le désigne
+            self._pointeur = (
+                widget.winfo_rootx() - _DECALAGE[0],
+                widget.winfo_rooty() + widget.winfo_height() - _DECALAGE[1] + 4,
+            )
+        except tk.TclError:  # pragma: no cover - widget détruit
+            return
+        self._annuler()
+        self._tache = self.widgets[0].after(_DELAI_FOCUS_MS, self.montrer)
+
+    def _sur_frappe(self, evenement=None) -> None:
+        """On tape : la bulle a fait son office, elle gênerait la lecture."""
+        if getattr(evenement, "keysym", "") in ("Tab", "ISO_Left_Tab"):
+            return
+        self._sur_sortie()
 
     def _annuler(self) -> None:
         if self._tache is None:
@@ -137,8 +187,10 @@ class Infobulle:
         fenetre.wm_geometry(f"+{max(x, 0)}+{max(y, 0)}")
 
     def cacher(self) -> None:
+        global _derniere_fermeture
         if self._fenetre is None:
             return
+        _derniere_fermeture = time.monotonic()
         try:
             self._fenetre.destroy()
         except tk.TclError:  # pragma: no cover - fenêtre déjà détruite

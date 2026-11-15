@@ -39,6 +39,17 @@ from .references import (
 from .thermique.evolution import EPAISSEUR_SAINE_MIN
 from .unites import en_kN, en_kNm, en_minutes
 
+
+def origine_profil(p) -> str:
+    """D'où viennent les caractéristiques du profilé, pour la colonne « Origine »."""
+    from .profils.barres import BOULON
+
+    if p.soudee:
+        return "section reconstituée soudée"
+    if p.nom.startswith(BOULON):
+        return "tige ronde pleine, calculée depuis son diamètre"
+    return SZS_C5.courte
+
 __all__ = ["note_de_calcul"]
 
 
@@ -125,7 +136,7 @@ def note_de_calcul(r: ResultatVerification) -> str:
     lignes.append("")
     lignes.append("| Grandeur | Valeur | Référence |")
     lignes.append("|---|---|---|")
-    origine = "section reconstituée soudée" if r.profil.soudee else SZS_C5.courte
+    origine = origine_profil(r.profil)
     lignes.append(
         _ligne("Profilé", f"{r.profil.nom} ({r.profil.famille.value})", origine)
     )
