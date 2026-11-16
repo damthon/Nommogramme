@@ -156,16 +156,63 @@ def dossier_utilisateur() -> Path:
     return Path(racine) / "Nommogramme"
 
 
-def modele_par_defaut() -> Path | None:
-    """Le modèle Word du bureau, s'il est installé sur ce poste.
+def preferences() -> dict:
+    """Les réglages retenus d'une session à l'autre ; vide si aucun ou illisible."""
+    import json
 
-    ``NOMMOGRAMME_SANS_MODELE=1`` l'ignore (tests reproductibles).
+    try:
+        valeur = json.loads((dossier_utilisateur() / "preferences.json")
+                            .read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return valeur if isinstance(valeur, dict) else {}
+
+
+def retenir(cle: str, valeur: str) -> None:
+    """Enregistre un réglage. Un échec d'écriture n'empêche pas de travailler."""
+    import json
+
+    reglages = preferences()
+    reglages[cle] = valeur
+    fichier = dossier_utilisateur() / "preferences.json"
+    try:
+        fichier.parent.mkdir(parents=True, exist_ok=True)
+        fichier.write_text(json.dumps(reglages, ensure_ascii=False, indent=2),
+                           encoding="utf-8")
+    except OSError:
+        pass
+
+
+def modele_par_defaut() -> Path | None:
+    """Le modèle Word du bureau, dans l'ordre :
+
+    1. ``NOMMOGRAMME_MODELE_WORD`` ;
+    2. le modèle choisi dans le programme (préférence « modele_word ») —
+       typiquement celui du serveur du bureau, partagé par tous ;
+    3. la copie locale ``%APPDATA%/Nommogramme/modele-note.dotx``, qui prend
+       le relais hors du réseau.
+
+    Le chemin du serveur n'est pas écrit dans le code : il est propre au
+    bureau, et le dépôt est public. ``NOMMOGRAMME_SANS_MODELE=1`` ignore tout
+    modèle (tests reproductibles).
     """
     if os.environ.get("NOMMOGRAMME_SANS_MODELE") == "1":
         return None
     candidats = [os.environ.get("NOMMOGRAMME_MODELE_WORD", ""),
+                 preferences().get("modele_word", ""),
                  str(dossier_utilisateur() / "modele-note.dotx")]
-    return next((Path(c) for c in candidats if c and Path(c).is_file()), None)
+    for candidat in candidats:
+        if not candidat:
+            continue
+        chemin = Path(candidat)
+        if chemin.is_dir():  # un dossier : le modèle qu'il contient
+            chemin = chemin / "modele-note.dotx"
+        try:
+            if chemin.is_file():
+                return chemin
+        except OSError:  # lecteur réseau déconnecté
+            continue
+    return None
 
 
 def _ouvrir_modele(modele: Path):
