@@ -120,6 +120,42 @@ class TestAvecModele:
         assert "1TitreNiv1ChapitreINGPHI" in xml and "11TitreNiv2ChapitreINGPHI" in xml
 
 
+class TestOuEstLeModele:
+    """Modèle choisi (serveur) d'abord, copie locale hors réseau, sinon aucun."""
+
+    @pytest.fixture()
+    def dossier(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("NOMMOGRAMME_SANS_MODELE", raising=False)
+        monkeypatch.delenv("NOMMOGRAMME_MODELE_WORD", raising=False)
+        monkeypatch.setenv("NOMMOGRAMME_DOSSIER", str(tmp_path / "utilisateur"))
+        return tmp_path
+
+    def test_le_modele_choisi_passe_avant_la_copie_locale(self, dossier) -> None:
+        from nommogramme.note_word import modele_par_defaut, retenir
+
+        serveur = dossier / "serveur" / "modele-note.dotx"
+        locale = dossier / "utilisateur" / "modele-note.dotx"
+        for f in (serveur, locale):
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_bytes(b"x")
+        assert modele_par_defaut() == locale
+        retenir("modele_word", str(serveur))
+        assert modele_par_defaut() == serveur
+        retenir("modele_word", str(serveur.parent))  # un dossier suffit
+        assert modele_par_defaut() == serveur
+
+    def test_serveur_injoignable_la_copie_locale_prend_le_relais(self, dossier) -> None:
+        from nommogramme.note_word import modele_par_defaut, retenir
+
+        locale = dossier / "utilisateur" / "modele-note.dotx"
+        locale.parent.mkdir(parents=True)
+        locale.write_bytes(b"x")
+        retenir("modele_word", str(dossier / "lecteur-deconnecte" / "modele-note.dotx"))
+        assert modele_par_defaut() == locale
+        locale.unlink()
+        assert modele_par_defaut() is None
+
+
 def test_sans_word_le_pdf_retombe_sur_le_moteur_interne(tmp_path) -> None:
     """Hors Word (ou désactivé), la note PDF reste produite."""
     assert os.environ.get("NOMMOGRAMME_PDF_INTERNE") == "1"

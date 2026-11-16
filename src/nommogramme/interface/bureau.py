@@ -79,8 +79,13 @@ _DELAI_FIGURES_MS = 400
 _FORMATS_FIGURE = {"nomogramme": (11.0, (5.4, 7.6)), "echauffement": (8.2, (4.6, 6.4))}
 """Largeur fixe et bornes de hauteur des figures affichées [po]."""
 
-_DPI_MINIMAL = 52.0
-"""En deçà, la figure cesse de rétrécir : elle ne serait plus lisible."""
+_DPI_MINIMAL = 48.0
+"""En deçà, la figure cesse de rétrécir : elle ne serait plus lisible.
+
+Abaissé de 52 à 48 avec le panneau de gauche élargi : sur un petit écran (le
+coureur Windows de GitHub), le cadre du nomogramme ne fait plus que 569 px, et
+11 po × 52 dpi = 572 px débordait. À 48 dpi, 528 px tiennent.
+"""
 
 # Palette « Minimalism & Swiss » (UI/UX Pro Max) : fond clair, bleu marine,
 # vert et rouge réservés au verdict. Chaque texte tient 4,5:1 sur son fond.
@@ -240,29 +245,15 @@ def _fichier_preferences() -> Path:
 
 
 def _preferences() -> dict:
-    """Les réglages retenus d'une session à l'autre ; vide si aucun ou illisible."""
-    import json
+    from nommogramme.note_word import preferences
 
-    try:
-        valeur = json.loads(_fichier_preferences().read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    return valeur if isinstance(valeur, dict) else {}
+    return preferences()
 
 
 def _retenir(cle: str, valeur: str) -> None:
-    """Enregistre un réglage. Un échec d'écriture n'empêche pas de travailler."""
-    import json
+    from nommogramme.note_word import retenir
 
-    preferences = _preferences()
-    preferences[cle] = valeur
-    fichier = _fichier_preferences()
-    try:
-        fichier.parent.mkdir(parents=True, exist_ok=True)
-        fichier.write_text(json.dumps(preferences, ensure_ascii=False, indent=2),
-                           encoding="utf-8")
-    except OSError:
-        pass
+    retenir(cle, valeur)
 
 
 def _famille_de(nom_profil: str) -> str:
@@ -413,6 +404,31 @@ class Application(ttk.Frame):
             kappa_2=lire("kappa_2"),
             C1=lire("C1"),
         )
+
+    def _afficher_modele(self) -> None:
+        """Dit quel modèle Word la note utilisera, et d'où il vient."""
+        from nommogramme.note_word import modele_par_defaut
+
+        modele = modele_par_defaut()
+        if modele is None:
+            texte = "Modèle Word : aucun (note sobre)"
+        else:
+            local = modele.parent == _fichier_preferences().parent
+            texte = f"Modèle Word : {modele.name}" + (" (copie locale)" if local else "")
+        self.etiquette_modele.configure(text=texte)
+        if modele is not None:
+            self.infobulles["modele_word"] = infobuller(
+                self.etiquette_modele, texte=str(modele))
+
+    def choisir_modele(self) -> None:
+        """Désigne le modèle Word du bureau — un fichier .dotx, sur le serveur."""
+        chemin = filedialog.askopenfilename(
+            title="Modèle Word de la note de calcul",
+            filetypes=[("Modèle Word", "*.dotx"), ("Document Word", "*.docx")],
+        )
+        if chemin:
+            _retenir("modele_word", chemin)
+            self._afficher_modele()
 
     def projet(self):
         """Les informations de l'affaire, pour la note de calcul."""
@@ -603,6 +619,15 @@ class Application(ttk.Frame):
             projet, foreground=_GRIS,
             text=f"Date : {datetime.date.today():%d.%m.%Y} (du jour)",
         ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(3, 0))
+
+        # Le modèle Word du bureau : choisi une fois (sur le serveur, en
+        # général), retenu ensuite. Sans modèle, la note reste sobre.
+        self.etiquette_modele = ttk.Label(projet, foreground=_GRIS,
+                                          wraplength=self._l_texte, justify="left")
+        self.etiquette_modele.grid(row=5, column=0, sticky="w", pady=(3, 0))
+        ttk.Button(projet, text="Choisir…", style="Action.TButton", cursor="hand2",
+                   command=self.choisir_modele).grid(row=5, column=1, sticky="e")
+        self._afficher_modele()
 
         element = self._bloc(parent, "Élément")
         self._champ(
